@@ -217,18 +217,11 @@ void imgui_update() {
             }
             ImGui::EndDisabled();
 
-            // Quick Options
-            if (ImGui::CollapsingHeader("Quick Options")) {
-                ImGui::Checkbox("HUD", &enable_hud);
-                ImGui::Checkbox("Shadows", &enable_shadows);
-                ImGui::SetNextItemWidth(150);
-                ImGui::SliderInt("###walkpoint", &walkpoint_speed, 0, 127, "Walkpoint %d");
-                ImGui::BeginDisabled(!freeze_camera);
-                ImGui::Checkbox("Head Rotations", &enable_head_rotation);
-                ImGui::EndDisabled();
-                ImGui::Checkbox("Torso Rotations", &enable_torso_rotation);
-                ImGui::Dummy(ImVec2(0, 15));
-            }
+            ImGui::Checkbox("HUD", &enable_hud);
+            ImGui::Checkbox("Shadows", &enable_shadows);
+            ImGui::SetNextItemWidth(150);
+            ImGui::SliderInt("###walkpoint", &walkpoint_speed, 0, 127, "Walkpoint %d");
+            ImGui::Dummy(ImVec2(0, 15));
 
             // Angle
             if (gMarioStates[0].marioObj != NULL) {

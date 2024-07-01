@@ -28,13 +28,13 @@
 
 #include "data/dynos.cpp.h"
 
+bool ignore_expression_visibility;
+
 const char* eye_switches[] = {"Default (Blink)", "Open", "Half", "Closed", "Left", "Right", "Up", "Down", "Dead"};
 const char* right_hand_switches[] = {"Default", "Fist", "Open", "Peace", "With Cap", "With Wing Cap"};
 const char* left_hand_switches[] = {"Default", "Fist", "Open"};
 const char* cap_switches[] = {"Default (On)", "Off", "Wing Cap"}; // unused "wing cap off" not included
 const char* powerup_switches[] = {"Default", "None", "Vanish", "Metal", "Vanish & Metal"};
-
-bool ignore_expression_visibility;
 
 bool warning_dismissed;
 
@@ -90,10 +90,10 @@ void OpenModelExpressionSelector(PackData* pack) {
         ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
         //ImGui::TableHeadersRow();
         for (int i = 0; i < current_expressions.size(); i++) {
-            ImGui::TableNextRow();
             Expression expression = current_expressions[i];
             if (expression.Name == "eyes") continue;
             if (expression.Textures.size() <= 1) continue;
+            ImGui::TableNextRow();
             ImGui::BeginDisabled(!expression.Visible && !ignore_expression_visibility);
 
             ImGui::TableSetColumnIndex(0);
@@ -228,14 +228,23 @@ void OpenSwitchOptions() {
         switch_state_cap = 0;
         switch_state_powerup = 0;
         vanish_transparency = 128;
+        enable_head_rotation = false;
+        enable_torso_rotation = true;
     }
+    ImGui::Separator();
+
     ImGui::BeginDisabled(custom_eyes);
     ImGui::Combo("Eyes###eye_state", &switch_state_eyes, eye_switches, IM_ARRAYSIZE(eye_switches));
     ImGui::EndDisabled();
-
     ImGui::Combo("Right Hand###right_hand_state", &switch_state_hand_right, right_hand_switches, IM_ARRAYSIZE(right_hand_switches));
     ImGui::Combo("Left Hand###left_hand_state", &switch_state_hand_left, left_hand_switches, IM_ARRAYSIZE(left_hand_switches));
     ImGui::Combo("Cap###cap_state", &switch_state_cap, cap_switches, IM_ARRAYSIZE(cap_switches));
+
+    ImGui::Separator();
+    ImGui::BeginDisabled(!freeze_camera);
+    ImGui::Checkbox("Head Rotations", &enable_head_rotation);
+    ImGui::EndDisabled();
+    ImGui::Checkbox("Torso Rotations", &enable_torso_rotation);
 
     ImGui::Separator();
     if (ImGui::Combo("Powerup###powerup_state", &switch_state_powerup, powerup_switches, IM_ARRAYSIZE(powerup_switches)))
@@ -243,6 +252,7 @@ void OpenSwitchOptions() {
     ImGui::BeginDisabled(switch_state_powerup <= 1 || switch_state_powerup == 3);
     ImGui::SliderInt("###transparency", &vanish_transparency, 0, 255, "Alpha %d", ImGuiSliderFlags_AlwaysClamp);
     ImGui::EndDisabled();
+
     ImGui::PopItemWidth();
 }
 
