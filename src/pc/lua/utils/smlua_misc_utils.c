@@ -25,6 +25,7 @@
 #include "game/first_person_cam.h"
 
 #include "saturn/saturn.h"
+#include "saturn/saturn_colors.h"
 
 static struct DateTime sDateTime;
 
@@ -544,7 +545,7 @@ u8 get_vertex_color(u8 index) {
 
 void set_vertex_color(u8 index, u8 value) {
     if (index > 2) { return; }
-    gVertexColor[index] = value;
+    gVertexColor[index] = (auto_chroma) ? 255 : value;
 }
 
 ///
