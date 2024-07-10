@@ -42,6 +42,7 @@ extern "C" {
     extern bool hang_anim;
     extern bool loop_anim;
 
+    extern int player_speed;
     extern int walkpoint_speed;
 
     void saturn_action_idle(struct MarioState*);

@@ -8,6 +8,7 @@
 #include "pc/djui/djui_chat_box.h"
 #include "pc/djui/djui_console.h"
 extern "C" {
+    #include "sm64.h"
     #include "game/camera.h"
     #include "game/mario.h"
     #include "game/game_init.h"
@@ -45,6 +46,7 @@ int paused_frame;
 bool hang_anim;
 bool loop_anim;
 
+int player_speed = 127;
 int walkpoint_speed = 127;
 
 /* Returns false when an ImGui text widget is active (i.e. the user is editing text). */
@@ -132,7 +134,7 @@ void saturn_action_idle(struct MarioState *m) {
     if (m->marioObj == NULL) return;
 
     // Spin/Angle
-    //m->faceAngle[1] = (s16)(face_angle * 182.04f);
+    walkpoint_speed = (m->action & ACT_FLAG_MOVING) ? 127 : player_speed;
 
     struct Animation *targetAnim = m->animation->targetAnim;
     // Animation-specific looping
