@@ -6,8 +6,9 @@
 #include "saturn/saturn_animations.h"
 #include "saturn/saturn_textures.h"
 #include "saturn/saturn_colors.h"
-#include "saturn/saturn_imgui_colors.h"
-#include "saturn/saturn_imgui_models.h"
+#include "saturn/ui/saturn_imgui_colors.h"
+#include "saturn/ui/saturn_imgui_models.h"
+#include "saturn/ui/saturn_imgui_world.h"
 #include "saturn/libs/imgui/imgui.h"
 #include "saturn/libs/imgui/imgui_internal.h"
 #include "saturn/libs/imgui/imgui-knobs.h"
@@ -38,7 +39,6 @@ bool show_window_machinima = true;
 bool show_window_cc_editor = true;
 bool show_window_model_settings = true;
 
-ImVec4 uiChromaColor =                  ImVec4(0.0f / 255.0f, 255.0f / 255.0f, 0.0f / 255.0f, 255.0f / 255.0f);
 static char animSearchTerm[128];
 
 void imgui_init_backend(SDL_Window* window, SDL_GLContext ctx) {
@@ -106,7 +106,7 @@ void imgui_update() {
                 if (ImGui::MenuItem("Color Code Editor", NULL, show_window_cc_editor)) show_window_cc_editor = !show_window_cc_editor;
                 ImGui::EndMenu();
             }
-            if (ImGui::BeginMenu("Character")) {
+            if (ImGui::BeginMenu("Avatar")) {
                 ImGui::BeginDisabled(active_saturn_model_index == -1);
                 if (ImGui::MenuItem("Model Settings", NULL, show_window_model_settings)) show_window_model_settings = !show_window_model_settings;
                 ImGui::EndDisabled();
@@ -159,6 +159,17 @@ void imgui_update() {
                 OpenModelSelector();
                 ImGui::EndMenu();
             }
+            if (ImGui::BeginMenu("World")) {
+                // Chroma Key (Auto-Chroma)
+                OpenAutoChromaMenu();
+                
+                // Quick Options
+                ImGui::Checkbox("HUD", &enable_hud);
+                ImGui::Checkbox("Shadows", &enable_shadows);
+
+                ImGui::EndMenu();
+            }
+
             ImGui::EndMainMenuBar();
         }
 
@@ -183,44 +194,11 @@ void imgui_update() {
             ImGui::EndDisabled();
             ImGui::SliderFloat("###camera_fov", &camera_fov, 0.f, 100.f, "FOV %.1f");
             ImGui::PopItemWidth();
+
             ImGui::Dummy(ImVec2(0, 15));
 
-            // Chroma Key (Auto-Chroma)
-            ImGui::Checkbox("Chroma Key", &auto_chroma);
-            ImGui::BeginDisabled(!auto_chroma);
-            ImGui::SameLine();
-            if (ImGui::ColorEdit4("Skybox Color", (float*)&uiChromaColor, ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_InputRGB | ImGuiColorEditFlags_Uint8 | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoInputs)) {
-                int r5 = ((int)(uiChromaColor.x * 255) * 31 / 255);
-                int g5 = ((int)(uiChromaColor.y * 255) * 31 / 255);
-                int b5 = ((int)(uiChromaColor.z * 255) * 31 / 255);
-                int rShift = (int) r5 << 11;
-                int bShift = (int) g5 << 6;
-                int gShift = (int) b5 << 1;
-                gChromaKeyColor = (int) (bShift | gShift | rShift | 1);
-
-                chromaColor.red[0] = (int)(uiChromaColor.x * 255);
-                chromaColor.green[0] = (int)(uiChromaColor.y * 255);
-                chromaColor.blue[0] = (int)(uiChromaColor.z * 255);
-                chromaColor.red[1] = chromaColor.red[0];
-                chromaColor.green[1] = chromaColor.green[0];
-                chromaColor.blue[1] = chromaColor.blue[0];
-            }
-            if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
-                ImGui::OpenPopup("###chromaColorPresets");
-            if (ImGui::BeginPopup("###chromaColorPresets")) {
-                if (ImGui::Selectable("Green")) uiChromaColor = ImVec4(0.0f / 255.0f, 255.0f / 255.0f, 0.0f / 255.0f, 255.0f / 255.0f);
-                if (ImGui::Selectable("Blue")) uiChromaColor = ImVec4(0.0f / 255.0f, 0.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f);
-                if (ImGui::Selectable("Pink")) uiChromaColor = ImVec4(255.0f / 255.0f, 0.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f);
-                if (ImGui::Selectable("Black")) uiChromaColor = ImVec4(0.0f / 255.0f, 0.0f / 255.0f, 0.0f / 255.0f, 255.0f / 255.0f);
-                if (ImGui::Selectable("White")) uiChromaColor = ImVec4(255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f);
-                ImGui::EndPopup();
-            }
-            ImGui::EndDisabled();
-
-            ImGui::Checkbox("HUD", &enable_hud);
-            ImGui::Checkbox("Shadows", &enable_shadows);
             ImGui::SetNextItemWidth(150);
-            ImGui::SliderInt("###walkpoint", &walkpoint_speed, 0, 127, "Walkpoint %d");
+            ImGui::SliderInt("###walkpoint", &player_speed, 0, 127, "Walkpoint %d");
             ImGui::Dummy(ImVec2(0, 15));
 
             // Angle

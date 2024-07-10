@@ -481,7 +481,7 @@ ACTOR_DIR      := actors
 LEVEL_DIRS     := $(patsubst levels/%,%,$(dir $(wildcard levels/*/header.h)))
 
 # Directories containing source files
-SRC_DIRS := src src/engine src/game src/audio src/bass_audio src/menu src/buffers src/saturn src/saturn/libs/imgui actors levels bin data assets asm lib sound
+SRC_DIRS := src src/engine src/game src/audio src/bass_audio src/menu src/buffers src/saturn src/saturn/ui src/saturn/libs/imgui actors levels bin data assets asm lib sound
 BIN_DIRS := bin bin/$(VERSION)
 
 # PC files

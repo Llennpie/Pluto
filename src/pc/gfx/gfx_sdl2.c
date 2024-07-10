@@ -39,7 +39,7 @@
 #include "pc/utils/misc.h"
 #include "pc/mods/mod_import.h"
 
-#include "src/saturn/saturn_imgui.h"
+#include "src/saturn/ui/saturn_imgui.h"
 
 #ifndef GL_MAX_SAMPLES
 #define GL_MAX_SAMPLES 0x8D57

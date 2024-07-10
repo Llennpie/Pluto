@@ -18,7 +18,7 @@
 #include "pc/lua/utils/smlua_misc_utils.h"
 #include "pc/lua/smlua_hooks.h"
 
-#include "saturn/saturn_imgui.h"
+#include "saturn/ui/saturn_imgui.h"
 
 #define CLAMP(_val, _min, _max) MAX(MIN((_val), _max), _min)
 

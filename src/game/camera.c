@@ -38,7 +38,7 @@
 #include "first_person_cam.h"
 
 #include "saturn/saturn.h"
-#include "saturn/saturn_imgui.h"
+#include "saturn/ui/saturn_imgui.h"
 
 #define CBUTTON_MASK (U_CBUTTONS | D_CBUTTONS | L_CBUTTONS | R_CBUTTONS)
 
