@@ -11,8 +11,8 @@ void saturn_file_browser_scan_directory(std::filesystem::path path, bool recursi
 void saturn_file_browser_rescan_directory(std::filesystem::path path, bool recursive = true);
 void saturn_file_browser_filter_extension(std::string extension);
 void saturn_file_browser_height(int height);
-bool saturn_file_browser_show(std::string id);
-bool saturn_file_browser_show_tree(std::string id);
+bool saturn_file_browser_show(std::string id, int exp_index);
+bool saturn_file_browser_show_tree(std::string id, int exp_index);
 std::filesystem::path saturn_file_browser_get_selected();
 
 

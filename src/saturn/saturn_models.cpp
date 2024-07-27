@@ -77,6 +77,10 @@ void LoadModelData(int index, bool enabled) {
         if (enabled || index == DynOS_Pack_GetCount() - 1)
             current_expressions = LoadExpressions(pack->mPath);
 
+        for (Expression expression : current_expressions) {
+            if (expression.Textures.size() > 0) expression.CurrentIndex = 0;
+        }
+
         if (enabled) active_saturn_model_index = index;
         else active_saturn_model_index = -1;
     }

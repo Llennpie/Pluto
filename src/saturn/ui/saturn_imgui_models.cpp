@@ -63,7 +63,7 @@ void OpenEyeSelector() {
         saturn_file_browser_filter_extension("png");
         saturn_file_browser_scan_directory(current_expressions[0].FolderPath);
         saturn_file_browser_height(150);
-        if (saturn_file_browser_show("eyes")) {
+        if (saturn_file_browser_show("eyes", 0)) {
             for (int i = 0; i < current_expressions[0].Textures.size(); i++) {
                 std::filesystem::path path = current_expressions[0].Textures[i].FilePath;
                 std::filesystem::path base = current_expressions[0].FolderPath;
@@ -135,7 +135,7 @@ void OpenModelExpressionSelector(PackData* pack) {
                     if (ImGui::BeginCombo(label_name.c_str(), defaultLabel.c_str(), ImGuiComboFlags_None)) {
                         saturn_file_browser_filter_extension("png");
                         saturn_file_browser_scan_directory(current_expressions[i].FolderPath);
-                        if (saturn_file_browser_show_tree("expr_" + std::to_string(i))) {
+                        if (saturn_file_browser_show_tree("expr_" + std::to_string(i), i)) {
                             for (int j = 0; j < current_expressions[i].Textures.size(); j++) {
                                 std::filesystem::path path = current_expressions[i].Textures[j].FilePath;
                                 std::filesystem::path base = current_expressions[i].FolderPath;

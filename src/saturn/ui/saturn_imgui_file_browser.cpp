@@ -7,6 +7,8 @@
 #include <algorithm>
 #include "saturn/libs/imgui/imgui.h"
 #include "saturn/ui/saturn_imgui_models.h"
+#include "saturn/saturn_models.h"
+#include "saturn/saturn_textures.h"
 
 class FileBrowserEntry {
 private:
@@ -123,12 +125,12 @@ void saturn_file_browser_clear() {
     extension_filter = "";
 }
 
-bool saturn_file_browser_create_imgui(FileBrowserEntry dir, std::string path, std::string browser_id, bool do_search) {
+bool saturn_file_browser_create_imgui(FileBrowserEntry dir, std::string path, std::string browser_id, bool do_search, int exp_index) {
     bool clicked = false;
     for (FileBrowserEntry& entry : dir.dir()) {
         if (entry.is_dir()) {
             if (ImGui::TreeNode(entry.name().c_str())) {
-                clicked |= saturn_file_browser_create_imgui(entry, path + entry.name() + "/", browser_id, do_search);
+                clicked |= saturn_file_browser_create_imgui(entry, path + entry.name() + "/", browser_id, do_search, exp_index);
                 ImGui::TreePop();
             }
         }
@@ -137,7 +139,8 @@ bool saturn_file_browser_create_imgui(FileBrowserEntry dir, std::string path, st
             std::transform(filename.begin(), filename.end(), filename.begin(), ::tolower);
             if (do_search) if (filename.find(search_terms[browser_id]) == std::string::npos) continue;
             std::string fullpath = path + entry.name();
-            bool selected = selected_paths[browser_id] == fullpath;
+            bool selected = selected_paths[browser_id] == fullpath ||
+                            current_expressions[exp_index].Textures[current_expressions[exp_index].CurrentIndex].FileName == entry.name();
             if (ImGui::Selectable(entry.name().c_str(), &selected)) {
                 selected_paths[browser_id] = fullpath;
                 selected_path = fullpath;
@@ -148,7 +151,7 @@ bool saturn_file_browser_create_imgui(FileBrowserEntry dir, std::string path, st
     return clicked;
 }
 
-bool saturn_file_browser_show(std::string id) {
+bool saturn_file_browser_show(std::string id, int exp_index) {
     selected_path = "";
     if (selected_paths.find(id) == selected_paths.end()) selected_paths.insert({ id, "" });
     if (search_terms.find(id) == search_terms.end()) {
@@ -159,14 +162,15 @@ bool saturn_file_browser_show(std::string id) {
     ImGui::BeginChild(("###file_browser_" + id).c_str(), ImVec2(200, browser_height), ImGuiChildFlags_Border);
     ImGui::SetNextItemWidth(ImGui::GetWindowWidth());
     ImGui::InputTextWithHint(("###searchbar_file_browser_" + id).c_str(), "Search...", search_terms[id], 256);
-    bool result = saturn_file_browser_create_imgui(root, "", id, true);
+    ImGui::Separator();
+    bool result = saturn_file_browser_create_imgui(root, "", id, true, exp_index);
     ImGui::EndChild();
     saturn_file_browser_clear();
     return result;
 }
 
-bool saturn_file_browser_show_tree(std::string id) {
-    bool result = saturn_file_browser_create_imgui(root, "", id, false);
+bool saturn_file_browser_show_tree(std::string id, int exp_index) {
+    bool result = saturn_file_browser_create_imgui(root, "", id, false, exp_index);
     saturn_file_browser_clear();
     return result;
 }
