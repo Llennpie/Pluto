@@ -545,7 +545,7 @@ u8 get_vertex_color(u8 index) {
 
 void set_vertex_color(u8 index, u8 value) {
     if (index > 2) { return; }
-    gVertexColor[index] = (auto_chroma) ? 255 : value;
+    gVertexColor[index] = (auto_chroma && !chroma_affects_light) ? 255 : value;
 }
 
 ///

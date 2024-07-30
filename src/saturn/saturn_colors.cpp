@@ -42,6 +42,7 @@ bool auto_chroma;
 ColorTemplate chromaColor           {0,   0,   255, 127, 0,   0  };
 bool chroma_show_objects;
 bool chroma_show_geo;
+bool chroma_affects_light = true;
 
 /* Converts a color template into a hex string */
 std::string HexifyColorTemplate(ColorTemplate &colorBodyPart) {
