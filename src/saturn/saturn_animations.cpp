@@ -239,6 +239,7 @@ const char* saturn_animations[] = {
 
 std::vector<std::string> pluto_animations_list;
 
+/* Loads a PlutoAnim struct from a given filepath */
 PlutoAnim LoadPAnim(std::string filePath) {
     PlutoAnim plutoAnim;
 
@@ -254,21 +255,25 @@ PlutoAnim LoadPAnim(std::string filePath) {
         for (int i = 0x00; i < 0x20; i++) {plutoAnim.Name += bytes[i];}
         for (int j = 0x20; j < 0x40; j++) {plutoAnim.Author += bytes[j];}
         
-        plutoAnim.Looping = (uint8_t)bytes[0x40];
-        plutoAnim.Length = (uint8_t)bytes[0x41];
-        plutoAnim.Nodes = (uint8_t)bytes[0x42];
+        int length1 = (uint8_t)bytes[0x41];
+        int length2 = (uint8_t)bytes[0x42];
+        plutoAnim.Length = (length1<<8)|(length2);
 
-        std::size_t values_pos = 0x49;
+        plutoAnim.Looping = (uint8_t)bytes[0x40] != 0x00;
+        plutoAnim.Nodes = (uint8_t)bytes[0x43];
+
+        std::size_t values_pos = 0x4A;
         std::size_t indices_pos;
 
         // Values
         std::vector<std::string> values;
         for (int v = values_pos; v < bytes.size(); v++) {
             if (bytes[v] == 'i' && bytes[v+1] == 'n' && bytes[v+2] == 'd' && bytes[v+3] == 'i' && bytes[v+4] == 'c' && bytes[v+5] == 'e' && bytes[v+6] == 's') {
-                indices_pos = v + 0x07;
+                indices_pos = v + 0x08;
+                //plutoAnim.Length = (uint8_t)bytes[indices_pos];
                 break;
             }
-            if (v % 2 == 0 && v > 0) {
+            if (v % 2 != 0 && v > 0) {
                 std::stringstream first, second;
                 first << std::setfill('0') << std::setw(2) << std::hex << (0xff & (unsigned int)bytes[v-1]);
                 second << std::setfill('0') << std::setw(2) << std::hex << (0xff & (unsigned int)bytes[v]);
@@ -283,7 +288,7 @@ PlutoAnim LoadPAnim(std::string filePath) {
         // Indices
         std::vector<std::string> indices;
         for (int i = indices_pos; i < bytes.size(); i++) {
-            if (i % 2 != 0 && i > 0) {
+            if (i % 2 == 0 && i > 0) {
                 std::stringstream first, second;
                 first << std::setfill('0') << std::setw(2) << std::hex << (0xff & (unsigned int)bytes[i-1]);
                 second << std::setfill('0') << std::setw(2) << std::hex << (0xff & (unsigned int)bytes[i]);
@@ -315,7 +320,8 @@ std::vector<std::string> GetPAnimList(std::string folderPath) {
     return panim_list;
 }
 
-void saturn_play_custom_animation() {
+/* Overwrites the currently played animation with the actively selected PlutoAnim */
+void saturn_play_pluto_animation() {
     PlutoAnim plutoAnim = LoadPAnim("dynos/anims/" + pluto_animations_list[selected_panim_index]);
     if (override_anim &&
     plutoAnim.Values.size() > 0 && plutoAnim.Indices.size() > 0) {
