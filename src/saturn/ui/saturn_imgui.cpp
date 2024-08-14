@@ -40,6 +40,7 @@ bool show_menu;
 bool show_window_machinima = true;
 bool show_window_cc_editor = true;
 bool show_window_model_settings = true;
+bool show_window_animations = true;
 
 void imgui_init_backend(SDL_Window* window, SDL_GLContext ctx) {
     current_window = window;
@@ -118,13 +119,7 @@ void imgui_update() {
                     ImGui::EndMenu();
                 }
 
-                // Animation Mixtape
-                if (gMarioStates[0].marioObj != NULL) {
-                if (ImGui::BeginMenu("Animation", freeze_camera && !enable_head_rotation)) {
-                    OpenAnimationsMenu();
-                    ImGui::EndMenu();
-                }
-                }
+                if (ImGui::MenuItem("Animation", NULL, show_window_animations, freeze_camera && !enable_head_rotation)) show_window_animations = !show_window_animations;
 
                 ImGui::Separator();
                 OpenModelSelector();
@@ -183,7 +178,13 @@ void imgui_update() {
             ImGui::End();
         }
 
+        // Animation Mixtape
+        if (gMarioStates[0].marioObj != NULL) {
+        ImGui::Begin("Animation Mixtape", &show_window_animations, ImGuiWindowFlags_AlwaysAutoResize);
+        OpenAnimationsMenu();
+        ImGui::End();
         BoneEditorWindow();
+        }
     }
 
     /*ImGui::Begin("Test");

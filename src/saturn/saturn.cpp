@@ -123,7 +123,7 @@ int saturn_camera_update() {
         // Misc. Animation
         if (gMarioStates[0].marioObj != NULL) {
             if (!pause_anim) paused_frame = gMarioStates[0].marioObj->header.gfx.animInfo.animFrame;
-            if (gMarioStates[0].forwardVel != 0.f && !pause_anim) override_anim = false;
+            if (gMarioStates[0].forwardVel != 0.f && (!pause_anim || enable_custom_anim)) override_anim = false;
         }
 
         return CAM_FROZEN;
@@ -136,7 +136,7 @@ int saturn_camera_update() {
 To-do: Cycle animations via the mixtape */
 void saturn_action_idle(struct MarioState *m) {
     if (enable_custom_anim && override_anim) saturn_play_pluto_animation();
-    else set_character_animation(m, (override_anim) ? selected_anim_index : CHAR_ANIM_FIRST_PERSON);
+    else force_set_character_animation(m, (override_anim) ? selected_anim_index : CHAR_ANIM_FIRST_PERSON);
     if (m->marioObj == NULL) return;
 
     // Spin/Angle
@@ -157,7 +157,7 @@ void saturn_action_idle(struct MarioState *m) {
         if (paused_frame > targetAnim->loopEnd-1) paused_frame = targetAnim->loopEnd-1;
         if (paused_frame < targetAnim->loopStart) paused_frame = targetAnim->loopStart;
     } else
-        if (!hang_anim && is_anim_past_end(m) && !targetAnimLooping) {
+        if (!hang_anim && is_anim_at_end(m) && !targetAnimLooping) {
             if (saturn_check_for_chainer() == false) {
                 override_anim = false;
                 set_mario_animation(m, MARIO_ANIM_START_CROUCHING);

@@ -382,18 +382,20 @@ void saturn_play_pluto_animation() {
 }
 
 bool saturn_check_for_chainer() {
-    return false;
-    /*if (selected_panim_index >= pluto_animations_list.size() - 1) return false;
+    if (!enable_custom_anim) return false;
+    if (selected_panim_index >= pluto_animations_list.size() - 1) return false;
 
     PlutoAnim currentAnim = LoadPAnim("dynos/anims/" + pluto_animations_list[selected_panim_index]);
     PlutoAnim nextAnim = LoadPAnim("dynos/anims/" + pluto_animations_list[selected_panim_index+1]);
 
-    if (currentAnim.Name.find_last_of(nextAnim.Name + "_") != std::string::npos) {
+    std::string key = pluto_animations_list[selected_panim_index].substr(0, pluto_animations_list[selected_panim_index].find_last_of("_"));
+    if (pluto_animations_list[selected_panim_index+1].find(key + "_") != std::string::npos) {
         selected_panim_index += 1;
+        current_pluto_anim = nextAnim;
         gMarioStates[0].marioObj->header.gfx.animInfo.animFrame = 0;
         override_anim = true;
         return true;
     }
 
-    return false;*/
+    return false;
 }

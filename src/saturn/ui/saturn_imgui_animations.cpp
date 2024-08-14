@@ -35,7 +35,7 @@ static char animSearchTerm[128];
 
 void BoneEditorWindow() {
     if (current_pluto_anim.Values.size() > 0 && pause_anim && is_editing_panim) {
-        ImGui::Begin("Edit Pluto Anim", &is_editing_panim, ImGuiWindowFlags_None);
+        ImGui::Begin("Animation Pose Editor", &is_editing_panim, ImGuiWindowFlags_AlwaysAutoResize);
         int currbone = 0;
 #define BONE_ENTRY(name) ImGui::DragFloat3(name, bone_rotations[currbone++]);
         BONE_ENTRY("Translation"    );
@@ -70,7 +70,7 @@ void OpenAnimationsMenu() {
         if (ImGui::BeginTabItem("Vanilla")) {
             enable_custom_anim = false;
             enable_bone_editor = false;
-            ImGui::SetNextItemWidth(200);
+            ImGui::SetNextItemWidth(208);
             if (ImGui::BeginCombo("###v_anim_combo", saturn_animations[selected_anim_index], ImGuiComboFlags_None)) {
                 ImGui::InputTextWithHint("###anim_search", "Search...", animSearchTerm, IM_ARRAYSIZE(animSearchTerm), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_CharsUppercase);
                 ImGui::Separator();
@@ -99,8 +99,8 @@ void OpenAnimationsMenu() {
                     loop_anim = current_pluto_anim.Looping;
                 }
 
-                ImGui::BeginChild("###p_anim_select", ImVec2(200, 125), ImGuiChildFlags_Border);
-                ImGui::SetNextItemWidth(200);
+                ImGui::BeginChild("###p_anim_select", ImVec2(208, 150), ImGuiChildFlags_Border);
+                ImGui::SetNextItemWidth(208);
                 ImGui::InputTextWithHint("###anim_search", "Search...", animSearchTerm, IM_ARRAYSIZE(animSearchTerm), ImGuiInputTextFlags_AutoSelectAll);
                 ImGui::Separator();
                 for (int n = 0; n < pluto_animations_list.size(); n++) {
@@ -121,7 +121,7 @@ void OpenAnimationsMenu() {
                 }
                 ImGui::EndChild();
 
-                ImGui::BeginChild("###p_metadata", ImVec2(200, 48), ImGuiChildFlags_Border);
+                ImGui::BeginChild("###p_metadata", ImVec2(208, 48), ImGuiChildFlags_Border);
                 ImGui::Text("%s", current_pluto_anim.Name.c_str());
                 if (ImGui::BeginItemTooltip()) {
                     ImGui::TextUnformatted(current_pluto_anim.Name.c_str());
@@ -159,7 +159,7 @@ void OpenAnimationsMenu() {
     ImGui::BeginDisabled(hang_anim);
     ImGui::SameLine(); ImGui::Checkbox("Loop", &loop_anim);
     ImGui::EndDisabled();
-    ImGui::Checkbox("Extra Bone", &mcomp_extra_bone);
+    //ImGui::Checkbox("Extra Bone", &mcomp_extra_bone);
 
     // Animation Editor
     if (enable_custom_anim) {
