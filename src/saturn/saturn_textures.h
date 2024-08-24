@@ -82,6 +82,7 @@ extern u8* GetTextureData(TexturePath, int*, int*);
 extern Expression LoadEyesFolder();
 std::vector<TexturePath> LoadExpressionTextures(std::string, Expression);
 std::vector<Expression> LoadExpressions(std::string);
+extern int GetValidExpressionCount(std::vector<Expression>);
 
 extern std::vector<Expression> current_expressions;
 

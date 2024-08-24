@@ -91,7 +91,7 @@ void OpenModelExpressionSelector(PackData* pack) {
 
     if (current_expressions.size() > 1) {
         // A scrollbar is visible if the expressions list is too long
-        if (current_expressions.size() > 8)
+        if (GetValidExpressionCount(current_expressions) > 8)
             ImGui::BeginChild(("###menu_exp_model"), ImVec2(200, 190), ImGuiChildFlags_ResizeY, ImGuiWindowFlags_NoBackground);
         
         ImGui::BeginTable("###menu_exp_table", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg, ImVec2(200, 0));
@@ -154,7 +154,7 @@ void OpenModelExpressionSelector(PackData* pack) {
             ImGui::EndDisabled();
         }
         ImGui::EndTable();
-        if (current_expressions.size() > 8) ImGui::EndChild();
+        if (GetValidExpressionCount(current_expressions) > 8) ImGui::EndChild();
     }
     if (!IsAllRGBA32(current_expressions) && !warning_dismissed) {
         ImGui::BeginChild("###menu_model_warning", ImVec2(200, 85), ImGuiChildFlags_Border, ImGuiWindowFlags_None);

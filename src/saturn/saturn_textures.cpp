@@ -156,6 +156,16 @@ Expression LoadEyesFolder() {
     return VanillaEyes;
 }
 
+int GetValidExpressionCount(std::vector<Expression> expressions_list) {
+    int count;
+    for (Expression expression : expressions_list) {
+        if (expression.Name == "eyes") continue;
+        if (expression.Textures.size() < 2) continue;
+        count++;
+    }
+    return count;
+}
+
 /* Handles texture replacement. Called from gfx_pc.c */
 const void* saturn_bind_texture(const void* input, Object* currentObj) {
     if (input == nullptr) return input;

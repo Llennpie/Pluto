@@ -57,6 +57,8 @@ int walkpoint_speed = 127;
 /* Returns false when an ImGui text widget is active (i.e. the user is editing text). */
 bool allow_game_input;
 
+extern struct Animation *gCurAnim;
+
 /* "Machinima Camera", an extended freeze camera function that allows for free/fly camera and C-Up. */
 int saturn_camera_update() {
     if (freeze_camera) {
@@ -135,12 +137,8 @@ int saturn_camera_update() {
 /* Custom Mario action, active when the player is idle and in machinima mode.
 To-do: Cycle animations via the mixtape */
 void saturn_action_idle(struct MarioState *m) {
-    if (enable_custom_anim && override_anim) saturn_play_pluto_animation();
-    else force_set_character_animation(m, (override_anim) ? selected_anim_index : CHAR_ANIM_FIRST_PERSON);
+    if (!(enable_custom_anim && override_anim)) force_set_character_animation(m, (override_anim) ? selected_anim_index : CHAR_ANIM_FIRST_PERSON);
     if (m->marioObj == NULL) return;
-
-    // Spin/Angle
-    walkpoint_speed = (m->action & ACT_FLAG_MOVING) ? 127 : player_speed;
 
     struct Animation *targetAnim = m->animation->targetAnim;
     // Animation-specific looping

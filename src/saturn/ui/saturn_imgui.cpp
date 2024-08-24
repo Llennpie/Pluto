@@ -97,6 +97,7 @@ void imgui_update() {
     allow_game_input = !ImGui::GetIO().WantTextInput;
 
     if (show_menu) {
+        if (gMarioStates[0].marioObj != NULL) {
         SDL_StartTextInput();
 
         // Main Menu
@@ -164,7 +165,15 @@ void imgui_update() {
             ImGui::Dummy(ImVec2(0, 15));
 
             ImGui::SetNextItemWidth(150);
-            ImGui::SliderInt("###walkpoint", &player_speed, 0, 127, "Walkpoint %d");
+            ImGui::SliderInt("###walkpoint", &walkpoint_speed, 0, 127, "Walkpoint %d");
+            if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+                ImGui::OpenPopup("###walkpointPresets");
+            if (ImGui::BeginPopup("###walkpointPresets")) {
+                if (ImGui::Selectable("Running")) walkpoint_speed = 127;
+                if (ImGui::Selectable("Walking")) walkpoint_speed = 36;
+                if (ImGui::Selectable("Tiptoe")) walkpoint_speed = 25;
+                ImGui::EndPopup();
+            }
             ImGui::Dummy(ImVec2(0, 15));
 
             // Angle
@@ -179,11 +188,13 @@ void imgui_update() {
         }
 
         // Animation Mixtape
-        if (gMarioStates[0].marioObj != NULL) {
-        ImGui::Begin("Animation Mixtape", &show_window_animations, ImGuiWindowFlags_AlwaysAutoResize);
-        OpenAnimationsMenu();
-        ImGui::End();
-        BoneEditorWindow();
+        if (show_window_animations &&
+            freeze_camera && !enable_head_rotation) {
+                ImGui::Begin("Animation Mixtape", &show_window_animations, ImGuiWindowFlags_AlwaysAutoResize);
+                OpenAnimationsMenu();
+                ImGui::End();
+                BoneEditorWindow();
+            }
         }
     }
 

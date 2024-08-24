@@ -340,44 +340,46 @@ PlutoAnim current_pluto_anim;
 
 /* Overwrites the currently played animation with the actively selected PlutoAnim */
 void saturn_play_pluto_animation() {
-    //set_character_animation(&gMarioStates[0], CHAR_ANIM_FIRST_PERSON);
-    //PlutoAnim plutoAnim = LoadPAnim("dynos/anims/" + pluto_animations_list[selected_panim_index]);
-    if (override_anim &&
-    current_pluto_anim.Values.size() > 0 && current_pluto_anim.Indices.size() > 0) {
-        // For some reason reading from the anim directly causes issues and copying over it this way seems to fix it
-        if (!is_editing_panim) {
-            struct AnimInfo* anim_info = &gMarioStates[0].marioObj->header.gfx.animInfo;
-            const u16* index = current_pluto_anim.Indices.data();
-            for (int i = 0; i < 21; i++) {
-                for (int j = 0; j < 3; j++) {
-                    int frame = anim_info->animFrame;
-                    int offset = 0;
-                    if (frame < index[0]) offset = index[1] + frame;
-                    else offset = index[1] + index[0] - 1;
-                    index += 2;
-                    bone_rotations[i][j] = (float)(current_pluto_anim.Values[offset]) * (i == 0 ? 1 : 360.f / 65536);
+    if (override_anim && freeze_camera &&
+        current_pluto_anim.Values.size() > 0 && current_pluto_anim.Indices.size() > 0) {
+            // Pose Editor
+            if (!is_editing_panim) {
+                // Copies the current frame's animation data into the pose editor when launched
+                struct AnimInfo* anim_info = &gMarioStates[0].marioObj->header.gfx.animInfo;
+                const u16* index = current_pluto_anim.Indices.data();
+                for (int i = 0; i < 21; i++) {
+                    for (int j = 0; j < 3; j++) {
+                        int frame = anim_info->animFrame;
+                        int offset = 0;
+                        if (frame < index[0]) offset = index[1] + frame;
+                        else offset = index[1] + index[0] - 1;
+                        index += 2;
+                        bone_rotations[i][j] = (float)(current_pluto_anim.Values[offset]) * (i == 0 ? 1 : 360.f / 65536);
+                    }
                 }
             }
-        }
-
-        // Overwrite values
-        for (int i = 0; i < 21; i++) {
-            for (int j = 0; j < 3; j++) {
-                bone_anim_values[i * 3 + j] = bone_rotations[i][j] * (i == 0 ? 1 : 65536 / 360);
+            // Generate values
+            for (int i = 0; i < 21; i++) {
+                for (int j = 0; j < 3; j++) {
+                    bone_anim_values[i * 3 + j] = bone_rotations[i][j] * (i == 0 ? 1 : 65536 / 360);
+                }
             }
-        }
-        gMarioStates[0].animation->targetAnim->flags = 1;
-        gMarioStates[0].animation->targetAnim->animYTransDivisor = 0;
-        gMarioStates[0].animation->targetAnim->startFrame = 0;
-        gMarioStates[0].animation->targetAnim->loopStart = 0;
-        gMarioStates[0].animation->targetAnim->loopEnd = (s16)current_pluto_anim.Length;
-        gMarioStates[0].animation->targetAnim->unusedBoneCount = current_pluto_anim.Indices.size() / 6 - 1;
-        gMarioStates[0].animation->targetAnim->values = bone_anim_values;
-        gMarioStates[0].animation->targetAnim->index = bone_anim_indices;
-        gMarioStates[0].animation->targetAnim->flags = is_editing_panim ? ANIM_FLAG_2 : 0;
-        gMarioStates[0].animation->targetAnim->length = (s16)current_pluto_anim.Length;
-        gMarioStates[0].marioObj->header.gfx.animInfo.curAnim = gMarioStates[0].animation->targetAnim;
-        gMarioStates[0].marioObj->header.gfx.animInfo.animYTrans = 0xBD;
+
+            // Create the custom animation struct
+            static Animation custom_animation;
+            custom_animation.flags = is_editing_panim ? ANIM_FLAG_2 : 0;
+            custom_animation.animYTransDivisor = 0;
+            custom_animation.startFrame = 0;
+            custom_animation.loopStart = 0;
+            custom_animation.loopEnd = (s16)current_pluto_anim.Length;
+            custom_animation.unusedBoneCount = current_pluto_anim.Indices.size() / 6 - 1;
+            custom_animation.values = (is_editing_panim) ? bone_anim_values : current_pluto_anim.Values.data();
+            custom_animation.valuesLength = current_pluto_anim.Values.size();
+            custom_animation.index = (is_editing_panim) ? bone_anim_indices : current_pluto_anim.Indices.data();
+            custom_animation.indexLength = current_pluto_anim.Indices.size();
+            custom_animation.length = (s16)current_pluto_anim.Length;
+            gMarioStates[0].marioObj->header.gfx.animInfo.curAnim = &custom_animation;
+            gMarioStates[0].marioObj->header.gfx.animInfo.animYTrans = 0xBD;
     }
 }
 
