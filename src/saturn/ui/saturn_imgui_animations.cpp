@@ -34,7 +34,7 @@ extern "C" {
 static char animSearchTerm[128];
 
 void BoneEditorWindow() {
-    if (current_pluto_anim.Values.size() > 0 && pause_anim && is_editing_panim) {
+    if (current_pluto_anim.Values.size() > 0 && pause_anim && is_editing_panim && override_anim) {
         ImGui::Begin("Animation Pose Editor", &is_editing_panim, ImGuiWindowFlags_AlwaysAutoResize);
         int currbone = 0;
 #define BONE_ENTRY(name) ImGui::DragFloat3(name, bone_rotations[currbone++]);
@@ -69,7 +69,6 @@ void OpenAnimationsMenu() {
     if (ImGui::BeginTabBar("###animation_tab_bar")) {
         if (ImGui::BeginTabItem("Vanilla")) {
             enable_custom_anim = false;
-            enable_bone_editor = false;
             ImGui::SetNextItemWidth(208);
             if (ImGui::BeginCombo("###v_anim_combo", saturn_animations[selected_anim_index], ImGuiComboFlags_None)) {
                 ImGui::InputTextWithHint("###anim_search", "Search...", animSearchTerm, IM_ARRAYSIZE(animSearchTerm), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_CharsUppercase);
@@ -91,15 +90,13 @@ void OpenAnimationsMenu() {
             ImGui::EndTabItem();
         }
         if (ImGui::IsItemClicked()) {
-            override_anim = false;
             force_set_character_animation(&gMarioStates[0], CHAR_ANIM_FIRST_PERSON);
         }
         if (pluto_animations_list.size() > 0) {
             if (ImGui::BeginTabItem("PAnim")) {
                 enable_custom_anim = true;
-                if (!is_editing_panim) enable_bone_editor = false;
                 if (current_pluto_anim.Length == -1) {
-                    current_pluto_anim = LoadPAnim("dynos/anims/" + pluto_animations_list[0]);
+                    current_pluto_anim = LoadPAnim(pluto_animations_list[0].FilePath);
                     loop_anim = current_pluto_anim.Looping;
                 }
 
@@ -110,13 +107,13 @@ void OpenAnimationsMenu() {
                 for (int n = 0; n < pluto_animations_list.size(); n++) {
                     const bool is_selected = (selected_panim_index == n);
 
-                    if (pluto_animations_list[n].find(animSearchTerm) == std::string::npos &&
+                    if (pluto_animations_list[n].FileName.find(animSearchTerm) == std::string::npos &&
                         std::string(animSearchTerm) != "")
                         continue;
 
-                    if (ImGui::Selectable(pluto_animations_list[n].c_str(), is_selected)) {
+                    if (ImGui::Selectable(pluto_animations_list[n].FileName.c_str(), is_selected)) {
                         selected_panim_index = n;
-                        current_pluto_anim = LoadPAnim("dynos/anims/" + pluto_animations_list[n]);
+                        current_pluto_anim = LoadPAnim(pluto_animations_list[n].FilePath);
                         loop_anim = current_pluto_anim.Looping;
                         mcomp_extra_bone = current_pluto_anim.BoneCount > 20 ? true : false;
                     }
@@ -140,7 +137,6 @@ void OpenAnimationsMenu() {
                 ImGui::EndTabItem();
             }
             if (ImGui::IsItemClicked()) {
-                override_anim = false;
                 pluto_animations_list = GetPAnimList("dynos/anims");
             }
         }
@@ -159,7 +155,8 @@ void OpenAnimationsMenu() {
             ImGui::BeginDisabled(!pause_anim);
                 ImGui::SliderInt("###animation_frame", &paused_frame, gMarioStates[0].marioObj->header.gfx.animInfo.curAnim->loopStart, gMarioStates[0].marioObj->header.gfx.animInfo.curAnim->loopEnd-1, "frame %d", ImGuiSliderFlags_AlwaysClamp);
             ImGui::EndDisabled();
-            ImGui::Checkbox("Paused", &pause_anim);
+            if (ImGui::Checkbox("Paused", &pause_anim))
+                if (!pause_anim) hang_anim = false;
         ImGui::EndDisabled();
         ImGui::SameLine(); ImGui::Checkbox("Hang", &hang_anim);
         ImGui::BeginDisabled(hang_anim);
@@ -169,7 +166,7 @@ void OpenAnimationsMenu() {
 
     // Pose Editor
     if (enable_custom_anim) {
-        ImGui::BeginDisabled(current_pluto_anim.Values.size() <= 0 || !pause_anim);
+        ImGui::BeginDisabled(current_pluto_anim.Values.size() <= 0 || !pause_anim && override_anim);
         if (ImGui::Button("Edit Pose")) is_editing_panim = !is_editing_panim;
         ImGui::EndDisabled();
     }

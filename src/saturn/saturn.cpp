@@ -140,7 +140,7 @@ void saturn_action_idle(struct MarioState *m) {
     if (!(enable_custom_anim && override_anim)) force_set_character_animation(m, (override_anim) ? selected_anim_index : CHAR_ANIM_FIRST_PERSON);
     if (m->marioObj == NULL) return;
 
-    struct Animation *targetAnim = m->animation->targetAnim;
+    struct Animation *targetAnim = m->marioObj->header.gfx.animInfo.curAnim;
     // Animation-specific looping
     if (override_anim) {
         if (loop_anim && !hang_anim) m->animation->targetAnim->flags &= ~ANIM_FLAG_NOLOOP;
@@ -149,16 +149,25 @@ void saturn_action_idle(struct MarioState *m) {
     bool targetAnimLooping = (m->animation->targetAnim->flags & ANIM_FLAG_NOLOOP) == 0;
 
     // Flip-flop
-    if (pause_anim && override_anim) {
-        m->marioObj->header.gfx.animInfo.animFrame = paused_frame;
-        // If the animation goes OOB
-        if (paused_frame > targetAnim->loopEnd-1) paused_frame = targetAnim->loopEnd-1;
-        if (paused_frame < targetAnim->loopStart) paused_frame = targetAnim->loopStart;
-    } else
-        if (!hang_anim && is_anim_at_end(m) && !targetAnimLooping) {
-            if (saturn_check_for_chainer() == false) {
-                override_anim = false;
-                set_mario_animation(m, MARIO_ANIM_START_CROUCHING);
+    if (override_anim) {
+        if (pause_anim) {
+            m->marioObj->header.gfx.animInfo.animFrame = paused_frame;
+            // If the animation goes OOB
+            if (paused_frame > targetAnim->loopEnd-1) paused_frame = targetAnim->loopEnd-1;
+            if (paused_frame < targetAnim->loopStart) paused_frame = targetAnim->loopStart;
+        } else {
+            if (is_anim_at_end(m)) {
+                if (hang_anim) { pause_anim = true; paused_frame = m->marioObj->header.gfx.animInfo.animFrame; }
+                else if (!targetAnimLooping) {
+                    if (saturn_check_for_chainer() == false) {
+                        override_anim = false;
+                        set_mario_animation(m, MARIO_ANIM_START_CROUCHING);
+                    }
+                }
             }
         }
+    } else {
+        pause_anim = false;
+        is_editing_panim = false;
+    }
 }

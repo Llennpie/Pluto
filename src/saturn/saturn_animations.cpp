@@ -238,9 +238,8 @@ const char* saturn_animations[] = {
     "TRIPLE_JUMP_FLY"
 };
 
-std::vector<std::string> pluto_animations_list;
+std::vector<PlutoAnim> pluto_animations_list;
 bool is_editing_panim;
-bool enable_bone_editor;
 Vec3f bone_rotations[21];
 
 s16 ReadS16(std::vector<char> data, int index) {
@@ -290,12 +289,11 @@ PlutoAnim LoadPAnim(std::string filePath) {
 
         plutoAnim.BoneCount = plutoAnim.Indices.size() / 6 - 1;
     }
-
     return plutoAnim;
 }
 
-std::vector<std::string> GetPAnimList(std::string folderPath) {
-    std::vector<std::string> panim_list;
+std::vector<PlutoAnim> GetPAnimList(std::string folderPath) {
+    std::vector<PlutoAnim> panim_list;
 
     std::filesystem::create_directory(folderPath);
     if (std::filesystem::exists(folderPath)) {
@@ -303,8 +301,12 @@ std::vector<std::string> GetPAnimList(std::string folderPath) {
             std::filesystem::path path = entry.path();
             
             if (std::filesystem::is_directory(path)) continue;
-            if (path.extension().u8string() == ".panim")
-                panim_list.push_back(path.filename().u8string());
+            if (path.extension().generic_string() == ".panim") {
+                PlutoAnim panim;
+                panim.FileName = path.filename().generic_string();
+                panim.FilePath = path.generic_string();
+                panim_list.push_back(panim);
+            }
         }
     }
 
@@ -340,7 +342,7 @@ PlutoAnim current_pluto_anim;
 
 /* Overwrites the currently played animation with the actively selected PlutoAnim */
 void saturn_play_pluto_animation() {
-    if (override_anim && freeze_camera &&
+    if (override_anim && freeze_camera && enable_custom_anim &&
         current_pluto_anim.Values.size() > 0 && current_pluto_anim.Indices.size() > 0) {
             // Pose Editor
             if (!is_editing_panim) {
@@ -383,17 +385,14 @@ void saturn_play_pluto_animation() {
     }
 }
 
+/* Returns true if the next custom animation is part of the "Chainer queue" i.e. anim_00.panim, anim_01.panim, anim_02.panim... */
 bool saturn_check_for_chainer() {
     if (!enable_custom_anim) return false;
     if (selected_panim_index >= pluto_animations_list.size() - 1) return false;
 
-    PlutoAnim currentAnim = LoadPAnim("dynos/anims/" + pluto_animations_list[selected_panim_index]);
-    PlutoAnim nextAnim = LoadPAnim("dynos/anims/" + pluto_animations_list[selected_panim_index+1]);
-
-    std::string key = pluto_animations_list[selected_panim_index].substr(0, pluto_animations_list[selected_panim_index].find_last_of("_"));
-    if (pluto_animations_list[selected_panim_index+1].find(key + "_") != std::string::npos) {
+    if (pluto_animations_list[selected_panim_index].HasQueue() && pluto_animations_list[selected_panim_index+1].HasQueue()) {
         selected_panim_index += 1;
-        current_pluto_anim = nextAnim;
+        current_pluto_anim = LoadPAnim(pluto_animations_list[selected_panim_index+1].FilePath);
         gMarioStates[0].marioObj->header.gfx.animInfo.animFrame = 0;
         override_anim = true;
         return true;
