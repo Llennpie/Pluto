@@ -64,12 +64,14 @@ void imgui_handle_events(SDL_Event* event) {
     ImGui_ImplSDL2_ProcessEvent(event);
     switch (event->type) {
         case SDL_KEYDOWN:
-            if (event->key.keysym.sym == SDLK_F12) {
+            if (event->key.keysym.sym == SDLK_F12)
                 show_menu = !show_menu;
-            }
-            if (event->key.keysym.sym == SDLK_F5) {
+
+            if (event->key.keysym.sym == SDLK_F2)
+                enable_hud = !enable_hud;
+
+            if (event->key.keysym.sym == SDLK_F5)
                 auto_chroma = !auto_chroma;
-            }
 
             if (!gDjuiInMainMenu && !gDjuiChatBoxFocus && !gDjuiConsoleFocus && allow_game_input) {
                 if (event->key.keysym.sym == SDLK_f)
@@ -80,9 +82,8 @@ void imgui_handle_events(SDL_Event* event) {
                         gMarioStates[0].marioObj->header.gfx.animInfo.animFrame = 0;
                         override_anim = true;
                     }
-                    if (event->key.keysym.sym == SDLK_p && override_anim) {
+                    if (event->key.keysym.sym == SDLK_p && override_anim)
                         pause_anim = !pause_anim;
-                    }
                 }
             }
             break;
