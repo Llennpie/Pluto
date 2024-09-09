@@ -632,7 +632,8 @@ static void geo_process_translation_rotation(struct GraphNodeTranslationRotation
     if (!increment_mat_stack()) { return; }
 
     if (node->displayList != NULL) {
-        geo_append_display_list(node->displayList, node->node.flags >> 8);
+        if ((!auto_chroma || (auto_chroma && chroma_show_geo)) || gCurGraphNodeObject != NULL)
+            geo_append_display_list(node->displayList, node->node.flags >> 8);
     }
     if (node->node.children != NULL) {
         geo_process_node_and_siblings(node->node.children);
@@ -661,7 +662,8 @@ static void geo_process_translation(struct GraphNodeTranslation *node) {
     if (!increment_mat_stack()) { return; }
 
     if (node->displayList != NULL) {
-        geo_append_display_list(node->displayList, node->node.flags >> 8);
+        if ((!auto_chroma || (auto_chroma && chroma_show_geo)) || gCurGraphNodeObject != NULL)
+            geo_append_display_list(node->displayList, node->node.flags >> 8);
     }
     if (node->node.children != NULL) {
         geo_process_node_and_siblings(node->node.children);
@@ -696,7 +698,8 @@ static void geo_process_rotation(struct GraphNodeRotation *node) {
     if (!increment_mat_stack()) { return; }
 
     if (node->displayList != NULL) {
-        geo_append_display_list(node->displayList, node->node.flags >> 8);
+        if ((!auto_chroma || (auto_chroma && chroma_show_geo)) || gCurGraphNodeObject != NULL)
+            geo_append_display_list(node->displayList, node->node.flags >> 8);
     }
     if (node->node.children != NULL) {
         geo_process_node_and_siblings(node->node.children);
@@ -777,7 +780,8 @@ static void geo_process_billboard(struct GraphNodeBillboard *node) {
     if (!increment_mat_stack()) { return; }
 
     if (node->displayList != NULL) {
-        geo_append_display_list(node->displayList, node->node.flags >> 8);
+        if ((!auto_chroma || (auto_chroma && chroma_show_geo)) || gCurGraphNodeObject != NULL)
+            geo_append_display_list(node->displayList, node->node.flags >> 8);
     }
     if (node->node.children != NULL) {
         geo_process_node_and_siblings(node->node.children);
