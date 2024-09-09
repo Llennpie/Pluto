@@ -72,7 +72,13 @@ void OpenEyeSelector() {
                     if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl)) {
                         // Custom blink cycle
                         if (current_expressions[0].BlinkIndex[0] == -1) current_expressions[0].BlinkIndex[0] = i;
-                        else current_expressions[0].BlinkIndex[1] = i;
+                        else if (current_expressions[0].BlinkIndex[1] == -1) current_expressions[0].BlinkIndex[1] = i;
+                        else {
+                            // Clear
+                            current_expressions[0].CurrentIndex = i;
+                            current_expressions[0].BlinkIndex[0] = -1;
+                            current_expressions[0].BlinkIndex[1] = -1;
+                        }
                     } else {
                         // Set expression index
                         current_expressions[0].CurrentIndex = i;
@@ -83,6 +89,20 @@ void OpenEyeSelector() {
                 }
             }
         }
+
+        if (ImGui::IsItemHovered() && ImGui::IsKeyDown(ImGuiKey_LeftCtrl)) {
+            ImGui::BeginTooltip();
+            ImGui::Text("Frame 1: %s", current_expressions[0].Textures[current_expressions[0].CurrentIndex].ShortFileName().c_str());
+            ImGui::BeginDisabled(current_expressions[0].BlinkIndex[0] == -1);
+                ImGui::Text("Frame 2: %s", (current_expressions[0].BlinkIndex[0] == -1) ? "Click to set" : current_expressions[0].Textures[current_expressions[0].BlinkIndex[0]].ShortFileName().c_str());
+            ImGui::EndDisabled();
+            ImGui::BeginDisabled(current_expressions[0].BlinkIndex[1] == -1);
+                if (current_expressions[0].BlinkIndex[0] == -1) ImGui::Text("Frame 3:"); else
+                ImGui::Text("Frame 3: %s", (current_expressions[0].BlinkIndex[1] == -1) ? "Click to set" : current_expressions[0].Textures[current_expressions[0].BlinkIndex[1]].ShortFileName().c_str());
+            ImGui::EndDisabled();
+            ImGui::EndTooltip();
+        }
+
         ImGui::EndDisabled();
         TexturePopupMenu(0);
     }
