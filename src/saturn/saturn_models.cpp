@@ -37,6 +37,18 @@ bool AnyModelsEnabled() {
 bool IsSaturnModel(int index) {
     PackData* pack = DynOS_Pack_GetFromIndex(index);
 
+    // If the gfx data is already loaded, just check if it affects Mario at all
+    if (pack->mLoaded) {
+        for (auto& pair : pack->mGfxData) {
+            for (s32 geoIndex = pair.second->mGeoLayouts.Count() - 1; geoIndex >= 0; geoIndex--) {
+                auto &_GeoNode = pair.second->mGeoLayouts[geoIndex];
+                String _GeoRootName = _GeoNode->mName;
+                if (_GeoRootName == "mario_geo") return true;
+            }
+        }
+    }
+
+    // Failsafe by checking for Saturn-specific files and folders
     return (std::filesystem::is_directory(std::filesystem::path(pack->mPath + "/expressions")) ||
             std::filesystem::is_directory(std::filesystem::path(pack->mPath + "/colorcodes")) ||
             std::filesystem::exists(std::filesystem::path(pack->mPath + "/model.json")) ||
