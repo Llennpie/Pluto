@@ -21,6 +21,7 @@
 
 #include "saturn/saturn.h"
 #include "saturn/saturn_colors.h"
+#include "saturn/ui/saturn_imgui.h"
 
 /**
  * This file contains the code that processes the scene graph for rendering.
@@ -843,6 +844,11 @@ static void geo_process_generated_list(struct GraphNodeGenerated *node) {
  */
 static void geo_process_background(struct GraphNodeBackground *node) {
     Gfx *list = NULL;
+
+    if (capture_screenshot && screenshot_hides_skybox) {
+        skybox_has_deinit = true;
+        return;
+    }
 
     if (node->fnNode.func != NULL) {
         Vec3f posCopy;

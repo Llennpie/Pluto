@@ -12,6 +12,7 @@
 #include "hud.h"
 
 #include "saturn/saturn_colors.h"
+#include "saturn/ui/saturn_imgui.h"
 
 /**
  * @file skybox.c
@@ -475,6 +476,8 @@ Gfx *create_skybox_facing_camera(s8 player, s8 background, f32 fov,
     f32 cameraFaceY = focY - posY;
     f32 cameraFaceZ = focZ - posZ;
     s8 colorIndex = 1;
+    
+    if (capture_screenshot && screenshot_hides_skybox) return NULL;
 
     if (auto_chroma) {
         sSkyboxColors[0][0] = chromaColor.red[0];

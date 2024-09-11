@@ -714,8 +714,13 @@ GLuint rendertexture_id;
 static void gfx_opengl_start_frame(void) {
     frame_count++;
 
-    if (!framebuffer_created) {
-        framebuffer_created = true;
+    if (configWindow.msaa > 0) {
+        glEnable(GL_MULTISAMPLE);
+    } else {
+        glDisable(GL_MULTISAMPLE);
+    }
+
+    if (capture_screenshot && (skybox_has_deinit || !screenshot_hides_skybox)) {
         glGenFramebuffers(1, &framebuffer_id);
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_id);
         glGenTextures(1, &rendertexture_id);
@@ -728,12 +733,7 @@ static void gfx_opengl_start_frame(void) {
         glBindRenderbuffer(GL_RENDERBUFFER, depthbuffer_id);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, gfx_current_dimensions.width, gfx_current_dimensions.height);
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthbuffer_id);
-    }
-
-    if (configWindow.msaa > 0) {
-        glEnable(GL_MULTISAMPLE);
-    } else {
-        glDisable(GL_MULTISAMPLE);
+        framebuffer_created = true;
     }
 
     glDisable(GL_SCISSOR_TEST);
@@ -749,13 +749,14 @@ static void gfx_opengl_start_frame(void) {
 static void gfx_opengl_end_frame(void) {
     if (framebuffer_created) {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        imgui_set_framebuffer((void*)(intptr_t)rendertexture_id);
+        imgui_capture_screenshot((void*)(intptr_t)rendertexture_id);
     }
     imgui_update();
     if (framebuffer_created) {
         glDeleteFramebuffers(1, &framebuffer_id);
         glDeleteRenderbuffers(1, &depthbuffer_id);
         glDeleteTextures(1, &rendertexture_id);
+        framebuffer_created = false;
     }
 }
 

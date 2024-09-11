@@ -12,11 +12,15 @@ extern "C" {
 #endif
     extern bool show_menu;
     extern bool show_window_model_settings;
+    
+    extern bool capture_screenshot;
+    extern bool screenshot_hides_skybox;
 
     void imgui_init_backend(SDL_Window*, SDL_GLContext);
     void imgui_handle_events(SDL_Event*);
     void imgui_update();
-    void imgui_set_framebuffer(void*);
+    extern bool skybox_has_deinit;
+    void imgui_capture_screenshot(void*);
 
     void UpdatePaletteFromEditor(int);
 #ifdef __cplusplus
