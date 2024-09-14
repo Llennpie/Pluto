@@ -128,7 +128,7 @@ const char *sys_user_path(void) {
     static char path[SYS_MAX_PATH] = { 0 };
 
     // get the new pref path from SDL
-    char *sdlpath = SDL_GetPrefPath("", "sm64ex-coop");
+    char *sdlpath = SDL_GetPrefPath("Llennpie", "Pluto");
     if (sdlpath) {
         const unsigned int len = strlen(sdlpath);
         strncpy(path, sdlpath, sizeof(path));
