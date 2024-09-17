@@ -137,6 +137,8 @@ std::vector<Expression> LoadExpressions(std::string modelFolderPath) {
                 } else {
                     expressions_list.push_back(expression);
                 }
+
+                expression.ModelFolderPath = modelFolderPath;
             }
         }
     }
@@ -146,6 +148,18 @@ std::vector<Expression> LoadExpressions(std::string modelFolderPath) {
         expressions_list.insert(expressions_list.begin(), LoadEyesFolder());
 
     return expressions_list;
+}
+
+void Expression::Refresh() {
+    if (std::filesystem::is_directory(std::filesystem::path(this->FolderPath))) {
+        for (const auto & entry : std::filesystem::directory_iterator(this->FolderPath)) {
+            if (std::filesystem::is_directory(entry.path())) {
+                this->Textures = LoadExpressionTextures(this->FolderPath, *this);
+                if (this->CurrentIndex <= this->Textures.size())
+                    this->CurrentIndex = 0;
+            }
+        }
+    }
 }
 
 /* Loads textures from dynos/eyes/ into a global Expression */

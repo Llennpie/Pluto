@@ -7,6 +7,8 @@
 #include <algorithm>
 #include "saturn/libs/imgui/imgui.h"
 #include "saturn/ui/saturn_imgui_models.h"
+#include "saturn/ui/saturn_imgui_colors.h"
+#include "saturn/saturn.h"
 #include "saturn/saturn_models.h"
 #include "saturn/saturn_textures.h"
 
@@ -152,9 +154,31 @@ bool saturn_file_browser_create_imgui(FileBrowserEntry dir, std::string path, st
                 selected_path = fullpath;
                 clicked = true;
             }
+            if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(1)) {
+                current_expressions[exp_index].Textures = LoadExpressionTextures(current_expressions[exp_index].FolderPath, current_expressions[exp_index]);
+                clicked = true;
+            }
         }
     }
     return clicked;
+}
+
+void saturn_file_browser_tools(std::string id, bool search, int exp_index) {
+    ImGui::SetNextItemWidth(35);
+    if (ImGui::Button(("Refresh###refresh_file_browser" + id).c_str())) {
+        if (scanned_paths.find(last_scanned_path) != scanned_paths.end()) {
+            free(scanned_paths[last_scanned_path]);
+            scanned_paths.erase(last_scanned_path);
+        }
+        current_expressions[exp_index].Refresh();
+        UpdateEditorLabels();
+    }
+    if (search) {
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(ImGui::GetWindowWidth()-35);
+        ImGui::InputTextWithHint(("###searchbar_file_browser_" + id).c_str(), "Search...", search_terms[id], 256);
+    }
+    ImGui::Separator();
 }
 
 bool saturn_file_browser_show(std::string id, int exp_index) {
@@ -166,9 +190,7 @@ bool saturn_file_browser_show(std::string id, int exp_index) {
         search_terms.insert({ id, search });
     }
     ImGui::BeginChild(("###file_browser_" + id).c_str(), ImVec2(200, browser_height), ImGuiChildFlags_Border);
-    ImGui::SetNextItemWidth(ImGui::GetWindowWidth());
-    ImGui::InputTextWithHint(("###searchbar_file_browser_" + id).c_str(), "Search...", search_terms[id], 256);
-    ImGui::Separator();
+    saturn_file_browser_tools(id, true, exp_index);
     bool result = saturn_file_browser_create_imgui(root, "", id, true, exp_index);
     ImGui::EndChild();
     saturn_file_browser_clear();
@@ -176,6 +198,14 @@ bool saturn_file_browser_show(std::string id, int exp_index) {
 }
 
 bool saturn_file_browser_show_tree(std::string id, int exp_index) {
+    selected_path = "";
+    if (selected_paths.find(id) == selected_paths.end()) selected_paths.insert({ id, "" });
+    if (search_terms.find(id) == search_terms.end()) {
+        char* search = (char*)malloc(256);
+        search[0] = 0;
+        search_terms.insert({ id, search });
+    }
+    saturn_file_browser_tools(id, false, exp_index);
     bool result = saturn_file_browser_create_imgui(root, "", id, false, exp_index);
     saturn_file_browser_clear();
     return result;

@@ -73,8 +73,13 @@ public:
         return false;
     }
 
+    void Refresh();
+
     /* An array of indexes making up a custom blink cycle; Only used by eyes */
     int BlinkIndex[2] = {-1, -1};
+
+    /* Stored model folder path for later refreshes */
+    std::string ModelFolderPath;
 };
 
 extern u8* GetTextureData(TexturePath, int*, int*);

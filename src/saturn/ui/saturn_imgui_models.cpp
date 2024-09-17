@@ -42,19 +42,6 @@ const char* powerup_switches[] = {"Default", "None", "Vanish", "Metal", "Vanish 
 
 bool warning_dismissed;
 
-void TexturePopupMenu(int id) {
-    std::string label_name = "###menu_texture_popout_" + std::to_string(id);
-    
-    if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
-        ImGui::OpenPopup(label_name.c_str());
-    if (ImGui::BeginPopup(label_name.c_str())) {
-        ImGui::TextDisabled("#%i", id); ImGui::SameLine();
-        ImGui::Text(current_expressions[id].Textures[current_expressions[id].CurrentIndex].FileName.c_str()); ImGui::SameLine();
-        ImGui::TextDisabled(current_expressions[id].Format.c_str());
-        ImGui::EndPopup();
-    }
-}
-
 void OpenEyeSelector() {
     if (current_expressions.size() <= 0) return;
     if (current_expressions[0].Name == "eyes") {
@@ -103,7 +90,6 @@ void OpenEyeSelector() {
         }
 
         ImGui::EndDisabled();
-        TexturePopupMenu(0);
     }
 }
 
@@ -154,9 +140,6 @@ void OpenModelExpressionSelector(PackData* pack) {
                             if (is_selected) current_expressions[i].CurrentIndex = select_index;
                             else current_expressions[i].CurrentIndex = deselect_index;
                         }
-                        // Popout showing the checkbox's actively displayed value
-                        // This is technically the opposite of the dropdowns and selectables, which shows the value-that-will-be, not current
-                        TexturePopupMenu(i);
                 } else {
                     // Use dropdown
                     std::string defaultLabel = expression.Textures[expression.CurrentIndex].ShortFileName();
@@ -177,7 +160,6 @@ void OpenModelExpressionSelector(PackData* pack) {
                         ImGui::EndCombo();
                     }
                     ImGui::PopItemWidth();
-                    TexturePopupMenu(i);
                 }
             }
             ImGui::EndDisabled();
@@ -228,9 +210,7 @@ void OpenModelCCSelector(PackData* pack, std::vector<std::string> cc_list) {
             ImGui::Separator();
             ImGui::TextDisabled("%i color code(s)", cc_list.size());
             if (ImGui::Button("Refresh")) {
-                current_expressions.clear();
                 UpdateEditorLabels();
-                LoadModelData(active_saturn_model_index, pack->mEnabled);
                 ImGui::CloseCurrentPopup();
             }
             ImGui::EndPopup();
@@ -271,9 +251,7 @@ void OpenSwitchOptions() {
     }
     ImGui::Separator();
 
-    //ImGui::BeginDisabled(custom_eyes);
     ImGui::Combo("Eyes###eye_state", &switch_state_eyes, eye_switches, IM_ARRAYSIZE(eye_switches));
-    //ImGui::EndDisabled();
     ImGui::Combo("Right Hand###right_hand_state", &switch_state_hand_right, right_hand_switches, IM_ARRAYSIZE(right_hand_switches));
     ImGui::Combo("Left Hand###left_hand_state", &switch_state_hand_left, left_hand_switches, IM_ARRAYSIZE(left_hand_switches));
     ImGui::Combo("Cap###cap_state", &switch_state_cap, cap_switches, IM_ARRAYSIZE(cap_switches));
@@ -349,12 +327,6 @@ void OpenModelSelector() {
                 }
                 LoadModelData(i, pack->mEnabled);
                 if (active_saturn_model_index == -1) custom_eyes = false;
-
-                //for (int n = 0; n < pack->mGfxData.Count(); n++) {
-                    ImGui::LogToClipboard();
-                    ImGui::LogText(pack->mGfxData[0].first);
-                    ImGui::LogFinish();
-                //}
             }
             ImGui::EndDisabled();
             
