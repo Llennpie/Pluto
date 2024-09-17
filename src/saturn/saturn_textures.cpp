@@ -81,6 +81,8 @@ u8* GetTextureData(TexturePath Texture, int* Width, int* Height) {
     return _Buffer;
 }
 
+bool sortAlphabetically (TexturePath a, TexturePath b) { return a.FilePath < b.FilePath; }
+
 /* Loads textures into an Expression */
 std::vector<TexturePath> LoadExpressionTextures(std::string FolderPath, Expression expression) {
     std::vector<TexturePath> textures;
@@ -94,11 +96,12 @@ std::vector<TexturePath> LoadExpressionTextures(std::string FolderPath, Expressi
                     TexturePath texture;
                     texture.FileName = entry.path().filename().generic_u8string();
                     texture.FilePath = entry.path().generic_u8string();
-                    texture.RawData = GetTextureData(texture, &texture.Width, &texture.Height);
+                    //texture.RawData = GetTextureData(texture, &texture.Width, &texture.Height);
                     textures.push_back(texture);
                 }
             }
         }
+        std::sort(textures.begin(), textures.end(), sortAlphabetically);
     }
     return textures;
 }
@@ -158,6 +161,7 @@ void Expression::Refresh() {
                 this->Textures = LoadExpressionTextures(this->FolderPath, *this);
                 if (this->CurrentIndex <= this->Textures.size())
                     this->CurrentIndex = 0;
+                this->Textures[this->CurrentIndex].RawData = 0;
             }
         }
     }
@@ -209,6 +213,13 @@ const void* saturn_bind_texture(const void* input, Object* currentObj) {
                 if (expression.Format != "rgba32" && !format_warning_dismissed) return input;
 
                 current_expressions[i].Visible = true;
+
+                if (gMarioStates[0].marioObj != NULL &&
+                    expression.Textures[expression.CurrentIndex].RawData == 0) {
+                    current_expressions[i].Textures[expression.CurrentIndex].RawData =  GetTextureData(current_expressions[i].Textures[expression.CurrentIndex],
+                                                                                        &current_expressions[i].Textures[expression.CurrentIndex].Width,
+                                                                                        &current_expressions[i].Textures[expression.CurrentIndex].Height);
+                }
 
                 // Custom blink cycle
                 if (expression.Name == "eyes" && current_expressions.size() >= 3 &&

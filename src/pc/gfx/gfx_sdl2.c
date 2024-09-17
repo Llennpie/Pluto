@@ -90,8 +90,6 @@ static void gfx_sdl_reset_dimension_and_pos(void) {
     }
 
     if (configWindow.reset) {
-        configWindow.x = WAPI_WIN_CENTERPOS;
-        configWindow.y = WAPI_WIN_CENTERPOS;
         configWindow.w = DESIRED_SCREEN_WIDTH;
         configWindow.h = DESIRED_SCREEN_HEIGHT;
         configWindow.reset = false;
@@ -99,8 +97,8 @@ static void gfx_sdl_reset_dimension_and_pos(void) {
         return;
     }
 
-    int xpos = (configWindow.x == WAPI_WIN_CENTERPOS) ? SDL_WINDOWPOS_CENTERED : configWindow.x;
-    int ypos = (configWindow.y == WAPI_WIN_CENTERPOS) ? SDL_WINDOWPOS_CENTERED : configWindow.y;
+    int xpos = SDL_WINDOWPOS_CENTERED;
+    int ypos = SDL_WINDOWPOS_CENTERED;
 
     SDL_SetWindowSize(wnd, configWindow.w, configWindow.h);
     SDL_SetWindowPosition(wnd, xpos, ypos);
