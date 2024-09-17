@@ -82,6 +82,8 @@ public:
     std::string ModelFolderPath;
 };
 
+extern bool format_warning_dismissed;
+
 extern u8* GetTextureData(TexturePath, int*, int*);
 
 extern Expression LoadEyesFolder();

@@ -26,6 +26,7 @@
 #include "src/game/rendering_graph_node.h"
 
 std::vector<Expression> current_expressions;
+bool format_warning_dismissed;
 
 static u8 *RGBA32_RGBA16(const u8 *aData, u64 aLength) {
     u8 *_Buffer = New<u8>(aLength);
@@ -180,6 +181,7 @@ int GetValidExpressionCount(std::vector<Expression> expressions_list) {
     for (Expression expression : expressions_list) {
         if (expression.Name == "eyes") continue;
         if (expression.Textures.size() < 2) continue;
+        if (expression.Format != "rgba32" && !format_warning_dismissed) continue;
         count++;
     }
     return count;
@@ -199,11 +201,14 @@ const void* saturn_bind_texture(const void* input, Object* currentObj) {
             // Checks if the incoming texture has the expression's "key"
             // This could be "saturn_eye", "saturn_mouth", etc.
             if (expression.PathHasReplaceKey(texName, "saturn_")) {
-                current_expressions[i].Visible = true;
-
                 // Set texture format
                 if (texName.find_last_of("_") != std::string::npos)
                     current_expressions[i].Format = texName.substr(texName.find_last_of("_") + 1);
+
+                // Only support RGBA32 textures
+                if (expression.Format != "rgba32" && !format_warning_dismissed) return input;
+
+                current_expressions[i].Visible = true;
 
                 // Custom blink cycle
                 if (expression.Name == "eyes" && current_expressions.size() >= 3 &&

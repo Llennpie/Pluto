@@ -40,8 +40,6 @@ const char* left_hand_switches[] = {"Default", "Fist", "Open"};
 const char* cap_switches[] = {"Default (On)", "Off", "Wing Cap"}; // unused "wing cap off" not included
 const char* powerup_switches[] = {"Default", "None", "Vanish", "Metal", "Vanish & Metal"};
 
-bool warning_dismissed;
-
 void OpenEyeSelector() {
     if (current_expressions.size() <= 0) return;
     if (current_expressions[0].Name == "eyes") {
@@ -117,6 +115,7 @@ void OpenModelExpressionSelector(PackData* pack) {
             Expression expression = current_expressions[i];
             if (expression.Name == "eyes") continue;
             if (expression.Textures.size() <= 1) continue;
+            if (expression.Format != "rgba32" && !format_warning_dismissed) continue;
             ImGui::TableNextRow();
             ImGui::BeginDisabled(!expression.Visible && !ignore_expression_visibility);
 
@@ -167,13 +166,14 @@ void OpenModelExpressionSelector(PackData* pack) {
         ImGui::EndTable();
         if (GetValidExpressionCount(current_expressions) > 8) ImGui::EndChild();
     }
-    if (!IsAllRGBA32(current_expressions) && !warning_dismissed) {
-        ImGui::BeginChild("###menu_model_warning", ImVec2(200, 85), ImGuiChildFlags_Border, ImGuiWindowFlags_None);
+    if (!IsAllRGBA32(current_expressions) && !format_warning_dismissed) {
+        ImGui::BeginChild("###menu_model_warning", ImVec2(200, 75), ImGuiChildFlags_Border, ImGuiWindowFlags_None);
         ImGui::BeginDisabled();
-        ImGui::TextWrapped("Some materials are not set to texture format RGBA-32 - this may cause graphical errors!");
+        ImGui::TextWrapped("Some materials are not set to texture format RGBA-32 and have been disabled.");
+        //ImGui::TextWrapped("Some materials are not set to texture format RGBA-32 - this may cause graphical errors!");
         ImGui::EndDisabled();
-        if (ImGui::MenuItem("Dismiss###dismiss_model_warning")) {
-            warning_dismissed = true;
+        if (ImGui::MenuItem("Show Anyway###dismiss_model_warning")) {
+            format_warning_dismissed = true;
         }
         ImGui::EndChild();
     }
@@ -211,6 +211,7 @@ void OpenModelCCSelector(PackData* pack, std::vector<std::string> cc_list) {
             ImGui::TextDisabled("%i color code(s)", cc_list.size());
             if (ImGui::Button("Refresh")) {
                 UpdateEditorLabels();
+                format_warning_dismissed = false;
                 ImGui::CloseCurrentPopup();
             }
             ImGui::EndPopup();
@@ -322,7 +323,7 @@ void OpenModelSelector() {
                 if (IsSaturnModel(i)) {
                     current_expressions.clear();
                     UpdateEditorLabels();
-                    warning_dismissed = false;
+                    format_warning_dismissed = false;
                     spawn_object(gMarioStates[0].marioObj, 0x95, bhvGoldenCoinSparkles);
                 }
                 LoadModelData(i, pack->mEnabled);
