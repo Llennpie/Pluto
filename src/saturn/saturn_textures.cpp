@@ -28,6 +28,8 @@
 std::vector<Expression> current_expressions;
 bool format_warning_dismissed;
 
+bool loading_texture_data;
+
 static u8 *RGBA32_RGBA16(const u8 *aData, u64 aLength) {
     u8 *_Buffer = New<u8>(aLength);
     u8 *pBuffer = _Buffer;
@@ -45,9 +47,13 @@ static u8 *RGBA32_RGBA16(const u8 *aData, u64 aLength) {
     return _Buffer;
 }
 
+uint32_t gTextureId = 0;
+
 /* Fetches a TexturePath's raw texture data in RGBA32 format */
 u8* GetTextureData(TexturePath Texture, int* Width, int* Height) {
     if (Texture.RawData != 0) return Texture.RawData;
+    if (loading_texture_data) return 0;
+    loading_texture_data = true;
 
     // Open texture file for reading
     FILE *TextureFile = fopen(Texture.FilePath.c_str(), "rb");
@@ -73,11 +79,14 @@ u8* GetTextureData(TexturePath Texture, int* Width, int* Height) {
     u8 *_Buffer = TextureData->mRawData.begin();
     /* RGBA-16 */ //RGBA32_RGBA16(TextureData->mRawData.begin(), TextureData->mRawData.Count());
 
-    gfx_get_current_rendering_api()->select_texture(0, 0);
+    if (gTextureId == 0) gTextureId = gfx_get_current_rendering_api()->new_texture();
+    gfx_get_current_rendering_api()->select_texture(0, gTextureId);
     gfx_get_current_rendering_api()->upload_texture(_Buffer, TextureData->mRawWidth, TextureData->mRawHeight);
 
     *Width = TextureData->mRawWidth;
     *Height = TextureData->mRawHeight;
+
+    loading_texture_data = false;
     return _Buffer;
 }
 
@@ -221,7 +230,7 @@ const void* saturn_bind_texture(const void* input, uint32_t format, uint32_t siz
                 current_expressions[i].Format = format;
                 current_expressions[i].Size = size;
                 // Only support RGBA32 textures
-                current_expressions[i].Visible = true;
+                if ((format != G_IM_FMT_RGBA || size != G_IM_SIZ_32b) && !format_warning_dismissed) return input;
 
                 // Load texture data if it hasn't been loaded yet
                 // This is to prevent the game from crashing when the texture is missing

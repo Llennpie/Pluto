@@ -182,6 +182,13 @@ void saturn_file_browser_tools(std::string id, bool search, int exp_index) {
 }
 
 bool saturn_file_browser_show(std::string id, int exp_index) {
+    if (id == "eyes") {
+        if (custom_eyes) {
+            if (current_expressions[exp_index].Textures.size() <= 0) return false;
+            if (current_expressions[exp_index].Textures[current_expressions[exp_index].CurrentIndex].RawData == 0) return false;
+        }
+    }
+
     selected_path = "";
     if (selected_paths.find(id) == selected_paths.end()) selected_paths.insert({ id, "" });
     if (search_terms.find(id) == search_terms.end()) {

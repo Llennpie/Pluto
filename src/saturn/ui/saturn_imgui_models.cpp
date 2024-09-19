@@ -92,13 +92,14 @@ void OpenEyeSelector() {
 }
 
 void OpenModelExpressionSelector(PackData* pack) {
-    if (!pack->mEnabled || !IsSaturnModel(pack->mIndex) || current_expressions.size() <= 0 || active_saturn_model_index == -1) return;
+    if (!pack->mEnabled || !pack->mLoaded || !IsSaturnModel(pack->mIndex) || current_expressions.size() <= 0 || active_saturn_model_index == -1) return;
     if (model_color_code_list.size() > 0) ImGui::Separator();
 
     if (current_expressions[0].Name == "eyes") {
-        if (ImGui::Checkbox("Custom Eyes", &custom_eyes))
+        if (ImGui::Checkbox("Custom Eyes", &custom_eyes)) {
             if (!custom_eyes) switch_state_eyes = 0;
             else if (switch_state_eyes <= 3 || switch_state_eyes == 8) switch_state_eyes = 4;
+        }
     }
     OpenEyeSelector();
 
