@@ -59,8 +59,9 @@ bool IsSaturnModel(int index) {
 bool IsAllRGBA32(std::vector<Expression> expression_list) {
     bool value = true;
     for (Expression expression : expression_list) {
-        if (expression.Format != "rgba32" && expression.Format != "")
+        if (expression.Visible && (expression.Format != G_IM_FMT_RGBA || expression.Size != G_IM_SIZ_32b)) {
             value = false;
+        }
     }
     return value;
 }

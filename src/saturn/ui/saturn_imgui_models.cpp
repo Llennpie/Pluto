@@ -115,7 +115,7 @@ void OpenModelExpressionSelector(PackData* pack) {
             Expression expression = current_expressions[i];
             if (expression.Name == "eyes") continue;
             if (expression.Textures.size() <= 1) continue;
-            if (expression.Format != "rgba32" && !format_warning_dismissed) continue;
+            if (expression.Visible && (expression.Format != G_IM_FMT_RGBA || expression.Size != G_IM_SIZ_32b) && !format_warning_dismissed) continue;
             ImGui::TableNextRow();
             ImGui::BeginDisabled(!expression.Visible && !ignore_expression_visibility);
 

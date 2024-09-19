@@ -186,7 +186,7 @@ int GetValidExpressionCount(std::vector<Expression> expressions_list) {
     for (Expression expression : expressions_list) {
         if (expression.Name == "eyes") continue;
         if (expression.Textures.size() < 2) continue;
-        if (expression.Format != "rgba32" && !format_warning_dismissed) continue;
+        if ((expression.Format != G_IM_FMT_RGBA || expression.Size != G_IM_SIZ_32b) && !format_warning_dismissed) continue;
         count++;
     }
     return count;
@@ -201,7 +201,7 @@ void InitTextureData(int exp_index, int tex_index) {
 }
 
 /* Handles texture replacement. Called from gfx_pc.c */
-const void* saturn_bind_texture(const void* input, Object* currentObj) {
+const void* saturn_bind_texture(const void* input, uint32_t format, uint32_t size, Object* currentObj) {
     if (input == nullptr || gDjuiInMainMenu) return input;
     const char* inputTexture = static_cast<const char*>(input);
     const char* outputTexture;
@@ -211,15 +211,16 @@ const void* saturn_bind_texture(const void* input, Object* currentObj) {
         for (int i = 0; i < current_expressions.size(); i++) {
             Expression expression = current_expressions[i];
             if (expression.CurrentIndex < 0) return input;
+
             // Checks if the incoming texture has the expression's "key"
             // This could be "saturn_eye", "saturn_mouth", etc.
             if (expression.PathHasReplaceKey(texName, "saturn_")) {
-                // Set texture format
-                if (texName.find_last_of("_") != std::string::npos)
-                    current_expressions[i].Format = texName.substr(texName.find_last_of("_") + 1);
+                current_expressions[i].Visible = true;
 
+                // Set texture format
+                current_expressions[i].Format = format;
+                current_expressions[i].Size = size;
                 // Only support RGBA32 textures
-                if (expression.Format != "rgba32" && !format_warning_dismissed) return input;
                 current_expressions[i].Visible = true;
 
                 // Load texture data if it hasn't been loaded yet

@@ -36,9 +36,10 @@ public:
     /* Returns true if the replace key was detected in the texture pool
        (Note: This ignores whether or not an expression folder is present) */
     bool Visible;
-    /* The material's texture format, as read in the replace key's filepath
-       (Note: This may be misleading if the geo.inc.c was manually edited) */
-    std::string Format;
+
+    /* The material's texture format, identified in saturn_bind_texture when it is first displayed onscreen */
+    uint32_t Format;
+    uint32_t Size;
     
     std::vector<TexturePath> Textures;
     std::vector<TexturePath> Folders;
@@ -96,7 +97,7 @@ extern std::vector<Expression> current_expressions;
 extern "C" {
 #endif    
     #include "include/types.h"
-    const void* saturn_bind_texture(const void*, struct Object*);
+    const void* saturn_bind_texture(const void*, uint32_t, uint32_t, struct Object*);
     void saturn_custom_blink(s16* switch_eyes, s16 blink_frame, s8 eye_state);
 #ifdef __cplusplus
 }
