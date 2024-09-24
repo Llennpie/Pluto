@@ -41,29 +41,33 @@ const char* left_hand_switches[] = {"Default", "Fist", "Open"};
 const char* cap_switches[] = {"Default (On)", "Off", "Wing Cap"}; // unused "wing cap off" not included
 const char* powerup_switches[] = {"Default", "None", "Vanish", "Metal", "Vanish & Metal"};
 
+/* Expression selector UI for the eye expression */
 void OpenEyeSelector() {
     if (current_expressions.size() <= 0) return;
+    if (current_expressions[0].Textures.size() <= 0) return;
     if (current_expressions[0].Name == "eyes") {
+        // The file browser is always visible, but only interactable when custom eyes are enabled
         ImGui::BeginDisabled(!custom_eyes || (!current_expressions[0].Visible && !ignore_expression_visibility));
+
         saturn_file_browser_filter_extension("png");
         saturn_file_browser_scan_directory(current_expressions[0].FolderPath);
         saturn_file_browser_height(150);
         if (saturn_file_browser_show("eyes", 0)) {
-            for (int i = 0; i < current_expressions[0].Textures.size(); i++) {
-                if (current_expressions[0].Textures[i].FilePath.find(saturn_file_browser_get_selected().generic_string()) != std::string::npos) {
+            // Iterate between textures and find the selected one
+            for (int tex = 0; tex < current_expressions[0].Textures.size(); tex++) {
+                if (current_expressions[0].Textures[tex].FilePath.find(saturn_file_browser_get_selected().generic_string()) != std::string::npos) {
                     if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl)) {
-                        // Custom blink cycle
-                        if (current_expressions[0].BlinkIndex[0] == -1) current_expressions[0].BlinkIndex[0] = i;
-                        else if (current_expressions[0].BlinkIndex[1] == -1) current_expressions[0].BlinkIndex[1] = i;
+                        // Left Ctrl sets the custom blink cycle
+                        if (current_expressions[0].BlinkIndex[0] == -1) current_expressions[0].BlinkIndex[0] = tex;
+                        else if (current_expressions[0].BlinkIndex[1] == -1) current_expressions[0].BlinkIndex[1] = tex;
                         else {
-                            // Clear
-                            current_expressions[0].CurrentIndex = i;
+                            current_expressions[0].CurrentIndex = tex;
                             current_expressions[0].BlinkIndex[0] = -1;
                             current_expressions[0].BlinkIndex[1] = -1;
                         }
                     } else {
                         // Set expression index
-                        current_expressions[0].CurrentIndex = i;
+                        current_expressions[0].CurrentIndex = tex;
                         current_expressions[0].BlinkIndex[0] = -1;
                         current_expressions[0].BlinkIndex[1] = -1;
                     }
@@ -72,6 +76,7 @@ void OpenEyeSelector() {
             }
         }
 
+        // Show custom blink cycle UI
         if (ImGui::IsItemHovered() && ImGui::IsKeyDown(ImGuiKey_LeftCtrl)) {
             ImGui::BeginTooltip();
             ImGui::Text("Frame 1: %s", current_expressions[0].Textures[current_expressions[0].CurrentIndex].ShortFileName().c_str());
@@ -89,89 +94,102 @@ void OpenEyeSelector() {
     }
 }
 
+/* Expression selector UI for all other expressions, i.e. individual dropdowns or checkboxes */
+void OpenComboSelector(Expression* expression, int index) {
+    if (expression->Name == "eyes") return;
+    if (expression->Textures.size() <= 1) return;
+    if (expression->Visible && (expression->Format != G_IM_FMT_RGBA || expression->Size != G_IM_SIZ_32b) && !format_warning_dismissed) return;
+
+    // Fun table UI
+    ImGui::TableNextRow();
+    ImGui::BeginDisabled(!expression->Visible && !ignore_expression_visibility);
+
+    ImGui::TableSetColumnIndex(0);
+    std::string label_name = "###menu_exp_label_" + expression->Name;
+    ImGui::Text(expression->Name.c_str());
+
+    ImGui::TableSetColumnIndex(1);
+    if (expression->IsToggleFormat() &&
+        // Use checkbox
+        (expression->Textures[0].FileName.find("default") != std::string::npos ||
+        expression->Textures[1].FileName.find("default") != std::string::npos)) {
+
+            // Check which index "default.png" is (0 or 1) to determine default value
+            int select_index = (expression->Textures[0].FileName.find("default") != std::string::npos) ? 0 : 1;
+            int deselect_index = (select_index == 0) ? 1 : 0;
+            bool is_selected = (expression->CurrentIndex == select_index);
+
+            if (ImGui::Checkbox(label_name.c_str(), &is_selected)) {
+                if (is_selected) expression->CurrentIndex = select_index;
+                else expression->CurrentIndex = deselect_index;
+            }
+    } else {
+        // Use dropdown
+        std::string defaultLabel = expression->Textures[expression->CurrentIndex].ShortFileName();
+        ImGui::PushItemWidth((current_expressions.size() > 8) ? ImGui::GetColumnWidth(1) - 14 : ImGui::GetColumnWidth(1));
+
+        if (ImGui::BeginCombo(label_name.c_str(), defaultLabel.c_str(), ImGuiComboFlags_None)) {
+            saturn_file_browser_filter_extension("png");
+            saturn_file_browser_scan_directory(expression->FolderPath);
+            if (saturn_file_browser_show_tree("expr_" + std::to_string(index), index)) {
+                for (int tex = 0; tex < expression->Textures.size(); tex++) {
+                    if (expression->Textures[tex].FilePath.find(saturn_file_browser_get_selected().generic_string()) != std::string::npos) {
+                        expression->CurrentIndex = tex;
+                        break;
+                    }
+                }
+            }
+            ImGui::EndCombo();
+        }
+        
+        ImGui::PopItemWidth();
+    }
+    ImGui::EndDisabled();
+}
+
 void OpenModelExpressionSelector(PackData* pack) {
     if (!pack->mEnabled || !pack->mLoaded || !IsSaturnModel(pack->mIndex) || current_expressions.size() <= 0 || active_saturn_model_index == -1) return;
     if (model_color_code_list.size() > 0) ImGui::Separator();
 
+    // Eyes
     if (current_expressions[0].Name == "eyes") {
         if (ImGui::Checkbox("Custom Eyes", &custom_eyes)) {
+            // Swap switch state
             if (!custom_eyes) switch_state_eyes = 0;
             else if (switch_state_eyes <= 3 || switch_state_eyes == 8) switch_state_eyes = 4;
         }
     }
     OpenEyeSelector();
 
+    // Other Expressions
     if (current_expressions.size() > 1) {
         // A scrollbar is visible if the expressions list is too long
         if (GetValidExpressionCount(current_expressions) > 8)
             ImGui::BeginChild(("###menu_exp_model"), ImVec2(200, 190), ImGuiChildFlags_ResizeY, ImGuiWindowFlags_NoBackground);
         
+        // Create table UI
         ImGui::BeginTable("###menu_exp_table", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg, ImVec2(200, 0));
         ImGui::TableSetupColumn("Expression", ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
-        //ImGui::TableHeadersRow();
-        for (int i = 0; i < current_expressions.size(); i++) {
-            Expression expression = current_expressions[i];
-            if (expression.Name == "eyes") continue;
-            if (expression.Textures.size() <= 1) continue;
-            if (expression.Visible && (expression.Format != G_IM_FMT_RGBA || expression.Size != G_IM_SIZ_32b) && !format_warning_dismissed) continue;
-            ImGui::TableNextRow();
-            ImGui::BeginDisabled(!expression.Visible && !ignore_expression_visibility);
 
-            ImGui::TableSetColumnIndex(0);
-            std::string label_name = "###menu_exp_label_" + expression.Name;
-            ImGui::Text(expression.Name.c_str());
-            
-            ImGui::TableSetColumnIndex(1);
-            if (expression.Textures.size() >= 2) {
-                if (expression.IsToggleFormat() &&
-                    // Use checkbox
-                    (expression.Textures[0].FileName.find("default") != std::string::npos ||
-                    expression.Textures[1].FileName.find("default") != std::string::npos)) {
+        // Individual expression selector
+        for (int i = 0; i < current_expressions.size(); i++)
+            OpenComboSelector(&current_expressions[i], i);
 
-                        // Check which index "default.png" is (0 or 1) to determine default value
-                        int select_index = (expression.Textures[0].FileName.find("default") != std::string::npos) ? 0 : 1;
-                        int deselect_index = (select_index == 0) ? 1 : 0;
-                        bool is_selected = (expression.CurrentIndex == select_index);
-
-                        if (ImGui::Checkbox(label_name.c_str(), &is_selected)) {
-                            if (is_selected) current_expressions[i].CurrentIndex = select_index;
-                            else current_expressions[i].CurrentIndex = deselect_index;
-                        }
-                } else {
-                    // Use dropdown
-                    std::string defaultLabel = expression.Textures[expression.CurrentIndex].ShortFileName();
-                    ImGui::PushItemWidth((current_expressions.size() > 8) ? ImGui::GetColumnWidth(1) - 14 : ImGui::GetColumnWidth(1));
-                    if (ImGui::BeginCombo(label_name.c_str(), defaultLabel.c_str(), ImGuiComboFlags_None)) {
-                        saturn_file_browser_filter_extension("png");
-                        saturn_file_browser_scan_directory(current_expressions[i].FolderPath);
-                        if (saturn_file_browser_show_tree("expr_" + std::to_string(i), i)) {
-                            for (int j = 0; j < current_expressions[i].Textures.size(); j++) {
-                                if (current_expressions[i].Textures[j].FilePath.find(saturn_file_browser_get_selected().generic_string()) != std::string::npos) {
-                                    current_expressions[i].CurrentIndex = j;
-                                    break;
-                                }
-                            }
-                        }
-                        ImGui::EndCombo();
-                    }
-                    ImGui::PopItemWidth();
-                }
-            }
-            ImGui::EndDisabled();
-        }
         ImGui::EndTable();
-        if (GetValidExpressionCount(current_expressions) > 8) ImGui::EndChild();
+        if (GetValidExpressionCount(current_expressions) > 8)
+            ImGui::EndChild();
     }
+
+    // Warning label for non-RGBA32 textures
     if (!IsAllRGBA32(current_expressions) && !format_warning_dismissed) {
         ImGui::BeginChild("###menu_model_warning", ImVec2(200, 75), ImGuiChildFlags_Border, ImGuiWindowFlags_None);
         ImGui::BeginDisabled();
         ImGui::TextWrapped("Some materials are not set to texture format RGBA-32 and have been disabled.");
         //ImGui::TextWrapped("Some materials are not set to texture format RGBA-32 - this may cause graphical errors!");
         ImGui::EndDisabled();
-        if (ImGui::MenuItem("Show Anyway###dismiss_model_warning")) {
+        if (ImGui::MenuItem("Show Anyway###dismiss_model_warning"))
             format_warning_dismissed = true;
-        }
         ImGui::EndChild();
     }
 }
