@@ -222,42 +222,52 @@ void UpdatePaletteFromEditor(int networkIndex) {
 void ColorPartDrag(int id) {
     if (ImGui::BeginDragDropTarget()) {
         if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("COLORCODE")) {
-            ColorCode dragged = *(const ColorCode*)payload->Data;
-            // Find address position in GameShark string
-            // This should account for all formats; Never assume the string has a consistent order
-            std::string::size_type pos1 = 0;
-            std::string::size_type pos2 = 30;
-            switch(id) {
-                case 0:     /* Shirt */     pos1 = dragged.GameShark.find("07EC40")-2; pos2 = dragged.GameShark.find("07EC42")-2; break;
-                case 1:                     pos1 = dragged.GameShark.find("07EC38")-2; pos2 = dragged.GameShark.find("07EC3A")-2; break;
-                case 2:     /* Overalls */  pos1 = dragged.GameShark.find("07EC28")-2; pos2 = dragged.GameShark.find("07EC2A")-2; break;
-                case 3:                     pos1 = dragged.GameShark.find("07EC20")-2; pos2 = dragged.GameShark.find("07EC22")-2; break;
-                case 4:     /* Gloves */    pos1 = dragged.GameShark.find("07EC58")-2; pos2 = dragged.GameShark.find("07EC5A")-2; break;
-                case 5:                     pos1 = dragged.GameShark.find("07EC50")-2; pos2 = dragged.GameShark.find("07EC52")-2; break;
-                case 6:     /* Shoes */     pos1 = dragged.GameShark.find("07EC70")-2; pos2 = dragged.GameShark.find("07EC72")-2; break;
-                case 7:                     pos1 = dragged.GameShark.find("07EC68")-2; pos2 = dragged.GameShark.find("07EC6A")-2; break;
-                case 8:     /* Skin */      pos1 = dragged.GameShark.find("07EC88")-2; pos2 = dragged.GameShark.find("07EC8A")-2; break;
-                case 9:                     pos1 = dragged.GameShark.find("07EC80")-2; pos2 = dragged.GameShark.find("07EC82")-2; break;
-                case 10:    /* Hair*/       pos1 = dragged.GameShark.find("07ECA0")-2; pos2 = dragged.GameShark.find("07ECA2")-2; break;
-                case 11:                    pos1 = dragged.GameShark.find("07EC98")-2; pos2 = dragged.GameShark.find("07EC9A")-2; break;
-                case 12:    /* Shirt */     pos1 = dragged.GameShark.find("07ECB8")-2; pos2 = dragged.GameShark.find("07ECBA")-2; break;
-                case 13:                    pos1 = dragged.GameShark.find("07ECB0")-2; pos2 = dragged.GameShark.find("07ECB2")-2; break;
-                case 14:    /* Shoulders */ pos1 = dragged.GameShark.find("07ECD0")-2; pos2 = dragged.GameShark.find("07ECD2")-2; break;
-                case 15:                    pos1 = dragged.GameShark.find("07ECC8")-2; pos2 = dragged.GameShark.find("07ECCA")-2; break;
-                case 16:    /* Arms */      pos1 = dragged.GameShark.find("07ECE8")-2; pos2 = dragged.GameShark.find("07ECEA")-2; break;
-                case 17:                    pos1 = dragged.GameShark.find("07ECE0")-2; pos2 = dragged.GameShark.find("07ECE2")-2; break;
-                case 18:    /* Pelvis */    pos1 = dragged.GameShark.find("07ED00")-2; pos2 = dragged.GameShark.find("07ED02")-2; break;
-                case 19:                    pos1 = dragged.GameShark.find("07ECF8")-2; pos2 = dragged.GameShark.find("07ECFA")-2; break;
-                case 20:    /* Thighs*/     pos1 = dragged.GameShark.find("07ED18")-2; pos2 = dragged.GameShark.find("07ED1A")-2; break;
-                case 21:                    pos1 = dragged.GameShark.find("07ED10")-2; pos2 = dragged.GameShark.find("07ED12")-2; break;
-                case 22:    /* Calves */    pos1 = dragged.GameShark.find("07ED30")-2; pos2 = dragged.GameShark.find("07ED32")-2; break;
-                case 23:                    pos1 = dragged.GameShark.find("07ED28")-2; pos2 = dragged.GameShark.find("07ED2A")-2; break;
-            }
-            // Verify we didn't load a null value
-            if (pos1 != std::string::npos-2 && pos2 != std::string::npos-2) {
-                // Paste only a small segment
-                PasteGameShark(dragged.GameShark.substr(pos1, 13) + "\n" + dragged.GameShark.substr(pos2, 13), false);
-                UpdateEditorFromPalette();
+            ColorCode dragged = *(ColorCode*)payload->Data;
+            if (dragged.GameShark.size() > 0) {
+                // Find address position in GameShark string
+                // This should account for all formats; Never assume the string has a consistent order
+                std::string::size_type pos1 = 0;
+                std::string::size_type pos2 = 30;
+                switch(id) {
+                    case 0:     /* Shirt */     pos1 = dragged.GameShark.find("07EC40")-2; pos2 = dragged.GameShark.find("07EC42")-2; break;
+                    case 1:                     pos1 = dragged.GameShark.find("07EC38")-2; pos2 = dragged.GameShark.find("07EC3A")-2; break;
+                    case 2:     /* Overalls */  pos1 = dragged.GameShark.find("07EC28")-2; pos2 = dragged.GameShark.find("07EC2A")-2; break;
+                    case 3:                     pos1 = dragged.GameShark.find("07EC20")-2; pos2 = dragged.GameShark.find("07EC22")-2; break;
+                    case 4:     /* Gloves */    pos1 = dragged.GameShark.find("07EC58")-2; pos2 = dragged.GameShark.find("07EC5A")-2; break;
+                    case 5:                     pos1 = dragged.GameShark.find("07EC50")-2; pos2 = dragged.GameShark.find("07EC52")-2; break;
+                    case 6:     /* Shoes */     pos1 = dragged.GameShark.find("07EC70")-2; pos2 = dragged.GameShark.find("07EC72")-2; break;
+                    case 7:                     pos1 = dragged.GameShark.find("07EC68")-2; pos2 = dragged.GameShark.find("07EC6A")-2; break;
+                    case 8:     /* Skin */      pos1 = dragged.GameShark.find("07EC88")-2; pos2 = dragged.GameShark.find("07EC8A")-2; break;
+                    case 9:                     pos1 = dragged.GameShark.find("07EC80")-2; pos2 = dragged.GameShark.find("07EC82")-2; break;
+                    case 10:    /* Hair*/       pos1 = dragged.GameShark.find("07ECA0")-2; pos2 = dragged.GameShark.find("07ECA2")-2; break;
+                    case 11:                    pos1 = dragged.GameShark.find("07EC98")-2; pos2 = dragged.GameShark.find("07EC9A")-2; break;
+                    case 12:    /* Shirt */     pos1 = dragged.GameShark.find("07ECB8")-2; pos2 = dragged.GameShark.find("07ECBA")-2; break;
+                    case 13:                    pos1 = dragged.GameShark.find("07ECB0")-2; pos2 = dragged.GameShark.find("07ECB2")-2; break;
+                    case 14:    /* Shoulders */ pos1 = dragged.GameShark.find("07ECD0")-2; pos2 = dragged.GameShark.find("07ECD2")-2; break;
+                    case 15:                    pos1 = dragged.GameShark.find("07ECC8")-2; pos2 = dragged.GameShark.find("07ECCA")-2; break;
+                    case 16:    /* Arms */      pos1 = dragged.GameShark.find("07ECE8")-2; pos2 = dragged.GameShark.find("07ECEA")-2; break;
+                    case 17:                    pos1 = dragged.GameShark.find("07ECE0")-2; pos2 = dragged.GameShark.find("07ECE2")-2; break;
+                    case 18:    /* Pelvis */    pos1 = dragged.GameShark.find("07ED00")-2; pos2 = dragged.GameShark.find("07ED02")-2; break;
+                    case 19:                    pos1 = dragged.GameShark.find("07ECF8")-2; pos2 = dragged.GameShark.find("07ECFA")-2; break;
+                    case 20:    /* Thighs*/     pos1 = dragged.GameShark.find("07ED18")-2; pos2 = dragged.GameShark.find("07ED1A")-2; break;
+                    case 21:                    pos1 = dragged.GameShark.find("07ED10")-2; pos2 = dragged.GameShark.find("07ED12")-2; break;
+                    case 22:    /* Calves */    pos1 = dragged.GameShark.find("07ED30")-2; pos2 = dragged.GameShark.find("07ED32")-2; break;
+                    case 23:                    pos1 = dragged.GameShark.find("07ED28")-2; pos2 = dragged.GameShark.find("07ED2A")-2; break;
+                }
+
+                ImGui::LogToClipboard();
+                ImGui::LogText("%s", dragged.GameShark.c_str());
+                ImGui::LogFinish();
+
+                // Verify we didn't load a null value
+                if (pos1 != std::string::npos-2 && pos2 != std::string::npos-2) {
+                    // Paste only a small segment
+                    PasteGameShark(dragged.GameShark.substr(pos1, 13) + "\n" + dragged.GameShark.substr(pos2, 13), false);
+                    UpdateEditorFromPalette();
+                } else {
+                    PasteGameShark("8107EC40 60C6\n8107EC42 2000\n8107EC38 3063\n8107EC3A 1000\n8107EC28 FFFF\n8107EC2A FF00\n8107EC20 7F7F\n8107EC22 7F00\n8107EC58 61AA\n8107EC5A EC00\n8107EC50 3055\n8107EC52 7600\n8107EC70 8A7A\n8107EC72 2B00\n8107EC68 453D\n8107EC6A 1500\n8107EC88 D961\n8107EC8A 6700\n8107EC80 6C30\n8107EC82 3300\n8107ECA0 8C82\n8107ECA2 BC00\n8107EC98 4641\n8107EC9A 5E00\n8107ECB8 0000\n8107ECBA 0000\n8107ECB0 FFFF\n8107ECB2 0000\n8107ECD0 0000\n8107ECD2 0000\n8107ECC8 0000\n8107ECCA 0000\n8107ECE8 0000\n8107ECEA 0000\n8107ECE0 FFFF\n8107ECE2 FF00\n8107ED00 0000\n8107ED02 0000\n8107ECF8 FFFF\n8107ECFA FF00\n8107ED18 0000\n8107ED1A 0000\n8107ED10 FFFF\n8107ED12 FF00\n8107ED30 0000\n8107ED32 0000\n8107ED28 FFFF\n8107ED2A FF00", false);
+                    UpdateEditorFromPalette();
+                }
             }
         }
         ImGui::EndDragDropTarget();
@@ -419,7 +429,7 @@ void OpenCCEditor() {
             if (ImGui::Button("Add to List")) {
                 UpdatePaletteFromEditor(0);
                 if (std::filesystem::exists("dynos/colorcodes/" + current_color_code.Name + ".gs"))
-                ImGui::OpenPopup("###overwrite_gs");
+                    ImGui::OpenPopup("###overwrite_gs");
                 else SaveActiveColorCode("dynos/colorcodes/");
             }
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {

@@ -141,7 +141,7 @@ void OpenComboSelector(Expression* expression, int index) {
             }
             ImGui::EndCombo();
         }
-        
+
         ImGui::PopItemWidth();
     }
     ImGui::EndDisabled();
@@ -235,7 +235,6 @@ void OpenModelCCSelector(PackData* pack, std::vector<std::string> cc_list) {
         }
         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
             ColorCode dragging = LoadGSFile(cc_list[n], pack->mPath + "/colorcodes");
-            dragging.IsModel = true;
             ImGui::SetDragDropPayload("COLORCODE", &dragging, sizeof(ColorCode));
             ImGui::Text("%s (%s)", pack->mDisplayName, dragging.Name.c_str());
             ImGui::EndDragDropSource();
@@ -249,7 +248,7 @@ void OpenModelCCSelector(PackData* pack, std::vector<std::string> cc_list) {
 
             current_expressions.clear();
             UpdateEditorLabels();
-            LoadModelData(active_saturn_model_index, pack->mEnabled);
+            LoadModelData(pack->mIndex, pack->mEnabled);
         }
         ImGui::EndDragDropTarget();
     }

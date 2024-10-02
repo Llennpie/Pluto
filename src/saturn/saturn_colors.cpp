@@ -159,10 +159,10 @@ std::vector<std::string> GetColorCodeList(std::string folderPath) {
             for (const auto & entry : std::filesystem::directory_iterator(folderPath)) {
                 std::filesystem::path path = entry.path();
 
-                if (path.filename().u8string() != "Mario") {
-                    if (path.extension().u8string() == ".gs" ||
-                        path.extension().u8string() == ".txt")
-                            cc_list.push_back(path.filename().u8string());
+                if (path.filename().generic_string() != "Mario") {
+                    if (path.extension().generic_string() == ".gs" ||
+                        path.extension().generic_string() == ".txt")
+                            cc_list.push_back(path.filename().generic_string());
                 }
             }
         }
@@ -173,10 +173,10 @@ std::vector<std::string> GetColorCodeList(std::string folderPath) {
                 std::filesystem::path path = entry.path();
                 
                 if (std::filesystem::is_directory(path)) continue;
-                if (path.filename().u8string() != "Mario") {
-                    if (path.extension().u8string() == ".gs" ||
-                        path.extension().u8string() == ".txt")
-                            cc_list.push_back(path.filename().u8string());
+                if (path.filename().generic_string() != "Mario") {
+                    if (path.extension().generic_string() == ".gs" ||
+                        path.extension().generic_string() == ".txt")
+                            cc_list.push_back(path.filename().generic_string());
                 }
             }
         }
@@ -192,7 +192,7 @@ ColorCode LoadGSFile(std::string fileName, std::string filePath) {
     ColorCode colorCode;
 
     if (fileName == "../default.gs") {
-        filePath = std::filesystem::path(filePath).parent_path().u8string();
+        filePath = std::filesystem::path(filePath).parent_path().generic_string();
         fileName = "default.gs";
     }
 
