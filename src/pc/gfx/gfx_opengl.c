@@ -721,6 +721,11 @@ static void gfx_opengl_start_frame(void) {
     }
 
     if (configWindow.secret_ui || (!configWindow.secret_ui && capture_screenshot && (skybox_has_deinit || !auto_chroma))) {
+        if (capture_screenshot) {
+            gfx_current_dimensions.width *= screenshot_multiplier;
+            gfx_current_dimensions.height *= screenshot_multiplier;
+        }
+
         glGenFramebuffers(1, &framebuffer_id);
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_id);
 

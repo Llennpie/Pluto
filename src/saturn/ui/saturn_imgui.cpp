@@ -53,6 +53,9 @@ bool show_window_model_settings = true;
 bool show_window_animations = true;
 
 bool capture_screenshot;
+int screenshot_multiplier = 2;
+int screenshot_width = 320;
+int screenshot_height = 240;
 
 void imgui_init_backend(SDL_Window* window, SDL_GLContext ctx) {
     current_window = window;
@@ -121,6 +124,9 @@ void imgui_update() {
             if (ImGui::BeginMenu("Menu")) {
                 if (ImGui::MenuItem("Show Menu", NULL, show_menu)) show_menu = false;
                 if (ImGui::BeginMenu("Screenshot")) {
+                    ImGui::SetNextItemWidth(100);
+                    ImGui::SliderInt("Multiplier", &screenshot_multiplier, 1, 4);
+                    ImGui::TextDisabled("%dx%d", gfx_current_dimensions.width * screenshot_multiplier, gfx_current_dimensions.height * screenshot_multiplier);
 #ifdef __MINGW32__
                     if (ImGui::Button("Copy to Clipboard")) capture_screenshot = true;
 #else
@@ -258,16 +264,14 @@ void imgui_capture_screenshot(void* buffer) {
         glBlitFramebuffer(0, 0, gfx_current_dimensions.width, gfx_current_dimensions.height, 0, gfx_current_dimensions.height ,gfx_current_dimensions.width, 0, GL_COLOR_BUFFER_BIT, GL_NEAREST);
         glBindFramebuffer(GL_FRAMEBUFFER, resolve_framebuffer_id);
 
-        int width = gfx_current_dimensions.width;
-        int height = gfx_current_dimensions.height;
-        unsigned char* pixels = (unsigned char*)malloc(4 * width * height);
-        glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+        unsigned char* pixels = (unsigned char*)malloc(4 * gfx_current_dimensions.width * gfx_current_dimensions.height);
+        glReadPixels(0, 0, gfx_current_dimensions.width, gfx_current_dimensions.height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
 #ifdef __MINGW32__
         BITMAPV5HEADER header = {
             .bV5Size = sizeof(header),
-            .bV5Width = width,
-            .bV5Height = height, // could be negative to vflip, but some applications do not like it
+            .bV5Width = gfx_current_dimensions.width,
+            .bV5Height = gfx_current_dimensions.height, // could be negative to vflip, but some applications do not like it
             .bV5Planes = 1,
             .bV5BitCount = 32,
             .bV5Compression = BI_BITFIELDS,
@@ -278,14 +282,14 @@ void imgui_capture_screenshot(void* buffer) {
             .bV5CSType = *(DWORD*)"Win ", // required for alpha support
         };
 
-        HGLOBAL global = GlobalAlloc(GMEM_MOVEABLE, sizeof(header) + width * height * 4);
+        HGLOBAL global = GlobalAlloc(GMEM_MOVEABLE, sizeof(header) + gfx_current_dimensions.width * gfx_current_dimensions.height * 4);
         if (global) {
             BYTE* buffer = (BYTE*)GlobalLock(global);
             if (buffer) {
                 CopyMemory(buffer, &header, sizeof(header));
                 // vflip the bitmap manually, for better compatibility
-                for (int i = 0; i < height; i++) {
-                    CopyMemory(buffer + sizeof(header) + i * width * 4, pixels + (height - 1 - i) * width * 4, width * 4);
+                for (int i = 0; i < gfx_current_dimensions.height; i++) {
+                    CopyMemory(buffer + sizeof(header) + i * gfx_current_dimensions.width * 4, pixels + (gfx_current_dimensions.height - 1 - i) * gfx_current_dimensions.width * 4, gfx_current_dimensions.width * 4);
                 }
                 GlobalUnlock(global);
             }
@@ -296,7 +300,7 @@ void imgui_capture_screenshot(void* buffer) {
             }
         }
 #else
-        stbi_write_png("screenshot.png", width, height, 4, pixels, width * 4);
+        stbi_write_png("screenshot.png", gfx_current_dimensions.width, gfx_current_dimensions.height, 4, pixels, gfx_current_dimensions.width * 4);
 #endif
         free(pixels);
     }
