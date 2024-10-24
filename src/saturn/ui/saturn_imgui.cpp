@@ -134,11 +134,24 @@ void imgui_update() {
                     ImGui::EndMenu();
                 }
                 ImGui::Separator();
-                if (ImGui::MenuItem("Machinima", NULL, show_window_machinima)) show_window_machinima = !show_window_machinima;
                 if (ImGui::MenuItem("Color Code Editor", NULL, show_window_cc_editor)) show_window_cc_editor = !show_window_cc_editor;
                 if (ImGui::MenuItem("Animation", NULL, show_window_animations, freeze_camera && !enable_head_rotation)) show_window_animations = !show_window_animations;
                 ImGui::EndMenu();
             }
+
+            // Machinima Camera
+            if (ImGui::BeginMenu("Camera")) {
+                ImGui::Checkbox("Freeze Camera", &freeze_camera);
+                ImGui::BeginDisabled(!freeze_camera);
+                ImGui::PushItemWidth(150);
+                ImGui::SliderFloat("###freeze_camera_speed", &freeze_camera_speed, 0.f, 6.f, "Speed %.1f");
+                ImGui::EndDisabled();
+                ImGui::SliderFloat("###camera_fov", &camera_fov, 0.f, 100.f, "FOV %.1f");
+                ImGui::PopItemWidth();
+                ImGui::EndMenu();
+            }
+
+            // Models
             if (ImGui::BeginMenu("Avatar")) {
                 ImGui::BeginDisabled(active_saturn_model_index == -1);
                 if (ImGui::MenuItem("Model Settings", NULL, show_window_model_settings)) show_window_model_settings = !show_window_model_settings;
@@ -176,47 +189,10 @@ void imgui_update() {
         OpenModelSettings();
         }
 
-        // Machinima
-        if (show_window_machinima) {
-            // Camera
-            ImGui::Begin("Machinima", &show_window_machinima, ImGuiWindowFlags_AlwaysAutoResize);
-            ImGui::Checkbox("Freeze Camera", &freeze_camera);
-            ImGui::BeginDisabled(!freeze_camera);
-            ImGui::PushItemWidth(150);
-            ImGui::SliderFloat("###freeze_camera_speed", &freeze_camera_speed, 0.f, 6.f, "Speed %.1f");
-            ImGui::EndDisabled();
-            ImGui::SliderFloat("###camera_fov", &camera_fov, 0.f, 100.f, "FOV %.1f");
-            ImGui::PopItemWidth();
-            ImGui::Dummy(ImVec2(0, 15));
-
-            // Walkpoint
-            ImGui::SetNextItemWidth(150);
-            ImGui::SliderInt("###walkpoint", &walkpoint_speed, 0, 127, "Walkpoint %d");
-            if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
-                ImGui::OpenPopup("###walkpointPresets");
-            if (ImGui::BeginPopup("###walkpointPresets")) {
-                if (ImGui::Selectable("Running")) walkpoint_speed = 127;
-                if (ImGui::Selectable("Walking")) walkpoint_speed = 36;
-                if (ImGui::Selectable("Tiptoe")) walkpoint_speed = 25;
-                ImGui::EndPopup();
-            }
-            ImGui::Dummy(ImVec2(0, 15));
-
-            // Rotation Angle
-            if (gMarioStates[0].marioObj != NULL) {
-            if (ImGuiKnobs::Knob("Angle", &face_angle, -180.f, 180.f, 0.f, "%.0f deg", ImGuiKnobVariant_Dot, 0.f, ImGuiKnobFlags_DragHorizontal))
-                gMarioStates[0].faceAngle[1] = (s16)(face_angle * 182.04f);
-            else
-                face_angle = (float)gMarioStates[0].faceAngle[1] / 182.04;
-            }
-
-            ImGui::End();
-        }
-
         // Animation Mixtape
         if (show_window_animations &&
             freeze_camera && !enable_head_rotation) {
-                ImGui::Begin("Animation Mixtape", &show_window_animations, ImGuiWindowFlags_AlwaysAutoResize);
+                ImGui::Begin("Animation Mixtape", &show_window_animations, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing);
                 OpenAnimationsMenu();
                 ImGui::End();
                 BoneEditorWindow();
@@ -264,8 +240,8 @@ void imgui_capture_screenshot(void* buffer) {
 #ifdef __MINGW32__
         BITMAPV5HEADER header = {
             .bV5Size = sizeof(header),
-            .bV5Width = gfx_current_dimensions.width,
-            .bV5Height = gfx_current_dimensions.height, // could be negative to vflip, but some applications do not like it
+            .bV5Width = (int)gfx_current_dimensions.width,
+            .bV5Height = (int)gfx_current_dimensions.height, // could be negative to vflip, but some applications do not like it
             .bV5Planes = 1,
             .bV5BitCount = 32,
             .bV5Compression = BI_BITFIELDS,
