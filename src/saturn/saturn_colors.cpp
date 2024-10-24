@@ -17,6 +17,7 @@
 
 #include "src/saturn/saturn.h"
 #include "src/pc/pc_main.h"
+#include "pc/network/network_player.h"
 
 int uiCcListId = 1;
 
@@ -143,6 +144,35 @@ void PasteGameShark(std::string GameShark, bool checkSize) {
                 case 0x07ED28:  sparkColorCalf.red[1] = value1;         sparkColorCalf.green[1] = value2;           break;
                 case 0x07ED2A:  sparkColorCalf.blue[1] = value1;                                                    break;
             }
+
+            // Shirt
+            gNetworkPlayers[0].overridePalette.parts[1][0] = defaultColorHat.red[0];
+            gNetworkPlayers[0].overridePalette.parts[1][1] = defaultColorHat.green[0];
+            gNetworkPlayers[0].overridePalette.parts[1][2] = defaultColorHat.blue[0];
+            // Cap
+            gNetworkPlayers[0].overridePalette.parts[6][0] = defaultColorHat.red[0];
+            gNetworkPlayers[0].overridePalette.parts[6][1] = defaultColorHat.green[0];
+            gNetworkPlayers[0].overridePalette.parts[6][2] = defaultColorHat.blue[0];
+            // Overalls
+            gNetworkPlayers[0].overridePalette.parts[0][0] = defaultColorOveralls.red[0];
+            gNetworkPlayers[0].overridePalette.parts[0][1] = defaultColorOveralls.green[0];
+            gNetworkPlayers[0].overridePalette.parts[0][2] = defaultColorOveralls.blue[0];
+            // Gloves
+            gNetworkPlayers[0].overridePalette.parts[2][0] = defaultColorGloves.red[0];
+            gNetworkPlayers[0].overridePalette.parts[2][1] = defaultColorGloves.green[0];
+            gNetworkPlayers[0].overridePalette.parts[2][2] = defaultColorGloves.blue[0];
+            // Shoes
+            gNetworkPlayers[0].overridePalette.parts[3][0] = defaultColorShoes.red[0];
+            gNetworkPlayers[0].overridePalette.parts[3][1] = defaultColorShoes.green[0];
+            gNetworkPlayers[0].overridePalette.parts[3][2] = defaultColorShoes.blue[0];
+            // Skin
+            gNetworkPlayers[0].overridePalette.parts[5][0] = defaultColorSkin.red[0];
+            gNetworkPlayers[0].overridePalette.parts[5][1] = defaultColorSkin.green[0];
+            gNetworkPlayers[0].overridePalette.parts[5][2] = defaultColorSkin.blue[0];
+            // Hair
+            gNetworkPlayers[0].overridePalette.parts[4][0] = defaultColorHair.red[0];
+            gNetworkPlayers[0].overridePalette.parts[4][1] = defaultColorHair.green[0];
+            gNetworkPlayers[0].overridePalette.parts[4][2] = defaultColorHair.blue[0];
         }
     }
 }

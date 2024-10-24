@@ -12,7 +12,6 @@ extern void SaveActiveColorCode(std::string);
 
 extern "C" {
 #endif
-    void UpdateEditorFromPalette();
     void UpdatePaletteFromEditor(int);
     void RefreshColorCodeList();
     void OpenCCEditor();

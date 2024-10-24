@@ -23,78 +23,8 @@
 
 #include <SDL2/SDL.h>
 
-static char uiCcLabelName[128] = "Default";
-static char uiGameShark[1024 * 16] =    "8107EC40 FF00\n8107EC42 0000\n8107EC38 7F00\n8107EC3A 0000\n"
-                                        "8107EC28 0000\n8107EC2A FF00\n8107EC20 0000\n8107EC22 7F00\n"
-                                        "8107EC58 FFFF\n8107EC5A FF00\n8107EC50 7F7F\n8107EC52 7F00\n"
-                                        "8107EC70 721C\n8107EC72 0E00\n8107EC68 390E\n8107EC6A 0700\n"
-                                        "8107EC88 FEC1\n8107EC8A 7900\n8107EC80 7F60\n8107EC82 3C00\n"
-                                        "8107ECA0 7306\n8107ECA2 0000\n8107EC98 3903\n8107EC9A 0000";
-
-static ImVec4 uiHatMainColor =          ImVec4(255.0f / 255.0f, 0.0f / 255.0f, 0.0f / 255.0f, 255.0f / 255.0f);
-static ImVec4 uiHatShadeColor =         ImVec4(127.0f / 255.0f, 0.0f / 255.0f, 0.0f / 255.0f, 255.0f / 255.0f);
-static ImVec4 uiOverallsMainColor =     ImVec4(0.0f / 255.0f, 0.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f);
-static ImVec4 uiOverallsShadeColor =    ImVec4(0.0f / 255.0f, 0.0f / 255.0f, 127.0f / 255.0f, 255.0f / 255.0f);
-static ImVec4 uiGlovesMainColor =       ImVec4(255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f);
-static ImVec4 uiGlovesShadeColor =      ImVec4(127.0f / 255.0f, 127.0f / 255.0f, 127.0f / 255.0f, 255.0f / 255.0f);
-static ImVec4 uiShoesMainColor =        ImVec4(114.0f / 255.0f, 28.0f / 255.0f, 14.0f / 255.0f, 255.0f / 255.0f);
-static ImVec4 uiShoesShadeColor =       ImVec4(57.0f / 255.0f, 14.0f / 255.0f, 7.0f / 255.0f, 255.0f / 255.0f);
-static ImVec4 uiSkinMainColor =         ImVec4(254.0f / 255.0f, 193.0f / 255.0f, 121.0f / 255.0f, 255.0f / 255.0f);
-static ImVec4 uiSkinShadeColor =        ImVec4(127.0f / 255.0f, 96.0f / 255.0f, 60.0f / 255.0f, 255.0f / 255.0f);
-static ImVec4 uiHairMainColor =         ImVec4(115.0f / 255.0f, 6.0f / 255.0f, 0.0f / 255.0f, 255.0f / 255.0f);
-static ImVec4 uiHairShadeColor =        ImVec4(57.0f / 255.0f, 3.0f / 255.0f, 0.0f / 255.0f, 255.0f / 255.0f);
-// SPARK
-static ImVec4 uiShirtMainColor =        ImVec4(255.0f / 255.0f, 255.0f / 255.0f, 0.0f / 255.0f, 255.0f / 255.0f);
-static ImVec4 uiShirtShadeColor =       ImVec4(127.0f / 255.0f, 127.0f / 255.0f, 0.0f / 255.0f, 255.0f / 255.0f);
-static ImVec4 uiShouldersMainColor =    ImVec4(0.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f);
-static ImVec4 uiShouldersShadeColor =   ImVec4(0.0f / 255.0f, 127.0f / 255.0f, 127.0f / 255.0f, 255.0f / 255.0f);
-static ImVec4 uiArmsMainColor =         ImVec4(0.0f / 255.0f, 255.0f / 255.0f, 127.0f / 255.0f, 255.0f / 255.0f);
-static ImVec4 uiArmsShadeColor =        ImVec4(0.0f / 255.0f, 127.0f / 255.0f, 64.0f / 255.0f, 255.0f / 255.0f);
-static ImVec4 uiPelvisMainColor =       ImVec4(255.0f / 255.0f, 0.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f);
-static ImVec4 uiPelvisShadeColor =      ImVec4(127.0f / 255.0f, 0.0f / 255.0f, 127.0f / 255.0f, 255.0f / 255.0f);
-static ImVec4 uiThighMainColor =        ImVec4(255.0f / 255.0f, 0.0f / 255.0f, 127.0f / 255.0f, 255.0f / 255.0f);
-static ImVec4 uiThighShadeColor =       ImVec4(127.0f / 255.0f, 0.0f / 255.0f, 64.0f / 255.0f, 255.0f / 255.0f);
-static ImVec4 uiCalfMainColor =         ImVec4(127.0f / 255.0f, 0.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f);
-static ImVec4 uiCalfShadeColor =        ImVec4(64.0f / 255.0f, 0.0f / 255.0f, 127.0f / 255.0f, 255.0f / 255.0f);
-
 bool show_cap, show_overalls, show_gloves, show_shoes, show_skin, show_hair;
 bool show_shirt, show_shoulders, show_arms, show_pelvis, show_thigh, show_calf;
-
-/* Update our CC Editor colors with our "defaultColor" values.
-This should be called when loading a CC, to insert our new colors into the editor. */
-void UpdateEditorFromPalette() {
-    uiHatMainColor = ImVec4(float(defaultColorHat.red[0]) / 255.0f, float(defaultColorHat.green[0]) / 255.0f, float(defaultColorHat.blue[0]) / 255.0f, 255.0f / 255.0f);
-    uiHatShadeColor = ImVec4(float(defaultColorHat.red[1]) / 255.0f, float(defaultColorHat.green[1]) / 255.0f, float(defaultColorHat.blue[1]) / 255.0f, 255.0f / 255.0f);
-    uiOverallsMainColor = ImVec4(float(defaultColorOveralls.red[0]) / 255.0f, float(defaultColorOveralls.green[0]) / 255.0f, float(defaultColorOveralls.blue[0]) / 255.0f, 255.0f / 255.0f);
-    uiOverallsShadeColor = ImVec4(float(defaultColorOveralls.red[1]) / 255.0f, float(defaultColorOveralls.green[1]) / 255.0f, float(defaultColorOveralls.blue[1]) / 255.0f, 255.0f / 255.0f);
-    uiGlovesMainColor = ImVec4(float(defaultColorGloves.red[0]) / 255.0f, float(defaultColorGloves.green[0]) / 255.0f, float(defaultColorGloves.blue[0]) / 255.0f, 255.0f / 255.0f);
-    uiGlovesShadeColor = ImVec4(float(defaultColorGloves.red[1]) / 255.0f, float(defaultColorGloves.green[1]) / 255.0f, float(defaultColorGloves.blue[1]) / 255.0f, 255.0f / 255.0f);
-    uiShoesMainColor = ImVec4(float(defaultColorShoes.red[0]) / 255.0f, float(defaultColorShoes.green[0]) / 255.0f, float(defaultColorShoes.blue[0]) / 255.0f, 255.0f / 255.0f);
-    uiShoesShadeColor = ImVec4(float(defaultColorShoes.red[1]) / 255.0f, float(defaultColorShoes.green[1]) / 255.0f, float(defaultColorShoes.blue[1]) / 255.0f, 255.0f / 255.0f);
-    uiSkinMainColor = ImVec4(float(defaultColorSkin.red[0]) / 255.0f, float(defaultColorSkin.green[0]) / 255.0f, float(defaultColorSkin.blue[0]) / 255.0f, 255.0f / 255.0f);
-    uiSkinShadeColor = ImVec4(float(defaultColorSkin.red[1]) / 255.0f, float(defaultColorSkin.green[1]) / 255.0f, float(defaultColorSkin.blue[1]) / 255.0f, 255.0f / 255.0f);
-    uiHairMainColor = ImVec4(float(defaultColorHair.red[0]) / 255.0f, float(defaultColorHair.green[0]) / 255.0f, float(defaultColorHair.blue[0]) / 255.0f, 255.0f / 255.0f);
-    uiHairShadeColor = ImVec4(float(defaultColorHair.red[1]) / 255.0f, float(defaultColorHair.green[1]) / 255.0f, float(defaultColorHair.blue[1]) / 255.0f, 255.0f / 255.0f);
-
-    uiShirtMainColor = ImVec4(float(sparkColorShirt.red[0]) / 255.0f, float(sparkColorShirt.green[0]) / 255.0f, float(sparkColorShirt.blue[0]) / 255.0f, 255.0f / 255.0f);
-    uiShirtShadeColor = ImVec4(float(sparkColorShirt.red[1]) / 255.0f, float(sparkColorShirt.green[1]) / 255.0f, float(sparkColorShirt.blue[1]) / 255.0f, 255.0f / 255.0f);
-    uiShouldersMainColor = ImVec4(float(sparkColorShoulders.red[0]) / 255.0f, float(sparkColorShoulders.green[0]) / 255.0f, float(sparkColorShoulders.blue[0]) / 255.0f, 255.0f / 255.0f);
-    uiShouldersShadeColor = ImVec4(float(sparkColorShoulders.red[1]) / 255.0f, float(sparkColorShoulders.green[1]) / 255.0f, float(sparkColorShoulders.blue[1]) / 255.0f, 255.0f / 255.0f);
-    uiArmsMainColor = ImVec4(float(sparkColorArms.red[0]) / 255.0f, float(sparkColorArms.green[0]) / 255.0f, float(sparkColorArms.blue[0]) / 255.0f, 255.0f / 255.0f);
-    uiArmsShadeColor = ImVec4(float(sparkColorArms.red[1]) / 255.0f, float(sparkColorArms.green[1]) / 255.0f, float(sparkColorArms.blue[1]) / 255.0f, 255.0f / 255.0f);
-    uiPelvisMainColor = ImVec4(float(sparkColorPelvis.red[0]) / 255.0f, float(sparkColorPelvis.green[0]) / 255.0f, float(sparkColorPelvis.blue[0]) / 255.0f, 255.0f / 255.0f);
-    uiPelvisShadeColor = ImVec4(float(sparkColorPelvis.red[1]) / 255.0f, float(sparkColorPelvis.green[1]) / 255.0f, float(sparkColorPelvis.blue[1]) / 255.0f, 255.0f / 255.0f);
-    uiThighMainColor = ImVec4(float(sparkColorThigh.red[0]) / 255.0f, float(sparkColorThigh.green[0]) / 255.0f, float(sparkColorThigh.blue[0]) / 255.0f, 255.0f / 255.0f);
-    uiThighShadeColor = ImVec4(float(sparkColorThigh.red[1]) / 255.0f, float(sparkColorThigh.green[1]) / 255.0f, float(sparkColorThigh.blue[1]) / 255.0f, 255.0f / 255.0f);
-    uiCalfMainColor = ImVec4(float(sparkColorCalf.red[0]) / 255.0f, float(sparkColorCalf.green[0]) / 255.0f, float(sparkColorCalf.blue[0]) / 255.0f, 255.0f / 255.0f);
-    uiCalfShadeColor = ImVec4(float(sparkColorCalf.red[1]) / 255.0f, float(sparkColorCalf.green[1]) / 255.0f, float(sparkColorCalf.blue[1]) / 255.0f, 255.0f / 255.0f);
-
-    current_color_code.ParseGameShark();
-    strcpy(uiGameShark, current_color_code.GameShark.c_str());
-    strcpy(uiCcLabelName, current_color_code.Name.c_str());
-
-    send_palette_to_network();
-}
 
 /* Applies UI values in the CC Editor to the active player.
 This should be called when loading a CC, to insert our new colors into the editor. */
@@ -281,12 +211,14 @@ bool ColorPartBox(int id, const char* name, const char* mainId, float* mainColor
     bool value_changed;
 
     // Main Color
-    if (ImGui::ColorEdit4(mainId, mainColorValue, color_part_box_flags)) value_changed = true;
+    if (ImGui::ColorEdit4(mainId, mainColorValue, color_part_box_flags))
+        if (ImGui::IsItemHovered()) value_changed = true;
     ColorPartDrag(id);
     ImGui::SameLine();
 
     // Shade Color
-    if (ImGui::ColorEdit4(shadeId, shadeColorValue, color_part_box_flags)) value_changed = true;
+    if (ImGui::ColorEdit4(shadeId, shadeColorValue, color_part_box_flags))
+        if (ImGui::IsItemHovered()) value_changed = true;
     ColorPartDrag(id+1);
 
     if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
@@ -395,22 +327,22 @@ void OpenCCEditor() {
                 ImGui::EndDisabled();
             }
             // Visual Editor
-            if (show_cap)       if (ColorPartBox(0,  "Cap", "Cap (Main)", (float*)&uiHatMainColor, "Cap (Shade)", (float*)&uiHatShadeColor)) value_changed = true;
-            if (show_overalls)  if (ColorPartBox(2,  "Overalls", "Overalls (Main)", (float*)&uiOverallsMainColor, "Overalls (Shade)", (float*)&uiOverallsShadeColor)) value_changed = true;
-            if (show_gloves)    if (ColorPartBox(4,  "Gloves", "Gloves (Main)", (float*)&uiGlovesMainColor, "Gloves (Shade)", (float*)&uiGlovesShadeColor)) value_changed = true;
-            if (show_shoes)     if (ColorPartBox(6,  "Shoes", "Shoes (Main)", (float*)&uiShoesMainColor, "Shoes (Shade)", (float*)&uiShoesShadeColor)) value_changed = true;
-            if (show_skin)      if (ColorPartBox(8,  "Skin", "Skin (Main)", (float*)&uiSkinMainColor, "Skin (Shade)", (float*)&uiSkinShadeColor)) value_changed = true;
-            if (show_hair)      if (ColorPartBox(10, "Hair", "Hair (Main)", (float*)&uiHairMainColor, "Hair (Shade)", (float*)&uiHairShadeColor)) value_changed = true;
+            if (show_cap) {       if (ColorPartBox(0,  "Cap", "Cap (Main)", (float*)&uiHatMainColor, "Cap (Shade)", (float*)&uiHatShadeColor)) value_changed = true; }
+            if (show_overalls) {  if (ColorPartBox(2,  "Overalls", "Overalls (Main)", (float*)&uiOverallsMainColor, "Overalls (Shade)", (float*)&uiOverallsShadeColor)) value_changed = true; }
+            if (show_gloves) {    if (ColorPartBox(4,  "Gloves", "Gloves (Main)", (float*)&uiGlovesMainColor, "Gloves (Shade)", (float*)&uiGlovesShadeColor)) value_changed = true; }
+            if (show_shoes) {     if (ColorPartBox(6,  "Shoes", "Shoes (Main)", (float*)&uiShoesMainColor, "Shoes (Shade)", (float*)&uiShoesShadeColor)) value_changed = true; }
+            if (show_skin) {      if (ColorPartBox(8,  "Skin", "Skin (Main)", (float*)&uiSkinMainColor, "Skin (Shade)", (float*)&uiSkinShadeColor)) value_changed = true; }
+            if (show_hair) {      if (ColorPartBox(10, "Hair", "Hair (Main)", (float*)&uiHairMainColor, "Hair (Shade)", (float*)&uiHairShadeColor)) value_changed = true; }
             if (AnyModelsEnabled() && active_saturn_model_index != -1) {
                 if (spark_enabled)
                     if (ImGui::SmallButton("v SPARKILIZE v###cc_editor_sparkilize"))
                         SparkilizeEditor();
-                if (show_shirt)     if (ColorPartBox(12, "Extra 1", "Shirt (Main)", (float*)&uiShirtMainColor, "Shirt (Shade)", (float*)&uiShirtShadeColor)) value_changed = true;
-                if (show_shoulders) if (ColorPartBox(14, "Extra 2", "Shoulders (Main)", (float*)&uiShouldersMainColor, "Shoulders (Shade)", (float*)&uiShouldersShadeColor)) value_changed = true;
-                if (show_arms)      if (ColorPartBox(16, "Extra 3", "Arms (Main)", (float*)&uiArmsMainColor, "Arms (Shade)", (float*)&uiArmsShadeColor)) value_changed = true;
-                if (show_pelvis)    if (ColorPartBox(18, "Extra 4", "Pelvis (Main)", (float*)&uiPelvisMainColor, "Pelvis (Shade)", (float*)&uiPelvisShadeColor)) value_changed = true;
-                if (show_thigh)     if (ColorPartBox(20, "Extra 5", "Thigh (Main)", (float*)&uiThighMainColor, "Thigh (Shade)", (float*)&uiThighShadeColor)) value_changed = true;
-                if (show_calf)      if (ColorPartBox(22, "Extra 6", "Calf (Main)", (float*)&uiCalfMainColor, "Calf (Shade)", (float*)&uiCalfShadeColor)) value_changed = true;
+                if (show_shirt) {     if (ColorPartBox(12, "Extra 1", "Shirt (Main)", (float*)&uiShirtMainColor, "Shirt (Shade)", (float*)&uiShirtShadeColor)) value_changed = true; }
+                if (show_shoulders) { if (ColorPartBox(14, "Extra 2", "Shoulders (Main)", (float*)&uiShouldersMainColor, "Shoulders (Shade)", (float*)&uiShouldersShadeColor)) value_changed = true; }
+                if (show_arms) {      if (ColorPartBox(16, "Extra 3", "Arms (Main)", (float*)&uiArmsMainColor, "Arms (Shade)", (float*)&uiArmsShadeColor)) value_changed = true; }
+                if (show_pelvis) {    if (ColorPartBox(18, "Extra 4", "Pelvis (Main)", (float*)&uiPelvisMainColor, "Pelvis (Shade)", (float*)&uiPelvisShadeColor)) value_changed = true; }
+                if (show_thigh) {     if (ColorPartBox(20, "Extra 5", "Thigh (Main)", (float*)&uiThighMainColor, "Thigh (Shade)", (float*)&uiThighShadeColor)) value_changed = true; }
+                if (show_calf) {      if (ColorPartBox(22, "Extra 6", "Calf (Main)", (float*)&uiCalfMainColor, "Calf (Shade)", (float*)&uiCalfShadeColor)) value_changed = true; }
             }
             ImGui::EndTabItem();
         }
@@ -458,6 +390,7 @@ void OpenCCEditor() {
     if (value_changed) {
         UpdatePaletteFromEditor(0);
         send_palette_to_network();
+        value_changed = false;
     }
 }
 

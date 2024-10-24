@@ -250,7 +250,7 @@ void OpenModelCCSelector(PackData* pack, std::vector<std::string> cc_list) {
 
             current_expressions.clear();
             UpdateEditorLabels();
-            LoadModelData(pack->mIndex, pack->mEnabled);
+            LoadModelData(pack->mIndex, pack->mEnabled, false);
         }
         ImGui::EndDragDropTarget();
     }
@@ -326,7 +326,7 @@ void OpenModelSettings() {
                 if (ImGui::MenuItem("Refresh")) {
                     current_expressions.clear();
                     UpdateEditorLabels();
-                    LoadModelData(active_saturn_model_index, pack->mEnabled);
+                    LoadModelData(active_saturn_model_index, pack->mEnabled, false);
                 }
                 ImGui::Checkbox("Show All Expressions", &ignore_expression_visibility);
                 ImGui::EndMenu();
@@ -378,7 +378,7 @@ void OpenModelSelector() {
                     format_warning_dismissed = false;
                     spawn_object(gMarioStates[0].marioObj, 0x95, bhvGoldenCoinSparkles);
                 }
-                LoadModelData(i, pack->mEnabled);
+                LoadModelData(i, pack->mEnabled, false);
                 if (active_saturn_model_index == -1) custom_eyes = false;
             }
             ImGui::EndDisabled();
