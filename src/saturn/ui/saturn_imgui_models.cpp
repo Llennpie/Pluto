@@ -287,16 +287,22 @@ void OpenSwitchOptions() {
     ImGui::BeginDisabled(switch_state_powerup <= 1 || switch_state_powerup == 3);
     ImGui::SliderInt("###transparency", &vanish_transparency, 0, 255, "Alpha %d", ImGuiSliderFlags_AlwaysClamp);
     ImGui::EndDisabled();
-
-    ImGui::PopItemWidth();
-    ImGui::Separator();
     
     if (gMarioStates[0].marioObj != NULL) {
-    if (ImGuiKnobs::Knob("Angle", &face_angle, -180.f, 180.f, 0.f, "%.0f deg", ImGuiKnobVariant_Dot, 0.f, ImGuiKnobFlags_DragHorizontal))
-        gMarioStates[0].faceAngle[1] = (s16)(face_angle * 182.04f);
-    else
-        face_angle = (float)gMarioStates[0].faceAngle[1] / 182.04;
-    }
+        ImGui::Separator();
+        if (ImGuiKnobs::Knob("Angle", &face_angle, -180.f, 180.f, 0.f, "%.0f deg", ImGuiKnobVariant_Dot, 0.f, ImGuiKnobFlags_DragHorizontal))
+            gMarioStates[0].faceAngle[1] = (s16)(face_angle * 182.04f);
+        else face_angle = (float)gMarioStates[0].faceAngle[1] / 182.04;
+        if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+            ImGui::OpenPopup("###anglePresets");
+        if (ImGui::BeginPopup("###anglePresets")) {
+            ImGui::Checkbox("Spin", &is_spinning);
+            ImGui::BeginDisabled(!is_spinning);
+            ImGui::SetNextItemWidth(150);
+            ImGui::SliderFloat("Speed###spin_speed", &spinning_speed, -3.f, 3.f, "%.1f");
+            ImGui::EndDisabled();
+            ImGui::EndPopup();
+        }
 
         ImGui::SameLine();
         ImGuiKnobs::KnobInt("Walkpoint", &walkpoint_speed, 0, 127, 0, "%d", ImGuiKnobVariant_Tick, 0, ImGuiKnobFlags_DragHorizontal);

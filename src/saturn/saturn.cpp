@@ -51,6 +51,8 @@ bool loop_anim;
 bool enable_custom_anim;
 bool mcomp_extra_bone;
 
+bool is_spinning;
+float spinning_speed = 1.f;
 int player_speed = 127;
 int walkpoint_speed = 127;
 
@@ -126,6 +128,8 @@ int saturn_camera_update() {
         if (gMarioStates[0].marioObj != NULL) {
             if (!pause_anim) paused_frame = gMarioStates[0].marioObj->header.gfx.animInfo.animFrame;
             if (gMarioStates[0].forwardVel != 0.f && (!pause_anim || enable_custom_anim)) override_anim = false;
+
+            if (is_spinning) gMarioState->faceAngle[1] += (s16)(spinning_speed * 15 * 182.04f);
         }
 
         return CAM_FROZEN;
