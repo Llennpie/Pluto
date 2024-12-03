@@ -1,8 +1,7 @@
 // sound_birds.inc.c
-#include "src/saturn/saturn.h"
 
 void bhv_birds_sound_loop(void) {
-    if (gCamera && gCamera->mode == CAMERA_MODE_BEHIND_MARIO || freeze_camera == true)
+    if (gCamera && gCamera->mode == CAMERA_MODE_BEHIND_MARIO)
         return;
 
     switch (o->oBehParams2ndByte) {

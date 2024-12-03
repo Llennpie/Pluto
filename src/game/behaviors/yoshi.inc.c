@@ -1,5 +1,4 @@
 // yoshi.c.inc
-#include "src/saturn/saturn.h"
 
 // X/Z coordinates of Yoshi's homes that he switches between.
 // Note that this doesn't contain the Y coordinate since the castle roof is flat,
@@ -44,7 +43,7 @@ void yoshi_walk_loop(void) {
 
     cur_obj_init_animation(1);
     if (sp24 == 0 || sp24 == 15)
-        if (freeze_camera) cur_obj_play_sound_2(SOUND_GENERAL_YOSHI_WALK);
+        cur_obj_play_sound_2(SOUND_GENERAL_YOSHI_WALK);
 
     if (o->oInteractStatus == INT_STATUS_INTERACTED && sYoshiTalkingState == 0) {
         o->oAction = YOSHI_ACT_TALK;
@@ -122,7 +121,7 @@ void yoshi_walk_and_jump_off_roof_loop(void) {
     o->oMoveAngleYaw = approach_s16_symmetric(o->oMoveAngleYaw, o->oYoshiTargetYaw, 0x500);
     if (is_point_close_to_object(o, o->oHomeX, 3174.0f, o->oHomeZ, 200)) {
         cur_obj_init_animation(2);
-        if (freeze_camera) cur_obj_play_sound_2(SOUND_GENERAL_ENEMY_ALERT1);
+        cur_obj_play_sound_2(SOUND_GENERAL_ENEMY_ALERT1);
         o->oForwardVel = 50.0f;
         o->oVelY = 40.0f;
         o->oMoveAngleYaw = -0x3FFF;
@@ -130,7 +129,7 @@ void yoshi_walk_and_jump_off_roof_loop(void) {
     }
 
     if (sp26 == 0 || sp26 == 15) {
-        if (freeze_camera) cur_obj_play_sound_2(SOUND_GENERAL_YOSHI_WALK);
+        cur_obj_play_sound_2(SOUND_GENERAL_YOSHI_WALK);
     }
 }
 
