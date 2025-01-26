@@ -9,6 +9,8 @@
 #include "sm64.h"
 #include "spawn_sound.h"
 #include "rumble_init.h"
+#include "game/level_update.h"
+#include "saturn/saturn.h"
 
 /*
  * execute an object's current sound state with a provided array
@@ -64,6 +66,7 @@ void create_sound_spawner(s32 soundMagic) {
  */
 void cur_obj_play_sound_1(s32 soundMagic) {
     if (!gCurrentObject) { return; }
+    if (gCurrentObject != gMarioStates[0].marioObj && freeze_camera) return;
     if (gCurrentObject->header.gfx.node.flags & GRAPH_RENDER_ACTIVE) {
         play_sound(soundMagic, gCurrentObject->header.gfx.cameraToObject);
     }
@@ -71,6 +74,8 @@ void cur_obj_play_sound_1(s32 soundMagic) {
 
 void cur_obj_play_sound_2(s32 soundMagic) {
     if (!gCurrentObject) { return; }
+    if (freeze_camera) return;
+
     if (gCurrentObject->header.gfx.node.flags & GRAPH_RENDER_ACTIVE) {
         play_sound(soundMagic, gCurrentObject->header.gfx.cameraToObject);
 
