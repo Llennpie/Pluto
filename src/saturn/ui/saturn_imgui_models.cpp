@@ -258,7 +258,7 @@ void OpenModelCCSelector(PackData* pack, std::vector<std::string> cc_list) {
 
 void OpenSwitchOptions() {
     ImGui::PushItemWidth(150);
-    if (ImGui::MenuItem("Reset")) {
+    if (ImGui::MenuItem("Reset###reset_switches")) {
         switch_state_eyes = 0;
         switch_state_hand_right = 0;
         switch_state_hand_left = 0;
@@ -287,9 +287,37 @@ void OpenSwitchOptions() {
     ImGui::BeginDisabled(switch_state_powerup <= 1 || switch_state_powerup == 3);
     ImGui::SliderInt("###transparency", &vanish_transparency, 0, 255, "Alpha %d", ImGuiSliderFlags_AlwaysClamp);
     ImGui::EndDisabled();
-    
+
+    ImGui::PopItemWidth();
+}
+
+void OpenExtraOptions() {
     if (gMarioStates[0].marioObj != NULL) {
+        ImGui::PushItemWidth(150);
+        if (ImGui::MenuItem("Reset###reset_extra")) {
+            is_spinning = false;
+            spinning_speed = 0.f;
+            walkpoint_speed = 127;
+            marioScaleX = marioScaleY = marioScaleZ = 1.f;
+        }
         ImGui::Separator();
+
+        if (ImGui::SliderFloat("###linked_scale", &marioScaleX, 0.f, 5.f, "Scale %.2f", ImGuiSliderFlags_NoRoundToFormat))
+            marioScaleY = marioScaleZ = marioScaleX;
+        if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+            ImGui::OpenPopup("###scalePresets");
+        if (ImGui::BeginPopup("###scalePresets")) {
+            if (ImGui::MenuItem("Reset")) {
+                marioScaleX = marioScaleY = marioScaleZ = 1.f;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SliderFloat("###scale_x", &marioScaleX, 0.f, 5.f, "X %.2f", ImGuiSliderFlags_NoRoundToFormat);
+            ImGui::SliderFloat("###scale_y", &marioScaleY, 0.f, 5.f, "Y %.2f", ImGuiSliderFlags_NoRoundToFormat);
+            ImGui::SliderFloat("###scale_z", &marioScaleZ, 0.f, 5.f, "Z %.2f", ImGuiSliderFlags_NoRoundToFormat);
+            ImGui::EndPopup();
+        }
+
+        ImGui::Dummy(ImVec2(15, 0));
         if (ImGuiKnobs::Knob("Angle", &face_angle, -180.f, 180.f, 0.f, "%.0f deg", ImGuiKnobVariant_Dot, 0.f, ImGuiKnobFlags_DragHorizontal))
             gMarioStates[0].faceAngle[1] = (s16)(face_angle * 182.04f);
         else face_angle = (float)gMarioStates[0].faceAngle[1] / 182.04;
@@ -316,22 +344,10 @@ void OpenSwitchOptions() {
         }
 
         ImGui::Separator();
-        if (ImGui::SliderFloat("###linked_scale", &marioScaleX, 0.f, 5.f, "Scale %.0f", ImGuiSliderFlags_NoRoundToFormat))
-            marioScaleY = marioScaleZ = marioScaleX;
-        if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
-            ImGui::OpenPopup("###scalePresets");
-        if (ImGui::BeginPopup("###scalePresets")) {
-            if (ImGui::MenuItem("Reset")) {
-                marioScaleX = marioScaleY = marioScaleZ = 1.f;
-                ImGui::CloseCurrentPopup();
-            }
-            ImGui::SliderFloat("###scale_x", &marioScaleX, 0.f, 5.f, "X %.3f", ImGuiSliderFlags_NoRoundToFormat);
-            ImGui::SliderFloat("###scale_y", &marioScaleY, 0.f, 5.f, "Y %.3f", ImGuiSliderFlags_NoRoundToFormat);
-            ImGui::SliderFloat("###scale_z", &marioScaleZ, 0.f, 5.f, "Z %.3f", ImGuiSliderFlags_NoRoundToFormat);
-            ImGui::EndPopup();
-        }
+        ImGui::Checkbox("Movement Particles", &enable_model_particles);
+
+        ImGui::PopItemWidth();
     }
-    ImGui::PopItemWidth();
 }
 
 void OpenModelSettings() {
@@ -352,10 +368,18 @@ void OpenModelSettings() {
                 ImGui::Checkbox("Show All Expressions", &ignore_expression_visibility);
                 ImGui::EndMenu();
             }
+
             if (ImGui::BeginMenu("Switches")) {
                 OpenSwitchOptions();
                 ImGui::EndMenu();
             }
+            ImGui::BeginDisabled(gMarioStates[0].marioObj == NULL);
+            if (ImGui::BeginMenu("Extra")) {
+                OpenExtraOptions();
+                ImGui::EndMenu();
+            }
+            ImGui::EndDisabled();
+            
             ImGui::EndMenuBar();
         }
 

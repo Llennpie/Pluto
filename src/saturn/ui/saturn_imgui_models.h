@@ -12,6 +12,7 @@ extern "C" {
 #endif
     void OpenEyeSelector();
     void OpenSwitchOptions();
+    void OpenExtraOptions();
     void OpenModelSettings();
     void OpenModelSelector();
 #ifdef __cplusplus

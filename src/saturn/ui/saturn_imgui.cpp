@@ -163,6 +163,13 @@ void imgui_update() {
                     ImGui::EndMenu();
                 }
 
+                ImGui::BeginDisabled(gMarioStates[0].marioObj == NULL);
+                if (ImGui::BeginMenu("Extra Options")) {
+                    OpenExtraOptions();
+                    ImGui::EndMenu();
+                }
+                ImGui::EndDisabled();
+
                 // Model Selector
                 ImGui::Separator();
                 OpenModelSelector();

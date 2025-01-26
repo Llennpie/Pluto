@@ -2140,5 +2140,10 @@ s32 mario_execute_moving_action(struct MarioState *m) {
         set_mario_particle_flags(m, PARTICLE_DUST, TRUE);
     }
 
+    if (!enable_model_particles) {
+        set_mario_particle_flags(m, PARTICLE_WAVE_TRAIL, TRUE);
+        set_mario_particle_flags(m, PARTICLE_DUST, TRUE);
+    }
+
     return cancel;
 }

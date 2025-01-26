@@ -27,6 +27,7 @@ bool enable_hud;
 bool enable_shadows = true;
 bool enable_torso_rotation = true;
 bool enable_head_rotation;
+bool enable_model_particles;
 float face_angle;
 
 bool custom_eyes;
