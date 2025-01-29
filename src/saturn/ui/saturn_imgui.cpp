@@ -128,7 +128,7 @@ void imgui_update() {
         OpenModelSettings();
         if (show_window_mario && !gDjuiInMainMenu && !gDjuiChatBoxFocus && !gDjuiConsoleFocus && !gInteractableOverridePad &&
             AnyModelsEnabled() && active_saturn_model_index != -1) {
-                if (ImGui::IsMouseReleased(1)) ImGui::OpenPopup("###model_settings");
+                if (ImGui::IsMouseReleased(1) && !ImGui::IsAnyItemHovered()) ImGui::OpenPopup("###model_settings");
                 if (!show_window_model_settings) {
                     ImGui::BeginTooltip();
                     ImGui::Text(DynOS_Pack_GetFromIndex(active_saturn_model_index)->mDisplayName.begin());

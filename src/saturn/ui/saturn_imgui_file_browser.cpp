@@ -149,8 +149,8 @@ bool saturn_file_browser_create_imgui(FileBrowserEntry dir, std::string path, st
             bool selected = false;
             if (browser_id == "eyes" && current_expressions[exp_index].Textures.size() > 0) {
                 if (eyes_full_path(current_expressions[exp_index].Textures[current_expressions[exp_index].CurrentIndex].FilePath) == fullpath) selected = true;
-                if (current_expressions[exp_index].BlinkIndex[0] != -1 && eyes_full_path(current_expressions[exp_index].Textures[current_expressions[exp_index].BlinkIndex[0]].FileName) == fullpath) selected = true;
-                if (current_expressions[exp_index].BlinkIndex[1] != -1 && eyes_full_path(current_expressions[exp_index].Textures[current_expressions[exp_index].BlinkIndex[1]].FileName) == fullpath) selected = true;
+                if (current_expressions[exp_index].BlinkIndex[0] != -1 && eyes_full_path(current_expressions[exp_index].Textures[current_expressions[exp_index].BlinkIndex[0]].FilePath) == fullpath) selected = true;
+                if (current_expressions[exp_index].BlinkIndex[1] != -1 && eyes_full_path(current_expressions[exp_index].Textures[current_expressions[exp_index].BlinkIndex[1]].FilePath) == fullpath) selected = true;
             }
 
             if (ImGui::Selectable(entry.name().c_str(), &selected)) {
