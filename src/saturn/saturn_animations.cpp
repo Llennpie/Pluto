@@ -24,6 +24,7 @@ extern "C" {
     #include "game/mario.h"
     #include "game/level_update.h"
     #include "pc/network/network_player.h"
+    #include "saturn/libs/json2panim.h"
 }
 
 const char* saturn_animations[] = {
@@ -306,6 +307,16 @@ std::vector<PlutoAnim> GetPAnimList(std::string folderPath) {
                 PlutoAnim panim;
                 panim.FileName = path.filename().generic_string();
                 panim.FilePath = path.generic_string();
+                panim_list.push_back(panim);
+            }
+            if (path.extension().generic_string() == ".json" &&
+            !std::filesystem::exists(folderPath + "/" + path.stem().generic_string() + ".panim")) {
+                std::string json_path = path.generic_string();
+                std::string panim_path = folderPath + "/" + path.stem().generic_string() + ".panim";
+                convert_mcomp_to_panim((char*)json_path.c_str(), (char*)panim_path.c_str());
+                PlutoAnim panim;
+                panim.FileName = path.stem().generic_string() + ".panim";
+                panim.FilePath = panim_path;
                 panim_list.push_back(panim);
             }
         }
