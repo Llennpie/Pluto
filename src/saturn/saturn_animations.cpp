@@ -313,7 +313,9 @@ std::vector<PlutoAnim> GetPAnimList(std::string folderPath) {
             !std::filesystem::exists(folderPath + "/" + path.stem().generic_string() + ".panim")) {
                 std::string json_path = path.generic_string();
                 std::string panim_path = folderPath + "/" + path.stem().generic_string() + ".panim";
+                std::cout << "Converting " << json_path << " to " << panim_path << std::endl;
                 convert_mcomp_to_panim((char*)json_path.c_str(), (char*)panim_path.c_str());
+                if (!std::filesystem::exists(panim_path)) continue;
                 PlutoAnim panim;
                 panim.FileName = path.stem().generic_string() + ".panim";
                 panim.FilePath = panim_path;

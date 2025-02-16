@@ -16,6 +16,7 @@ extern "C" {
     extern bool capture_screenshot;
     extern int screenshot_multiplier;
 
+    void imgui_init();
     void imgui_init_backend(SDL_Window*, SDL_GLContext);
     void imgui_handle_events(SDL_Event*);
     void imgui_handle_binds(int);

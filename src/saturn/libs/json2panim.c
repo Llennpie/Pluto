@@ -23,30 +23,6 @@ long find_length(char *i_file) {
   return len;
 }
 
-char *remove_trailing_commas(char *json_str) {
-  char *cleaned_str = malloc(strlen(json_str) + 1);
-  if (!cleaned_str) {
-    return json_str;
-  }
-
-  int j = 0;
-  bool in_quotes = false;
-  for (int i = 0; json_str[i] != '\0'; i++) {
-    if (json_str[i] == '\"') {
-      in_quotes = !in_quotes;
-    }
-    if (json_str[i] == ',' && !in_quotes) {
-      if (json_str[i + 1] == '}' || json_str[i + 1] == ']' || (json_str[i + 1] == '\n' && json_str[i + 6] == ']')) {
-        continue;
-      }
-    }
-    cleaned_str[j++] = json_str[i];
-  }
-  cleaned_str[j] = '\0';
-
-  return cleaned_str;
-}
-
 void convert_mcomp_to_panim(char *i_file, char *o_file) {
   FILE *json_file = fopen(i_file, "r");
 
@@ -59,9 +35,7 @@ void convert_mcomp_to_panim(char *i_file, char *o_file) {
   size_t read_file = fread(buf, sizeof(buf[0]), find_length(i_file), json_file);
   fclose(json_file);
 
-  char *cleaned_buf = remove_trailing_commas(buf);
-
-  cJSON *json = cJSON_Parse(cleaned_buf);
+  cJSON *json = cJSON_Parse(buf);
   if (json == NULL) {
     const char *error_p = cJSON_GetErrorPtr();
     if (error_p != NULL) {
@@ -119,7 +93,8 @@ void convert_mcomp_to_panim(char *i_file, char *o_file) {
   fputc(((uint16_t)cJSON_GetNumberValue(length) >> 8) & 0xFF, panim_file);
   fputc((uint16_t)cJSON_GetNumberValue(length) & 0xFF, panim_file);
 
-  fputc((uint8_t)cJSON_GetNumberValue(nodes), panim_file);
+  uint8_t bnodes = (uint8_t)cJSON_GetNumberValue(nodes) > 255 ? 255 : (uint8_t)cJSON_GetNumberValue(nodes);
+  fputc(bnodes, panim_file);
 
   fwrite("values", sizeof(char), 6, panim_file);
   fwrite(bval, sizeof(uint8_t), sizeof(bval)/sizeof(bval[0]), panim_file);
