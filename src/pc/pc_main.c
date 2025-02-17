@@ -338,8 +338,6 @@ void* main_game_init(UNUSED void* arg) {
 extern void djui_panel_do_host(bool reconnecting, bool playSound);
 int main(int argc, char *argv[]) {
 
-    imgui_init();
-
     // Handle terminal arguments
     if (!parse_cli_opts(argc, argv)) { return 0; }
 
