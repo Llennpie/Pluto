@@ -58,9 +58,13 @@ bool show_window_animations = true;
 bool show_window_mario = false;
 
 bool capture_screenshot;
-int screenshot_multiplier = 2;
+int screenshot_multiplier = 1;
 int screenshot_width = 320;
 int screenshot_height = 240;
+
+void imgui_init() {
+    pluto_animations_list = GetPAnimList("dynos/anims");
+}
 
 void imgui_init_backend(SDL_Window* window, SDL_GLContext ctx) {
     current_window = window;
@@ -79,7 +83,6 @@ void imgui_init_backend(SDL_Window* window, SDL_GLContext ctx) {
     ImGui_ImplOpenGL3_Init(glsl_version);
 
     RefreshColorCodeList();
-    pluto_animations_list = GetPAnimList("dynos/anims");
 }
 
 void imgui_handle_events(SDL_Event* event) {
