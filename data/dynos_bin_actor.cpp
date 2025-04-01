@@ -281,6 +281,7 @@ void DynOS_Actor_GeneratePack(const SysPath &aPackFolder) {
                 DynOS_Read_Source(_GfxData, fstring("%s/model.inc.c", _Folder.c_str()));
                 DynOS_Read_Source(_GfxData, fstring("%s/geo.inc.c", _Folder.c_str()));
                 DynOS_Read_Source(_GfxData, fstring("%s/collision.inc.c", _Folder.c_str()));
+                DynOS_Read_Source(_GfxData, fstring("%s/meta.txt", _Folder.c_str()));
 
                 if (_GfxData->mModelIdentifier != 0) {
                     _ActorsFolders.Add({ _GfxData->mModelIdentifier, String(_PackEnt->d_name) });

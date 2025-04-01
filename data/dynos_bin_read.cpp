@@ -165,7 +165,31 @@ void DynOS_Read_Source(GfxData *aGfxData, const SysPath &aFilename) {
 
             // Retrieving data type
             else if (_Buffer.Length() != 0) {
-                if (_Buffer == "static") {
+                if (_Buffer == "Name") {
+                    char* peek = c;
+                    while (*peek == ' ') { peek++; } // Skip spaces
+                
+                    String modelName;
+                    while (*peek != ' ' && *peek != '\n' && *peek != '\0') {
+                        modelName.Add(*peek);
+                        peek++;
+                    }
+                
+                    PrintConsole("Name: \"%s\"\n", modelName.begin());
+                    c = peek;
+                } else if (_Buffer == "Author") {
+                    char* peek = c;
+                    while (*peek == ' ') { peek++; } // Skip spaces
+                
+                    String modelAuthor;
+                    while (*peek != ' ' && *peek != '\n' && *peek != '\0') {
+                        modelAuthor.Add(*peek);
+                        peek++;
+                    }
+                
+                    PrintConsole("Author: \"%s\"\n", modelAuthor.begin());
+                    c = peek;
+                } else if (_Buffer == "static") {
                     // Ignore static keyword
                 } else if (_Buffer == "const") {
                     // Ignore const keyword
