@@ -64,8 +64,18 @@ extern struct Animation *gCurAnim;
 
 /* "Machinima Camera", an extended freeze camera function that allows for free/fly camera and C-Up. */
 int saturn_camera_update() {
+    if (gLakituState.posHSpeed > 0) gLakituState.posHSpeed = 0.3f;
+    if (gLakituState.posVSpeed > 0) gLakituState.posVSpeed = 0.3f;
+    if (gLakituState.focHSpeed > 0) gLakituState.focHSpeed = 0.8f;
+    if (gLakituState.focVSpeed > 0) gLakituState.focVSpeed = 0.3f;
+
     if (freeze_camera) {
         fade_volume_scale(SEQ_PLAYER_LEVEL, 0, 6);
+
+        gLakituState.posHSpeed = 32.f;
+        gLakituState.posVSpeed = 32.f;
+        gLakituState.focHSpeed = 32.f;
+        gLakituState.focVSpeed = 32.f;
 
         // Cancel input when another UI is present
         // This includes DJUI's menu/chat/console, and text inputs in Saturn's UI (i.e. CC editor GameShark)
