@@ -16,6 +16,17 @@
 #include <SDL2/SDL_opengl.h>
 #include <SDL2/SDL_opengl_glext.h>
 
+bool is_wayland() {
+#if defined(__MINGW32__) || defined(OSX_BUILD)
+    return false;
+#else
+    return getenv("WAYLAND_DISPLAY");
+#endif
+}
+
+#include <stdio.h>
+#include <time.h>
+
 #include <stb/stb_image_write.h>
 
 #include "saturn/ui/saturn_imgui_colors.h"
@@ -61,9 +72,9 @@ bool show_window_mario = false;
 int modelw_x, modelw_y, modelw_s;
 
 bool capture_screenshot;
+bool screenshot_custom_res;
 int screenshot_multiplier = 1;
-int screenshot_width = 320;
-int screenshot_height = 240;
+int screenshot_size[2] = { 320, 240 };
 
 void imgui_init() {
     pluto_animations_list = GetPAnimList("dynos/anims");
@@ -159,14 +170,17 @@ void imgui_update() {
             if (ImGui::BeginMenu("Menu")) {
                 if (ImGui::MenuItem("Show Menu", NULL, show_menu)) show_menu = false;
                 if (ImGui::BeginMenu("Screenshot")) {
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::SliderInt("Multiplier", &screenshot_multiplier, 1, 4);
-                    ImGui::TextDisabled("%dx%d", gfx_current_dimensions.width * screenshot_multiplier, gfx_current_dimensions.height * screenshot_multiplier);
-#ifdef __MINGW32__
-                    if (ImGui::Button("Copy to Clipboard")) capture_screenshot = true;
-#else
-                    if (ImGui::Button("Save to File")) capture_screenshot = true;
-#endif
+                    ImGui::Checkbox("Custom Size", &screenshot_custom_res);
+                    if (screenshot_custom_res) {
+                        ImGui::InputInt2("###screenshot_size", screenshot_size, ImGuiInputTextFlags_CharsDecimal);
+                    } else {
+                        ImGui::SetNextItemWidth(100);
+                        ImGui::SliderInt("Multiplier", &screenshot_multiplier, 1, 4);
+                        ImGui::TextDisabled("%dx%d", screenshot_size[0], screenshot_size[1]);
+                        screenshot_size[0] = gfx_current_dimensions.width * screenshot_multiplier;
+                        screenshot_size[1] = gfx_current_dimensions.height * screenshot_multiplier;
+                    }
+                    if (ImGui::Button("Save Screenshot")) capture_screenshot = true;
                     ImGui::EndMenu();
                 }
                 ImGui::Separator();
@@ -248,6 +262,15 @@ void imgui_update() {
 #include <windows.h>
 #endif
 
+std::string get_screenshot_name() {
+    time_t now = time(0);
+    tm* ltm = localtime(&now);
+    char buffer[80];
+    strftime(buffer, sizeof(buffer), "%Y-%m-%d_%H%M%S", ltm);
+    std::string filename = "Pluto " + std::string(buffer) + ".png";
+    return filename;
+}
+
 bool skybox_has_deinit = false;
 void imgui_capture_screenshot(void* buffer) {
     GLuint resolve_framebuffer_id;
@@ -271,7 +294,15 @@ void imgui_capture_screenshot(void* buffer) {
         unsigned char* pixels = (unsigned char*)malloc(4 * gfx_current_dimensions.width * gfx_current_dimensions.height);
         glReadPixels(0, 0, gfx_current_dimensions.width, gfx_current_dimensions.height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
+        const char* path = sys_user_path();
+        std::filesystem::path new_path = std::filesystem::path(path) / "screenshots";
+        if (!std::filesystem::exists(new_path)) std::filesystem::create_directory(new_path);
+        std::string filename = get_screenshot_name();
+        new_path /= filename;
+        stbi_write_png(new_path.generic_string().c_str(), gfx_current_dimensions.width, gfx_current_dimensions.height, 4, pixels, gfx_current_dimensions.width * 4);
+
 #ifdef __MINGW32__
+        // Copy to clipboard (Windows)
         BITMAPV5HEADER header = {
             .bV5Size = sizeof(header),
             .bV5Width = (int)gfx_current_dimensions.width,
@@ -303,13 +334,26 @@ void imgui_capture_screenshot(void* buffer) {
                 CloseClipboard();
             }
         }
+#else
+#ifndef OSX_BUILD
+        // Copy to clipboard (Linux)
+        int outlen;
+        unsigned char* data = stbi_write_png_to_mem((unsigned char*)pixels, gfx_current_dimensions.width * 4, gfx_current_dimensions.height, gfx_current_dimensions.height, 4, &outlen);
+        FILE* command;
+        if (is_wayland()) command = popen("wl-copy --type image/png", "w");
+        else command = popen("xclip -selection clipboard -t image/png -i", "w");
+        fwrite(data, outlen, 1, command);
+        fclose(command);
+#else
+        // Copy to clipboard (macOS)
+        FILE* command = popen("osascript -e 'set the clipboard to (read (\"/dev/stdin\") as \"PNG picture\")'", "w");
+        fwrite(pixels, 1, gfx_current_dimensions.width * gfx_current_dimensions.height * 4, command);
+        fclose(command);
 #endif
 #endif
-        const char* path = sys_user_path();
-        std::filesystem::path new_path = std::filesystem::path(path) / "screenshot.png";
-        stbi_write_png(new_path.string().c_str(), gfx_current_dimensions.width, gfx_current_dimensions.height, 4, pixels, gfx_current_dimensions.width * 4);
-
         free(pixels);
+
+        studio_notif_info(filename.c_str(), "Saved screenshot to:\n%s/screenshots", std::filesystem::path(path).generic_string().c_str());
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);

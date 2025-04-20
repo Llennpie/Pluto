@@ -14,7 +14,9 @@ extern "C" {
     extern bool show_window_model_settings;
     
     extern bool capture_screenshot;
+    extern int screenshot_size[2];
     extern int screenshot_multiplier;
+    extern bool screenshot_custom_res;
 
     void imgui_init();
     void imgui_init_backend(SDL_Window*, SDL_GLContext);
