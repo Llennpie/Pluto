@@ -16,6 +16,7 @@
 #include "saturn/libs/imgui/imgui_internal.h"
 #include "saturn/libs/imgui/imgui_impl_sdl.h"
 #include "saturn/libs/imgui/imgui_impl_opengl3.h"
+#include "saturn/ui/studio_notifications.h"
 
 #include "src/saturn/saturn.h"
 #include "src/pc/pc_main.h"
@@ -299,6 +300,7 @@ std::vector<PlutoAnim> GetPAnimList(std::string folderPath) {
 
     std::filesystem::create_directory(folderPath);
     if (std::filesystem::exists(folderPath)) {
+        convert_count = 0;
         for (const auto & entry : std::filesystem::directory_iterator(folderPath)) {
             std::filesystem::path path = entry.path();
             
@@ -323,6 +325,8 @@ std::vector<PlutoAnim> GetPAnimList(std::string folderPath) {
             }
         }
     }
+
+    if (convert_count > 0) studio_notif_success("JSON -> PAnim", "Converted %d JSON animations to PAnim. Backups saved.", convert_count);
 
     return panim_list;
 }

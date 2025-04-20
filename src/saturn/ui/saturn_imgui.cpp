@@ -26,6 +26,7 @@
 #include "saturn/libs/imgui/imgui_internal.h"
 #include "saturn/libs/imgui/imgui_impl_sdl.h"
 #include "saturn/libs/imgui/imgui_impl_opengl3.h"
+#include "saturn/ui/studio_notifications.h"
 
 extern "C" {
     #include "pc/pc_main.h"
@@ -124,6 +125,8 @@ void imgui_update() {
     ImGui::NewFrame();
 
     allow_game_input = !ImGui::GetIO().WantTextInput;
+
+    studio_render_notifications();
 
     if (show_menu) {
         if (gMarioStates[0].marioObj != NULL) {
@@ -300,6 +303,7 @@ void imgui_capture_screenshot(void* buffer) {
                 CloseClipboard();
             }
         }
+#endif
 #endif
         const char* path = sys_user_path();
         std::filesystem::path new_path = std::filesystem::path(path) / "screenshot.png";

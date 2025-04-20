@@ -3,6 +3,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 #include "saturn/saturn.h"
 #include "saturn/saturn_colors.h"
@@ -13,6 +14,7 @@
 #include "saturn/libs/imgui/imgui_internal.h"
 #include "saturn/libs/imgui/imgui_impl_sdl.h"
 #include "saturn/libs/imgui/imgui_impl_opengl3.h"
+#include "saturn/ui/studio_notifications.h"
 #include "pc/djui/djui.h"
 #include "pc/djui/djui_chat_box.h"
 #include "pc/djui/djui_console.h"
@@ -267,6 +269,17 @@ void SaveActiveColorCode(std::string save_path) {
     ccfile.open(save_path + "/" + std::string(uiCcLabelName) + ".gs");
     ccfile << uiGameShark;
     ccfile.close();
+
+    std::string short_path = save_path;
+    std::replace(short_path.begin(), short_path.end(), '\\', '/');
+    size_t pos = short_path.find("dynos/packs/");
+    short_path.erase(0, pos);
+
+    if (std::filesystem::exists(save_path + "/" + std::string(uiCcLabelName) + ".gs"))
+        studio_notif_success(uiCcLabelName, "Saved color code to:\n%s/%s.gs", short_path.c_str(), uiCcLabelName);
+    else
+        studio_notif_error(uiCcLabelName, "Failed to save color code to:\n%s/%s.gs", short_path.c_str(), uiCcLabelName);
+
     RefreshColorCodeList();
 }
 
@@ -364,7 +377,7 @@ void OpenCCEditor() {
                 UpdatePaletteFromEditor(0);
                 if (std::filesystem::exists("dynos/colorcodes/" + current_color_code.Name + ".gs"))
                     ImGui::OpenPopup("###overwrite_gs");
-                else SaveActiveColorCode("dynos/colorcodes/");
+                else SaveActiveColorCode("dynos/colorcodes");
             }
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
                 ColorCode dragging;
@@ -379,7 +392,7 @@ void OpenCCEditor() {
             if (ImGui::BeginPopup("###overwrite_gs")) {
                 ImGui::Text("Overwrite %s.gs? This action is irreversible!", uiCcLabelName);
                 if (ImGui::Button("Yes")) {
-                    SaveActiveColorCode("dynos/colorcodes/");
+                    SaveActiveColorCode("dynos/colorcodes");
                     ImGui::CloseCurrentPopup();
                 } ImGui::SameLine();
                 if (ImGui::Button("No")) ImGui::CloseCurrentPopup();

@@ -7,6 +7,8 @@
 #include <sys/types.h>
 #include "cjson/cJSON.h"
 
+int convert_count;
+
 long find_length(char *i_file) {
   FILE *json_file_b = fopen(i_file, "rb");
 
@@ -104,4 +106,6 @@ void convert_mcomp_to_panim(char *i_file, char *o_file) {
 
   cJSON_Delete(json);
   fclose(panim_file);
+
+  convert_count++;
 }
