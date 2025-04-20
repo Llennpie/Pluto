@@ -304,8 +304,13 @@ void OpenExtraOptions() {
 
         if (ImGui::SliderFloat("###linked_scale", &marioScaleX, 0.f, 5.f, "Scale %.2f", ImGuiSliderFlags_NoRoundToFormat))
             marioScaleY = marioScaleZ = marioScaleX;
-        if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
-            ImGui::OpenPopup("###scalePresets");
+        if (ImGui::IsItemHovered()) {
+            ImGui::BeginTooltip();
+            ImGui::TextDisabled("Right click for more options");
+            ImGui::EndTooltip();
+            if (ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+                ImGui::OpenPopup("###scalePresets");
+        }
         if (ImGui::BeginPopup("###scalePresets")) {
             if (ImGui::MenuItem("Reset")) {
                 marioScaleX = marioScaleY = marioScaleZ = 1.f;
