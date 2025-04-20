@@ -83,6 +83,16 @@ void JoystickSlider(float& _x, float& _y, float scale = 100.f, float b_scale = 1
         frame_color = ImGuiCol_FrameBgHovered;
         if (ImGui::GetIO().MouseClicked[mouse_button]) {
             button_clicked = true;
+
+            // Move the button to the clicked position within the circle
+            if (distance <= scale - b_scale) {
+                _x = (mouse.x - p.x - scale) / (scale - b_scale);
+                _y = (mouse.y - p.y - scale) / (scale - b_scale);
+            } else {
+                float angle = atan2(mouse.y - circle_center.y, mouse.x - circle_center.x);
+                _x = cos(angle);
+                _y = sin(angle);
+            }
         }
     } else {
         frame_color = ImGuiCol_FrameBg;
