@@ -49,6 +49,8 @@ extern "C" {
     extern float marioScaleZ;
     extern void LoadModelData(int, bool, bool);
     extern void RefreshActiveExpressions();
+    extern bool refreshEditorPalette;
+    extern int refreshCounter;
 #ifdef __cplusplus
 }
 #endif

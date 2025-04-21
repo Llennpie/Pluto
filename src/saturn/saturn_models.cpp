@@ -60,6 +60,9 @@ ImVec4 uiThighShadeColor =       ImVec4(127.0f / 255.0f, 0.0f / 255.0f, 64.0f / 
 ImVec4 uiCalfMainColor =         ImVec4(127.0f / 255.0f, 0.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f);
 ImVec4 uiCalfShadeColor =        ImVec4(64.0f / 255.0f, 0.0f / 255.0f, 127.0f / 255.0f, 255.0f / 255.0f);
 
+bool refreshEditorPalette;
+int refreshCounter = 0;
+
 /* Update our CC Editor colors with our "defaultColor" values.
 This should be called when loading a CC, to insert our new colors into the editor. */
 void UpdateEditorFromPalette() {

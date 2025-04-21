@@ -426,11 +426,11 @@ void OpenModelSelector() {
                 // Toggle model
                 if (IsSaturnModel(i)) {
                     current_expressions.clear();
-                    UpdateEditorLabels();
                     format_warning_dismissed = false;
                     spawn_object(gMarioStates[0].marioObj, 0x95, bhvGoldenCoinSparkles);
                 }
                 LoadModelData(i, pack->mEnabled, false);
+                if (IsSaturnModel(i)) UpdateEditorLabels();
                 if (active_saturn_model_index == -1) custom_eyes = false;
             }
             ImGui::EndDisabled();

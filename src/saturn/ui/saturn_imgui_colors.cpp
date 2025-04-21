@@ -410,17 +410,6 @@ void OpenCCEditor() {
 }
 
 void UpdateEditorLabels() {
-    show_cap = false;
-    show_overalls = false;
-    show_gloves = false;
-    show_shoes = false;
-    show_skin = false;
-    show_hair = false;
-    show_shirt = false;
-    show_shoulders = false;
-    show_arms = false;
-    show_pelvis = false;
-    show_thigh = false;
-    show_calf = false;
-    spark_enabled = false;
+    refreshCounter = 0;
+    refreshEditorPalette = true;
 }
