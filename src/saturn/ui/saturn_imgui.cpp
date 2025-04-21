@@ -338,7 +338,7 @@ void imgui_capture_screenshot(void* buffer) {
 #ifndef OSX_BUILD
         // Copy to clipboard (Linux)
         int outlen;
-        unsigned char* data = stbi_write_png_to_mem((unsigned char*)pixels, gfx_current_dimensions.width * 4, gfx_current_dimensions.height, gfx_current_dimensions.height, 4, &outlen);
+        unsigned char* data = stbi_write_png_to_mem((unsigned char*)pixels, gfx_current_dimensions.width * 4, gfx_current_dimensions.width, gfx_current_dimensions.height, 4, &outlen);
         FILE* command;
         if (is_wayland()) command = popen("wl-copy --type image/png", "w");
         else command = popen("xclip -selection clipboard -t image/png -i", "w");
