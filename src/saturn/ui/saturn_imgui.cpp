@@ -195,8 +195,12 @@ void imgui_update() {
                 ImGui::BeginDisabled(!freeze_camera);
                 ImGui::PushItemWidth(150);
                 ImGui::SliderFloat("###freeze_camera_speed", &freeze_camera_speed, 0.f, 6.f, "Speed %.1f");
+                if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+                    freeze_camera_speed = 1.f;
                 ImGui::EndDisabled();
                 ImGui::SliderFloat("###camera_fov", &camera_fov, 0.f, 100.f, "FOV %.1f");
+                if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+                    camera_fov = 45.f;
                 ImGui::PopItemWidth();
                 ImGui::EndMenu();
             }
