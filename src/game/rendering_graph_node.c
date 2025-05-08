@@ -809,7 +809,7 @@ void apply_scale() {
     && gCurGraphNodeObject == &find_hat_object()->header.gfx) {
         if ((gMatStackIndex + 1) >= MATRIX_STACK_SIZE) { LOG_ERROR("Preventing attempt to exceed the maximum size %i for our matrix stack with size of %i.", MATRIX_STACK_SIZE - 1, gMatStackIndex); return; }
         Vec3f scaleVec;
-        vec3f_set(scaleVec, (f32)hat_scale[0], (f32)hat_scale[0], (f32)hat_scale[0]);
+        vec3f_set(scaleVec, (f32)hat_scale[0], (f32)hat_scale[1], (f32)hat_scale[2]);
         mtxf_scale_vec3f(gMatStack[gMatStackIndex + 1], gMatStack[gMatStackIndex], scaleVec);
         mtxf_scale_vec3f(gMatStackPrev[gMatStackIndex + 1], gMatStackPrev[gMatStackIndex], scaleVec);
         if (!increment_mat_stack()) { return; }
@@ -825,7 +825,7 @@ void apply_translate_rotate() {
     if (active_accessory_index != -1 && gCurGraphNodeObject != NULL
     && gCurGraphNodeObject == &find_hat_object()->header.gfx) {
         if ((gMatStackIndex + 1) >= MATRIX_STACK_SIZE) { LOG_ERROR("Preventing attempt to exceed the maximum size %i for our matrix stack with size of %i.", MATRIX_STACK_SIZE - 1, gMatStackIndex); return; }
-        vec3f_set(translation, (f32)hat_pos[0], (f32)hat_pos[2], (f32)hat_pos[1]);
+        vec3f_set(translation, hat_pos[0] + (-125 * hat_scale[0] + 125), hat_pos[1], hat_pos[2]);
         vec3s_set(rotation, (s16)hat_rot[0] * 182.04f, (s16)hat_rot[1] * 182.04f, (s16)hat_rot[2] * 182.04f);
         mtxf_rotate_zxy_and_translate(mtxf, translation, rotation);
         mtxf_mul(gMatStack[gMatStackIndex + 1], mtxf, gMatStack[gMatStackIndex]);

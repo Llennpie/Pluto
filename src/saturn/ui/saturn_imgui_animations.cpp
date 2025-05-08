@@ -34,14 +34,12 @@ extern "C" {
 
 static char animSearchTerm[128];
 
-Vec3f smooth_bone_rotations[21];
-
 void BoneEditorWindow() {
     if (current_pluto_anim.Values.size() > 0 && pause_anim && is_editing_panim && override_anim) {
         ImGui::Begin("Animation Pose Editor", &is_editing_panim, ImGuiWindowFlags_AlwaysAutoResize);
         ImGui::PushItemWidth(150);
         int currbone = 0;
-#define BONE_ENTRY(name) ImGui::DragFloat3(name, smooth_bone_rotations[currbone++], 1.0f, 0.0f, 0.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
+#define BONE_ENTRY(name) ImGui::DragFloat3(name, bone_rotations[currbone++], 1.0f, 0.0f, 0.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
         BONE_ENTRY("Translation"    );
         BONE_ENTRY("Root"           );
         ImGui::Separator();
@@ -69,12 +67,6 @@ void BoneEditorWindow() {
         BONE_ENTRY("Lower Right Leg");
         BONE_ENTRY("Right Foot"     );
 #undef BONE_ENTRY
-        for (int i = 0; i < 21; i++) {
-            //camera_approach_f32_symmetric_bool(&sFOVState.fov, camera_default_fov, (camera_default_fov - sFOVState.fov) / 30.f);
-            bone_rotations[i][0] = camera_approach_f32_symmetric(bone_rotations[i][0], smooth_bone_rotations[i][0], (smooth_bone_rotations[i][0] - bone_rotations[i][0]) / 30.f);
-            bone_rotations[i][1] = camera_approach_f32_symmetric(bone_rotations[i][1], smooth_bone_rotations[i][1], (smooth_bone_rotations[i][1] - bone_rotations[i][1]) / 30.f);
-            bone_rotations[i][2] = camera_approach_f32_symmetric(bone_rotations[i][2], smooth_bone_rotations[i][2], (smooth_bone_rotations[i][2] - bone_rotations[i][2]) / 30.f);
-        }
         ImGui::PopItemWidth();
         ImGui::End();
     }
@@ -191,11 +183,6 @@ void OpenAnimationsMenu() {
     // Pose Editor
     ImGui::BeginDisabled(!pause_anim && override_anim || !override_anim);
     if (ImGui::Button("Edit Pose")) {
-        for (int i = 0; i < 21; i++) {
-            smooth_bone_rotations[i][0] = bone_rotations[i][0];
-            smooth_bone_rotations[i][1] = bone_rotations[i][1];
-            smooth_bone_rotations[i][2] = bone_rotations[i][2];
-        }
         if (!enable_custom_anim && !is_editing_panim) {
             current_pluto_anim = ConvertFromVanilla();
             saturn_play_pluto_animation();
