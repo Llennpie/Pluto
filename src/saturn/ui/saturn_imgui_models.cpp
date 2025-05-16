@@ -442,7 +442,18 @@ void OpenModelSettings() {
 std::vector<std::string> popup_color_code_list;
 static char model_search_term[256] = "";
 
+std::vector<std::pair<PackData*, bool>> model_packs;
+
 void OpenModelSelector() {
+
+    if (model_packs.size() <= 0) {
+        model_packs.clear();
+        for (int i = 0; i < DynOS_Pack_GetCount(); i++) {
+            PackData* pack = DynOS_Pack_GetFromIndex(i);
+            model_packs.push_back(std::make_pair(pack, IsAccessoryModel(i)));
+        }
+    }
+
     if (DynOS_Pack_GetCount() >= 20) {
         ImGui::SetNextItemWidth(200);
         ImGui::InputTextWithHint("###model_packs_search", "Search models...", model_search_term, IM_ARRAYSIZE(model_search_term), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_CharsLowercase);
@@ -450,9 +461,9 @@ void OpenModelSelector() {
     } else if (model_search_term != "") strcpy(model_search_term, "");
 
     if (ImGui::BeginListBox("###model_packs_list", ImVec2(200, 200))) {
-        for (int i = 0; i < DynOS_Pack_GetCount(); i++) {
-            PackData* pack = DynOS_Pack_GetFromIndex(i);
-            if (IsAccessoryModel(i)) continue;
+        for (int i = 0; i < model_packs.size(); i++) {
+            if (model_packs[i].second) continue; // Skip accessory packs
+            PackData* pack = model_packs[i].first;
             std::string pack_label = pack->mDisplayName.begin();
             std::string pack_id = pack_label + "###model_pack_" + std::to_string(i);
 
