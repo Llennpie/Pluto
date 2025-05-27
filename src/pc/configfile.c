@@ -70,8 +70,8 @@ ConfigWindow configWindow       = {
     .secret_ui = false,
 };
 unsigned int configFiltering    = 1;          // 0=force nearest, 1=linear, 2=three-point
-unsigned int configMasterVolume = 80; // 0 - MAX_VOLUME
-unsigned int configMusicVolume = MAX_VOLUME;
+unsigned int configMasterVolume = 50; // 0 - MAX_VOLUME
+unsigned int configMusicVolume = 32;
 unsigned int configSfxVolume = MAX_VOLUME;
 unsigned int configEnvVolume = MAX_VOLUME;
 
