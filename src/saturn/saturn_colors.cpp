@@ -45,6 +45,7 @@ u16 gChromaKeyColor = 0x07C1;
 bool chroma_show_objects;
 bool chroma_show_geo;
 bool chroma_affects_light = true;
+bool chroma_transparent_background;
 
 bool shade_lighting_enabled;
 float shade_lighting_dir[3] = {0.0f, 0.0f, 0.0f};
