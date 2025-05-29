@@ -143,27 +143,39 @@ bool saturn_file_browser_create_imgui(FileBrowserEntry dir, std::string path, st
             if (do_search) { if (filename.find(search_terms[browser_id]) == std::string::npos) continue; }
             std::string fullpath = path + entry.name();
 
-            Expression* expression = &current_expressions[exp_index];
-            if (expression->Textures.size() <= 0) continue;
-            
-            for (TexturePath& texture : expression->Textures) {
-                if (texture.SmallExpressionPath(expression->Name) == fullpath) {
-                    bool selected;
-                    selected = current_expressions[exp_index].CurrentIndex == &texture - &expression->Textures[0];
+            if (exp_index >= 0) {
+                // Expression selector
+                Expression* expression = &current_expressions[exp_index];
+                if (expression->Textures.size() <= 0) continue;
+                
+                for (TexturePath& texture : expression->Textures) {
+                    if (texture.SmallExpressionPath(expression->Name) == fullpath) {
+                        bool selected;
+                        selected =  (expression->CurrentIndex == &texture - &expression->Textures[0]) ||
+                                    (expression->BlinkIndex[0] != -1 && expression->BlinkIndex[0] == &texture - &expression->Textures[0]) ||
+                                    (expression->BlinkIndex[1] != -1 && expression->BlinkIndex[1] == &texture - &expression->Textures[0]);
 
-                    if (ImGui::Selectable(entry.name().c_str(), &selected)) {
-                        selected_path = selected_paths[browser_id] = fullpath;
-                        clicked = true;
-                    }
-                    if (ImGui::IsItemHovered()) {
-                        OpenExpressionPreview(&texture);
-                        // Right-click reloads the texture
-                        if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
-                            current_expressions[exp_index].Textures = LoadExpressionTextures(expression->FolderPath, *expression);
+                        if (ImGui::Selectable(entry.name().c_str(), &selected)) {
                             selected_path = selected_paths[browser_id] = fullpath;
                             clicked = true;
                         }
+                        if (ImGui::IsItemHovered()) {
+                            OpenExpressionPreview(&texture);
+                            // Right-click reloads the texture
+                            if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+                                current_expressions[exp_index].Textures = LoadExpressionTextures(expression->FolderPath, *expression);
+                                selected_path = selected_paths[browser_id] = fullpath;
+                                clicked = true;
+                            }
+                        }
                     }
+                }
+            }  else {
+                // General file browser
+                bool selected = (selected_paths[browser_id] == fullpath);
+                if (ImGui::Selectable(entry.name().c_str(), &selected)) {
+                    selected_path = selected_paths[browser_id] = fullpath;
+                    clicked = true;
                 }
             }
         }

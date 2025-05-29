@@ -119,7 +119,7 @@ void OpenAnimationsMenu() {
                 saturn_file_browser_filter_extension("panim");
                 saturn_file_browser_scan_directory("dynos/anims");
                 saturn_file_browser_height(150);
-                if (saturn_file_browser_show("panim", 0)) {
+                if (saturn_file_browser_show("panim", -1)) {
                     for (int n = 0; n < pluto_animations_list.size(); n++) {
                         if (pluto_animations_list[n].FilePath.find(saturn_file_browser_get_selected().generic_string()) != std::string::npos) {
                             // Overwrite current animation
