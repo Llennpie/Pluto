@@ -43,6 +43,27 @@ const char* left_hand_switches[] = {"Default", "Fist", "Open"};
 const char* cap_switches[] = {"Default (On)", "Off", "Wing Cap"}; // unused "wing cap off" not included
 const char* powerup_switches[] = {"Default", "None", "Vanish", "Metal", "Vanish & Metal"};
 
+void OpenExpressionPreview(TexturePath* texture) {
+    if (ImGui::IsItemHovered() && configExpressionPreviews) {
+        if (texture->RawData == 0) {
+            texture->RawData = SetTextureData(*texture, &texture->Width, &texture->Height, &texture->Preview);
+        } else if (texture->Preview != 0) {
+            float maxSize = 128.0f;
+            float width = (float)texture->Width;
+            float height = (float)texture->Height;
+            float scale = 1.0f;
+            if (width > maxSize || height > maxSize) {
+                scale = maxSize / max(width, height);
+                width *= scale;
+                height *= scale;
+            }
+            ImGui::BeginTooltip();
+            ImGui::Image((void*)(intptr_t)texture->Preview, ImVec2(width, height));
+            ImGui::EndTooltip();
+        }
+    }
+}
+
 /* Expression selector UI for the eye expression */
 void OpenEyeSelector() {
     if (current_expressions.size() <= 0) return;
@@ -57,7 +78,7 @@ void OpenEyeSelector() {
         if (saturn_file_browser_show("eyes", 0)) {
             // Iterate between textures and find the selected one
             for (int tex = 0; tex < current_expressions[0].Textures.size(); tex++) {
-                if (current_expressions[0].Textures[tex].FilePath.find(saturn_file_browser_get_selected().generic_string()) != std::string::npos) {
+                if (current_expressions[0].Textures[tex].SmallExpressionPath("eyes") == saturn_file_browser_get_selected().generic_string()) {
                     if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl)) {
                         // Left Ctrl sets the custom blink cycle
                         if (current_expressions[0].BlinkIndex[0] == -1) current_expressions[0].BlinkIndex[0] = tex;
@@ -125,6 +146,9 @@ void OpenComboSelector(Expression* expression, int index) {
                 if (is_selected) expression->CurrentIndex = select_index;
                 else expression->CurrentIndex = deselect_index;
             }
+
+            // Expression preview
+            OpenExpressionPreview(&expression->Textures[expression->CurrentIndex]);
     } else {
         // Use dropdown
         std::string defaultLabel = expression->Textures[expression->CurrentIndex].ShortFileName();
@@ -135,7 +159,7 @@ void OpenComboSelector(Expression* expression, int index) {
             saturn_file_browser_scan_directory(expression->FolderPath);
             if (saturn_file_browser_show_tree("expr_" + std::to_string(index), index)) {
                 for (int tex = 0; tex < expression->Textures.size(); tex++) {
-                    if (expression->Textures[tex].FilePath.find(saturn_file_browser_get_selected().generic_string()) != std::string::npos) {
+                    if (expression->Textures[tex].SmallExpressionPath(expression->Name) == saturn_file_browser_get_selected().generic_string()) {
                         expression->CurrentIndex = tex;
                         break;
                     }
@@ -405,12 +429,15 @@ void OpenModelSettings() {
                         UpdateEditorLabels();
                         LoadModelData(active_saturn_model_index, pack->mEnabled, false);
                     }
-                    ImGui::Separator();
+                    ImGui::BeginDisabled(accessory_packs.size() <= 0);
                     if (ImGui::BeginMenu("Accessories")) {
                         OpenAccessorySettings();
                         ImGui::EndMenu();
                     }
+                    ImGui::EndDisabled();
+                    ImGui::Separator();
                     ImGui::Checkbox("Show All Expressions", &ignore_expression_visibility);
+                    ImGui::Checkbox("Preview Textures", &configExpressionPreviews);
                     ImGui::EndMenu();
                 }
 

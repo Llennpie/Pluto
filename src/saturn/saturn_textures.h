@@ -26,7 +26,17 @@ public:
     u8 *RawData = 0;
     int Width = 32;
     int Height = 32;
-    bool IsModelTexture = false;
+    /* Returns a mini path following a specified expression name */
+    std::string SmallExpressionPath(std::string ExpressionName) {
+        size_t pos = FilePath.find("/" + ExpressionName + "/");
+        if (pos == std::string::npos) {
+            pos = FilePath.find("/" + ExpressionName.substr(0, ExpressionName.size() - 1) + "/");
+            if (pos == std::string::npos) return FilePath;
+            return FilePath.substr(pos + ExpressionName.size() + 3);
+        }
+        return FilePath.substr(pos + ExpressionName.size() + 2);
+    }
+    unsigned int Preview;
 };
 
 class Expression {
@@ -59,19 +69,9 @@ public:
                 path.find(prefix + this->Name.substr(0, this->Name.size() - 1) + "_") != std::string::npos);
     }
 
-    /* Returns true if the expression's textures are formatted for a checkbox
-       This is when an expression has two non-model textures and no subfolders */
+    /* Returns true if the expression's textures are formatted for a checkbox */
     bool IsToggleFormat() {
-        if (this->Textures.size() >= 2 && this->Folders.size() == 0) {
-            int countWithoutModelTextures = 0;
-            for (int i = 0; i < this->Textures.size(); i++) {
-                // Exclude model textures
-                if (this->Textures[i].IsModelTexture) continue;
-                countWithoutModelTextures++;
-            }
-            return(countWithoutModelTextures == 2);
-        }
-        return false;
+        return (this->Textures.size() >= 2 && this->Folders.size() == 0);
     }
 
     void Refresh();
@@ -85,7 +85,7 @@ public:
 
 extern bool format_warning_dismissed;
 
-extern u8* GetTextureData(TexturePath, int*, int*, int);
+extern u8* SetTextureData(TexturePath, int*, int*, unsigned int*);
 
 extern Expression LoadEyesFolder();
 std::vector<TexturePath> LoadExpressionTextures(std::string, Expression);

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <SDL2/SDL.h>
+#include <GL/glew.h>
 
 #include <dirent.h>
 #include <filesystem>
@@ -53,7 +54,7 @@ static u8 *RGBA32_RGBA16(const u8 *aData, u64 aLength) {
 uint32_t gTextureId = 0;
 
 /* Fetches a TexturePath's raw texture data in RGBA32 format */
-u8* GetTextureData(TexturePath Texture, int* Width, int* Height, int Tile) {
+u8* SetTextureData(TexturePath Texture, int* Width, int* Height, unsigned int* Preview) {
     //if (Texture.RawData != 0) return Texture.RawData;
     if (loading_texture_data) return 0;
     loading_texture_data = true;
@@ -75,24 +76,25 @@ u8* GetTextureData(TexturePath Texture, int* Width, int* Height, int Tile) {
     TextureData->mRawFormat = G_IM_FMT_RGBA;
     TextureData->mRawSize   = G_IM_SIZ_32b;
     TextureData->mRawData   = Array<u8>(RawData, RawData + (TextureData->mRawWidth * TextureData->mRawHeight * 4));
-    free(RawData);
 
-    // RGBA-32 buffer
-    // RGBA-16 is unused here, maybe support for conversion eventually
+    GLuint ExpressionPreview;
+    glGenTextures(1, &ExpressionPreview);
+    glBindTexture(GL_TEXTURE_2D, ExpressionPreview);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, TextureData->mRawWidth, TextureData->mRawHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, RawData);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    *Preview = ExpressionPreview;
+    stbi_image_free(RawData);
+
     u8 *_Buffer = TextureData->mRawData.begin();
-    /* RGBA-16 */ //RGBA32_RGBA16(TextureData->mRawData.begin(), TextureData->mRawData.Count());
-
-    if (gTextureId == 0) gTextureId = gfx_get_current_rendering_api()->new_texture();
-    gfx_get_current_rendering_api()->select_texture(Tile, gTextureId);
-    gfx_get_current_rendering_api()->set_sampler_parameters(Tile, false, 0, 0);
-    gfx_get_current_rendering_api()->upload_texture(_Buffer, TextureData->mRawWidth, TextureData->mRawHeight);
-
     *Width = TextureData->mRawWidth;
     *Height = TextureData->mRawHeight;
 
     loading_texture_data = false;
     return _Buffer;
 }
+
 
 bool sortAlphabetically (TexturePath a, TexturePath b) { return a.FilePath < b.FilePath; }
 
@@ -209,11 +211,21 @@ int GetValidExpressionCount(std::vector<Expression> expressions_list) {
 
 /* Loads a texture's raw data if it hasn't already */
 void InitTextureData(int exp_index, int tex_index, int tile) {
-    if (current_expressions[exp_index].Textures[tex_index].RawData == 0)
-        current_expressions[exp_index].Textures[tex_index].RawData =    GetTextureData(current_expressions[exp_index].Textures[tex_index],
-                                                                        &current_expressions[exp_index].Textures[tex_index].Width,
-                                                                        &current_expressions[exp_index].Textures[tex_index].Height,
-                                                                        tile);
+    if (current_expressions[exp_index].Textures[tex_index].RawData == 0) {
+        // Generate new texture data
+        current_expressions[exp_index].Textures[tex_index].RawData =
+            SetTextureData(current_expressions[exp_index].Textures[tex_index],
+                           &current_expressions[exp_index].Textures[tex_index].Width,
+                           &current_expressions[exp_index].Textures[tex_index].Height,
+                           &current_expressions[exp_index].Textures[tex_index].Preview);
+
+        if (gTextureId == 0) gTextureId = gfx_get_current_rendering_api()->new_texture();
+        gfx_get_current_rendering_api()->select_texture(tile, gTextureId);
+        gfx_get_current_rendering_api()->set_sampler_parameters(tile, false, 0, 0);
+        gfx_get_current_rendering_api()->upload_texture(current_expressions[exp_index].Textures[tex_index].RawData,
+                                                        current_expressions[exp_index].Textures[tex_index].Width,
+                                                        current_expressions[exp_index].Textures[tex_index].Height);
+    }
 }
 
 /* Handles texture replacement. Called from gfx_pc.c */

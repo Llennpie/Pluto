@@ -151,6 +151,7 @@ bool         configUncappedFramerate              = false;
 unsigned int configFrameLimit                     = 144;
 unsigned int configDrawDistance                   = 4;
 bool         configDisablePopups                  = false;
+bool         configExpressionPreviews             = false;
 bool         configLuaProfiler                    = false;
 #ifdef DEVELOPMENT
 bool         configCtxProfiler                    = false;
@@ -283,6 +284,7 @@ static const struct ConfigOption options[] = {
     {.name = "coop_compatibility",             .type = CONFIG_TYPE_BOOL  ,  .boolValue   = &configCoopCompatibility},
     {.name = "coopdx_global_player_models",    .type = CONFIG_TYPE_BOOL  , .boolValue   = &configGlobalPlayerModels},
     {.name = "disable_popups",                 .type = CONFIG_TYPE_BOOL  , .boolValue   = &configDisablePopups},
+    {.name = "expression_previews",            .type = CONFIG_TYPE_BOOL  , .boolValue   = &configExpressionPreviews},
     {.name = "lua_profiler",                   .type = CONFIG_TYPE_BOOL  , .boolValue   = &configLuaProfiler},
 #ifdef DEVELOPMENT
     {.name = "ctx_profiler",                   .type = CONFIG_TYPE_BOOL  , .boolValue   = &configCtxProfiler},
