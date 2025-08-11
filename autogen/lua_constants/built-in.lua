@@ -21,176 +21,39 @@ _ReadOnlyTable = {
     end
 }
 
+-----------
+-- table --
+-----------
 
---------------------
--- math functions --
---------------------
-
---- @param dest Vec3f
---- @param src Vec3f
---- @return Vec3f
-function vec3f_copy(dest, src)
-    dest.x = src.x
-    dest.y = src.y
-    dest.z = src.z
-    return dest
+--- Creates a shallow copy of table `t`
+--- @param t table
+--- @return table
+function table.copy(t)
+    return table_copy(t)
 end
 
---- @param dest Vec3f
---- @param x number
---- @param y number
---- @param z number
---- @return Vec3f
-function vec3f_set(dest, x, y, z)
-    dest.x = x
-    dest.y = y
-    dest.z = z
-    return dest
+--- Creates a deep copy of table `t`
+--- @param t table
+--- @return table
+function table.deepcopy(t)
+    return table_deepcopy(t)
 end
 
---- @param dest Vec3f
---- @param a Vec3f
---- @return Vec3f
-function vec3f_add(dest, a)
-    dest.x = dest.x + a.x
-    dest.y = dest.y + a.y
-    dest.z = dest.z + a.z
-    return dest
-end
-
---- @param dest Vec3f
---- @param a Vec3f
---- @param b Vec3f
---- @return Vec3f
-function vec3f_sum(dest, a, b)
-    dest.x = a.x + b.x
-    dest.y = a.y + b.y
-    dest.z = a.z + b.z
-    return dest
-end
-
---- @param dest Vec3f
---- @param a number
---- @return Vec3f
-function vec3f_mul(dest, a)
-    dest.x = dest.x * a
-    dest.y = dest.y * a
-    dest.z = dest.z * a
-    return dest
-end
-
---- @param dest Vec3f
---- @return Vec3f
-function vec3f_normalize(dest)
-    local divisor = math.sqrt(dest.x * dest.x + dest.y * dest.y + dest.z * dest.z)
-    if divisor == 0 then
-        return dest
-    end
-
-    local invsqrt = 1.0 / divisor
-    dest.x = dest.x * invsqrt
-    dest.y = dest.y * invsqrt
-    dest.z = dest.z * invsqrt
-
-    return dest
-end
-
---- @param a Vec3f
---- @return number
-function vec3f_length(a)
-    return math.sqrt(a.x * a.x + a.y * a.y + a.z * a.z)
-end
-
---- @param a Vec3f
---- @param b Vec3f
---- @return number
-function vec3f_dot(a, b)
-    return a.x * b.x + a.y * b.y + a.z * b.z
-end
-
---- @param vec Vec3f
---- @param onto Vec3f
---- @return Vec3f
-function vec3f_project(vec, onto)
-  local numerator = vec3f_dot(vec, onto)
-  local denominator = vec3f_dot(onto, onto)
-  local out = {}
-  vec3f_copy(out, onto)
-  vec3f_mul(out, numerator / denominator)
-  return out
-end
-
---- @param v1 Vec3f
---- @param v2 Vec3f
---- @return number
-function vec3f_dist(v1, v2)
-    dx = v1.x - v2.x
-    dy = v1.y - v2.y
-    dz = v1.z - v2.z
-    return math.sqrt(dx * dx + dy * dy + dz * dz)
-end
-
---- @param dest Vec3s
---- @param src Vec3s
---- @return Vec3s
-function vec3s_copy(dest, src)
-    dest.x = src.x
-    dest.y = src.y
-    dest.z = src.z
-    return dest
-end
-
---- @param dest Vec3s
---- @param x number
---- @param y number
---- @param z number
---- @return Vec3s
-function vec3s_set(dest, x, y, z)
-    dest.x = x
-    dest.y = y
-    dest.z = z
-    return dest
-end
-
---- @param dest Vec3s
---- @param a Vec3s
---- @return Vec3s
-function vec3s_add(dest, a)
-    dest.x = dest.x + a.x
-    dest.y = dest.y + a.y
-    dest.z = dest.z + a.z
-    return dest
-end
-
---- @param dest Vec3s
---- @param a Vec3s
---- @param b Vec3s
---- @return Vec3s
-function vec3s_sum(dest, a, b)
-    dest.x = a.x + b.x
-    dest.y = a.y + b.y
-    dest.z = a.z + b.z
-    return dest
-end
-
---- @param dest Vec3s
---- @param a number
---- @return Vec3s
-function vec3s_mul(dest, a)
-    dest.x = dest.x * a
-    dest.y = dest.y * a
-    dest.z = dest.z * a
-    return dest
-end
-
---- @param v1 Vec3s
---- @param v2 Vec3s
---- @return number
-function vec3s_dist(v1, v2)
-    dx = v1.x - v2.x
-    dy = v1.y - v2.y
-    dz = v1.z - v2.z
-    return math.sqrt(dx * dx + dy * dy + dz * dz)
+--- Utility function to create a read-only table
+--- @param data table
+--- @return table
+function create_read_only_table(data)
+    local t = {}
+    local mt = {
+        __index = data,
+        __newindex = function(_, k, _)
+            error('Attempting to modify key `' .. k .. '` of read-only table')
+        end,
+        __call = function() return table_copy(data) end,
+        __metatable = false
+    }
+    setmetatable(t, mt)
+    return t
 end
 
 -----------
@@ -307,9 +170,83 @@ function network_player_get_override_palette_color(np, part)
 end
 
 
------------------
--- legacy font --
------------------
+--------------------
+-- math functions --
+--------------------
+--- Note: These functions don't exist in the Lua math library,
+--- and are useful enough to not have to redefine them in every mod
 
---- @type integer
-FONT_TINY = -1
+local __math_min, __math_max, __math_sqrt, __math_floor, __math_ceil = math.min, math.max, math.sqrt, math.floor, math.ceil
+
+--- @param x number
+--- @return number
+--- Computes the square of the number `x`
+function math.sqr(x)
+    return x * x
+end
+
+--- @param x number
+--- @param a number
+--- @param b number
+--- @return number
+--- Clamps the number `x` between bounds `a` (minimum) and `b` (maximum)
+function math.clamp(x, a, b)
+    return __math_min(__math_max(x, a), b)
+end
+
+--- @param a number
+--- @param b number
+--- @return number
+--- Computes the hypotenuse of a right-angled triangle given sides `a` and `b` using the Pythagorean theorem
+function math.hypot(a, b)
+    return __math_sqrt(a * a + b * b)
+end
+
+--- @param x number
+--- @return number
+--- Returns 1 if `x` is positive or zero, -1 otherwise
+function math.sign(x)
+    return x >= 0 and 1 or -1
+end
+
+--- @param x number
+--- @return number
+--- Returns 1 if `x` is positive, 0 if it is zero, -1 otherwise
+function math.sign0(x)
+    return x ~= 0 and (x > 0 and 1 or -1) or 0
+end
+
+--- @param a number
+--- @param b number
+--- @param t number
+--- @return number
+--- Linearly interpolates between `a` and `b` using delta `t`
+function math.lerp(a, b, t)
+    return a + (b - a) * t
+end
+
+--- @param a number
+--- @param b number
+--- @param x number
+--- @return number
+--- Determines where `x` linearly lies between `a` and `b`. It's the inverse of `math.lerp`
+function math.invlerp(a, b, x)
+    return (x - a) / (b - a)
+end
+
+--- @param a number
+--- @param b number
+--- @param c number
+--- @param d number
+--- @param x number
+--- @return number
+--- Linearly remaps `x` from the source range `[a, b]` to the destination range `[c, d]`
+function math.remap(a, b, c, d, x)
+    return c + (d - c) * ((x - a) / (b - a))
+end
+
+--- @param x number
+--- Rounds `x` to the nearest integer value
+function math.round(x)
+    return x > 0 and __math_floor(x + 0.5) or __math_ceil(x - 0.5)
+end

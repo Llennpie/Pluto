@@ -150,6 +150,7 @@ bool smlua_is_cobject(lua_State* L, int index, UNUSED u16 lot) {
 
 void* smlua_to_cobject(lua_State* L, int index, u16 lot) {
     s32 indexType = lua_type(L, index);
+    if (indexType == LUA_TNIL) { return NULL; }
     if (indexType != LUA_TUSERDATA) {
         LOG_LUA_LINE("smlua_to_cobject received improper type '%s'", lua_typename(L, indexType));
         gSmLuaConvertSuccess = false;
@@ -176,6 +177,7 @@ void* smlua_to_cobject(lua_State* L, int index, u16 lot) {
 
 void* smlua_to_cpointer(lua_State* L, int index, u16 lvt) {
     s32 indexType = lua_type(L, index);
+    if (indexType == LUA_TNIL) { return NULL; }
     if (indexType != LUA_TUSERDATA) {
         LOG_LUA_LINE("smlua_to_cpointer received improper type '%s'", lua_typename(L, indexType));
         gSmLuaConvertSuccess = false;
@@ -749,15 +751,21 @@ void smlua_logline(void) {
         // Get the folder and file
         // in the format: "folder/file.lua"
         const char* src = info.source;
-        int slashCount = 0;
         const char* folderStart = NULL;
-        for (const char* p = src + strlen(src); p > src; --p) {
-            if (*p == '/' || *p == '\\') {
-                if (++slashCount == 2) {
-                    folderStart = p + 1;
-                    break;
+        if (strlen(src) < SYS_MAX_PATH) {
+            int slashCount = 0;
+            for (const char* p = src + strlen(src); p > src; --p) {
+                if (*p == '/' || *p == '\\') {
+                    if (++slashCount == 2) {
+                        folderStart = p + 1;
+                        break;
+                    }
                 }
             }
+        } else {
+            // That's not a filepath
+            // It also explains why sometimes the whole gSmluaConstants string was printed to the console
+            snprintf(info.short_src, sizeof(info.short_src), "gSmluaConstants");
         }
 
         LOG_LUA("    [%d] '%s':%d -- %s [%s]",

@@ -16,6 +16,11 @@ out_filename_defs = 'autogen/lua_definitions/functions.lua'
 in_files = [
     "src/audio/external.h",
     "src/engine/math_util.h",
+    "src/engine/math_util.inl",
+    "src/engine/math_util_vec3f.inl",
+    "src/engine/math_util_vec3i.inl",
+    "src/engine/math_util_vec3s.inl",
+    "src/engine/math_util_mat4.inl",
     "src/engine/surface_collision.h",
     "src/engine/surface_load.h",
     "src/game/camera.h",
@@ -49,7 +54,6 @@ in_files = [
     "src/pc/lua/utils/smlua_camera_utils.h",
     "src/pc/lua/utils/smlua_gfx_utils.h",
     "src/pc/lua/utils/smlua_collision_utils.h",
-    "src/pc/lua/utils/smlua_math_utils.h",
     "src/pc/lua/utils/smlua_model_utils.h",
     "src/pc/lua/utils/smlua_text_utils.h",
     "src/pc/lua/utils/smlua_audio_utils.h",
@@ -73,7 +77,8 @@ in_files = [
     "src/game/first_person_cam.h",
     "src/engine/behavior_script.h",
     "src/audio/seqplayer.h",
-    "src/engine/lighting_engine.h"
+    "src/engine/lighting_engine.h",
+    "src/pc/network/sync_object.h"
 ]
 
 override_allowed_functions = {
@@ -91,12 +96,12 @@ override_allowed_functions = {
     "src/game/area.h":                      [ "get_mario_spawn_type", "area_get_warp_node", "area_get_any_warp_node", "play_transition" ],
     "src/engine/level_script.h":            [ "area_create_warp_node" ],
     "src/game/ingame_menu.h":               [ "set_min_dialog_width", "set_dialog_override_pos", "reset_dialog_override_pos", "set_dialog_override_color", "reset_dialog_override_color", "set_menu_mode", "create_dialog_box", "create_dialog_box_with_var", "create_dialog_inverted_box", "create_dialog_box_with_response", "reset_dialog_render_state", "set_dialog_box_state", ],
-    "src/audio/seqplayer.h":                [ "sequence_player_set_tempo", "sequence_player_set_tempo_acc", "sequence_player_set_transposition", "sequence_player_get_tempo", "sequence_player_get_tempo_acc", "sequence_player_get_transposition", "sequence_player_get_volume", "sequence_player_get_fade_volume", "sequence_player_get_mute_volume_scale" ]
+    "src/audio/seqplayer.h":                [ "sequence_player_set_tempo", "sequence_player_set_tempo_acc", "sequence_player_set_transposition", "sequence_player_get_tempo", "sequence_player_get_tempo_acc", "sequence_player_get_transposition", "sequence_player_get_volume", "sequence_player_get_fade_volume", "sequence_player_get_mute_volume_scale" ],
+    "src/pc/network/sync_object.h":         [ "sync_object_is_initialized", "sync_object_is_owned_locally", "sync_object_get_object" ]
 }
 
 override_disallowed_functions = {
     "src/audio/external.h":                     [ " func_" ],
-    "src/engine/math_util.h":                   [ "atan2f", "vec3s_sub" ],
     "src/engine/surface_load.h":                [ "load_area_terrain", "alloc_surface_pools", "clear_dynamic_surfaces", "get_area_terrain_size" ],
     "src/engine/surface_collision.h":           [ " debug_", "f32_find_wall_collision" ],
     "src/game/mario_actions_airborne.c":        [ "^[us]32 act_.*" ],
@@ -892,9 +897,7 @@ def build_param(fid, param, i):
         else:
             s = '  ' + s
 
-        sanity_check = '    if (lua_isnil(L, %d)) { return 0; }\n' % (i)
-
-        return sanity_check + s + '\n'
+        return s + '\n'
 
 def build_param_after(param, i):
     ptype = param['type']
@@ -916,6 +919,9 @@ def build_call(function):
     # We can't possibly know the type of a void pointer,
     # So we just don't return anything from it
     elif ftype == 'void *':
+        return '    %s;\n' % ccall
+
+    if ftype in VECP_TYPES:
         return '    %s;\n' % ccall
 
     flot = translate_type_to_lot(ftype)
@@ -990,6 +996,10 @@ def build_function(function, do_extern):
         s += build_param_after(param, i)
         i += 1
     s += '\n'
+
+    # To allow chaining vector functions calls, return the table corresponding to `dest` parameter
+    if function['type'] in VECP_TYPES:
+        s += '    lua_settop(L, 1);\n'
 
     s += '    return 1;\n}\n'
 
@@ -1192,7 +1202,7 @@ def output_fuzz_file():
     global fuzz_functions
     with open(fuzz_from) as f:
         file_str = f.read()
-    with open(fuzz_to, 'w') as f:
+    with open(fuzz_to, 'w', encoding='utf-8', newline='\n') as f:
         f.write(file_str.replace('-- $[FUNCS]', fuzz_functions))
 
 ############################################################################
@@ -1381,7 +1391,7 @@ def doc_files(processed_files):
 
         buffer = buffer.replace('$[FUNCTION_NAV_HERE', function_nav)
 
-        with open(get_path(out_filename_docs % page_name), 'w', newline='\n') as out:
+        with open(get_path(out_filename_docs % page_name), 'w', encoding='utf-8', newline='\n') as out:
             out.write(buffer)
 
 ############################################################################
@@ -1439,7 +1449,10 @@ def def_files(processed_files):
     for def_pointer in def_pointers:
         s += '--- @alias %s %s\n' % (def_pointer, def_pointer[8:])
 
-    with open(get_path(out_filename_defs), 'w', newline='\n') as out:
+    for vecp_type, vec_type in VECP_TYPES.items():
+        s += '--- @alias %s %s\n' % (vecp_type, vec_type)
+
+    with open(get_path(out_filename_defs), 'w', encoding='utf-8', newline='\n') as out:
         out.write(s)
 
 ############################################################################
@@ -1460,7 +1473,7 @@ def main():
         .replace("$[BINDS]", built_binds)         \
         .replace("$[INCLUDES]", built_includes)
 
-    with open(filename, 'w', newline='\n') as out:
+    with open(filename, 'w', encoding='utf-8', newline='\n') as out:
         out.write(gen)
 
     if rejects != "":

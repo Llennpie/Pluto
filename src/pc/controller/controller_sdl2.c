@@ -23,6 +23,7 @@
 
 #include "game/level_update.h"
 #include "game/first_person_cam.h"
+#include "game/bettercamera.h"
 #include "pc/lua/utils/smlua_misc_utils.h"
 #include "pc/djui/djui.h"
 #include "pc/djui/djui_panel_pause.h"
@@ -37,8 +38,6 @@
 #define MAX_MOUSEBUTTONS 8 // arbitrary
 #define MAX_JOYBUTTONS 32  // arbitrary; includes virtual keys for triggers
 #define AXIS_THRESHOLD (30 * 256)
-
-extern u8 newcam_mouse;
 
 static bool init_ok = false;
 static bool haptics_enabled = false;
@@ -139,7 +138,7 @@ static void controller_sdl_init(void) {
         free(gcdata);
     }
 
-    if (newcam_mouse == 1) { controller_mouse_enter_relative(); }
+    if (gNewCamera.isMouse) { controller_mouse_enter_relative(); }
     controller_mouse_read_relative();
 
     controller_sdl_bind();
@@ -187,7 +186,7 @@ extern s16 gMenuMode;
 static void controller_sdl_read(OSContPad *pad) {
     if (!init_ok) { return; }
 
-    if ((newcam_mouse == 1 || get_first_person_enabled() || gDjuiHudLockMouse) && !is_game_paused() && !gDjuiPanelPauseCreated && !gDjuiInMainMenu && !gDjuiChatBoxFocus && !gDjuiConsoleFocus && WAPI.has_focus() && !show_menu) {
+    if ((gNewCamera.isMouse || get_first_person_enabled() || gDjuiHudLockMouse) && !is_game_paused() && !gDjuiPanelPauseCreated && !gDjuiInMainMenu && !gDjuiChatBoxFocus && !gDjuiConsoleFocus && WAPI.has_focus() && !show_menu) {
         controller_mouse_enter_relative();
     } else {
         controller_mouse_leave_relative();
@@ -221,7 +220,7 @@ static void controller_sdl_read(OSContPad *pad) {
         sdl_haptic = NULL;
     }
 
-    if (sdl_cntrl == NULL || last_gamepad != configGamepadNumber) {
+    if ((!sdl_cntrl && !sdl_joystick) || last_gamepad != configGamepadNumber) {
         if (sdl_haptic) { SDL_HapticClose(sdl_haptic); sdl_haptic = NULL; }
         if (sdl_cntrl) { SDL_GameControllerClose(sdl_cntrl); sdl_cntrl = NULL; }
         if (sdl_joystick) { SDL_JoystickClose(sdl_joystick); sdl_joystick = NULL; }

@@ -24,6 +24,7 @@
 #include "../fs/fs.h"
 
 #include "game/level_update.h"
+#include "game/bettercamera.h"
 
 #include "pc/djui/djui.h"
 
@@ -43,8 +44,6 @@ enum {
     JOY_AXIS_RTRIG,
     MAX_AXES,
 };
-
-extern u8 newcam_mouse;
 
 static bool init_ok;
 static SDL_Joystick *sdl_joy;
@@ -127,7 +126,7 @@ static void controller_sdl_init(void) {
                 joy_axis_binds[i] = -1;
     }
 
-    if (newcam_mouse == 1 && gMenuMode == -1 && !gDjuiChatBoxFocus && !gDjuiConsoleFocus && !show_menu) {
+    if (gNewCamera.isMouse && gMenuMode == -1 && !gDjuiChatBoxFocus && !gDjuiConsoleFocus && !show_menu) {
         controller_mouse_enter_relative();
     }
     controller_mouse_read_relative();
@@ -155,7 +154,7 @@ extern s16 gMenuMode;
 static void controller_sdl_read(OSContPad *pad) {
     if (!init_ok) return;
 
-    if (newcam_mouse == 1 && gMenuMode == -1 && !gDjuiChatBoxFocus && !gDjuiConsoleFocus && !show_menu) {
+    if (gNewCamera.isMouse && gMenuMode == -1 && !gDjuiChatBoxFocus && !gDjuiConsoleFocus && !show_menu) {
         controller_mouse_enter_relative();
     } else {
         controller_mouse_leave_relative();

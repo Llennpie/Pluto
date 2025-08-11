@@ -23,176 +23,39 @@ _ReadOnlyTable = {
     end
 }
 
+-----------
+-- table --
+-----------
 
---------------------
--- math functions --
---------------------
-
---- @param dest Vec3f
---- @param src Vec3f
---- @return Vec3f
-function vec3f_copy(dest, src)
-    dest.x = src.x
-    dest.y = src.y
-    dest.z = src.z
-    return dest
+--- Creates a shallow copy of table `t`
+--- @param t table
+--- @return table
+function table.copy(t)
+    return table_copy(t)
 end
 
---- @param dest Vec3f
---- @param x number
---- @param y number
---- @param z number
---- @return Vec3f
-function vec3f_set(dest, x, y, z)
-    dest.x = x
-    dest.y = y
-    dest.z = z
-    return dest
+--- Creates a deep copy of table `t`
+--- @param t table
+--- @return table
+function table.deepcopy(t)
+    return table_deepcopy(t)
 end
 
---- @param dest Vec3f
---- @param a Vec3f
---- @return Vec3f
-function vec3f_add(dest, a)
-    dest.x = dest.x + a.x
-    dest.y = dest.y + a.y
-    dest.z = dest.z + a.z
-    return dest
-end
-
---- @param dest Vec3f
---- @param a Vec3f
---- @param b Vec3f
---- @return Vec3f
-function vec3f_sum(dest, a, b)
-    dest.x = a.x + b.x
-    dest.y = a.y + b.y
-    dest.z = a.z + b.z
-    return dest
-end
-
---- @param dest Vec3f
---- @param a number
---- @return Vec3f
-function vec3f_mul(dest, a)
-    dest.x = dest.x * a
-    dest.y = dest.y * a
-    dest.z = dest.z * a
-    return dest
-end
-
---- @param dest Vec3f
---- @return Vec3f
-function vec3f_normalize(dest)
-    local divisor = math.sqrt(dest.x * dest.x + dest.y * dest.y + dest.z * dest.z)
-    if divisor == 0 then
-        return dest
-    end
-
-    local invsqrt = 1.0 / divisor
-    dest.x = dest.x * invsqrt
-    dest.y = dest.y * invsqrt
-    dest.z = dest.z * invsqrt
-
-    return dest
-end
-
---- @param a Vec3f
---- @return number
-function vec3f_length(a)
-    return math.sqrt(a.x * a.x + a.y * a.y + a.z * a.z)
-end
-
---- @param a Vec3f
---- @param b Vec3f
---- @return number
-function vec3f_dot(a, b)
-    return a.x * b.x + a.y * b.y + a.z * b.z
-end
-
---- @param vec Vec3f
---- @param onto Vec3f
---- @return Vec3f
-function vec3f_project(vec, onto)
-  local numerator = vec3f_dot(vec, onto)
-  local denominator = vec3f_dot(onto, onto)
-  local out = {}
-  vec3f_copy(out, onto)
-  vec3f_mul(out, numerator / denominator)
-  return out
-end
-
---- @param v1 Vec3f
---- @param v2 Vec3f
---- @return number
-function vec3f_dist(v1, v2)
-    dx = v1.x - v2.x
-    dy = v1.y - v2.y
-    dz = v1.z - v2.z
-    return math.sqrt(dx * dx + dy * dy + dz * dz)
-end
-
---- @param dest Vec3s
---- @param src Vec3s
---- @return Vec3s
-function vec3s_copy(dest, src)
-    dest.x = src.x
-    dest.y = src.y
-    dest.z = src.z
-    return dest
-end
-
---- @param dest Vec3s
---- @param x number
---- @param y number
---- @param z number
---- @return Vec3s
-function vec3s_set(dest, x, y, z)
-    dest.x = x
-    dest.y = y
-    dest.z = z
-    return dest
-end
-
---- @param dest Vec3s
---- @param a Vec3s
---- @return Vec3s
-function vec3s_add(dest, a)
-    dest.x = dest.x + a.x
-    dest.y = dest.y + a.y
-    dest.z = dest.z + a.z
-    return dest
-end
-
---- @param dest Vec3s
---- @param a Vec3s
---- @param b Vec3s
---- @return Vec3s
-function vec3s_sum(dest, a, b)
-    dest.x = a.x + b.x
-    dest.y = a.y + b.y
-    dest.z = a.z + b.z
-    return dest
-end
-
---- @param dest Vec3s
---- @param a number
---- @return Vec3s
-function vec3s_mul(dest, a)
-    dest.x = dest.x * a
-    dest.y = dest.y * a
-    dest.z = dest.z * a
-    return dest
-end
-
---- @param v1 Vec3s
---- @param v2 Vec3s
---- @return number
-function vec3s_dist(v1, v2)
-    dx = v1.x - v2.x
-    dy = v1.y - v2.y
-    dz = v1.z - v2.z
-    return math.sqrt(dx * dx + dy * dy + dz * dz)
+--- Utility function to create a read-only table
+--- @param data table
+--- @return table
+function create_read_only_table(data)
+    local t = {}
+    local mt = {
+        __index = data,
+        __newindex = function(_, k, _)
+            error('Attempting to modify key `' .. k .. '` of read-only table')
+        end,
+        __call = function() return table_copy(data) end,
+        __metatable = false
+    }
+    setmetatable(t, mt)
+    return t
 end
 
 -----------
@@ -309,12 +172,164 @@ function network_player_get_override_palette_color(np, part)
 end
 
 
------------------
--- legacy font --
------------------
+--------------------
+-- math functions --
+--------------------
+--- Note: These functions don't exist in the Lua math library,
+--- and are useful enough to not have to redefine them in every mod
 
---- @type integer
-FONT_TINY = -1
+local __math_min, __math_max, __math_sqrt, __math_floor, __math_ceil = math.min, math.max, math.sqrt, math.floor, math.ceil
+
+--- @param x number
+--- @return number
+--- Computes the square of the number `x`
+function math.sqr(x)
+    return x * x
+end
+
+--- @param x number
+--- @param a number
+--- @param b number
+--- @return number
+--- Clamps the number `x` between bounds `a` (minimum) and `b` (maximum)
+function math.clamp(x, a, b)
+    return __math_min(__math_max(x, a), b)
+end
+
+--- @param a number
+--- @param b number
+--- @return number
+--- Computes the hypotenuse of a right-angled triangle given sides `a` and `b` using the Pythagorean theorem
+function math.hypot(a, b)
+    return __math_sqrt(a * a + b * b)
+end
+
+--- @param x number
+--- @return number
+--- Returns 1 if `x` is positive or zero, -1 otherwise
+function math.sign(x)
+    return x >= 0 and 1 or -1
+end
+
+--- @param x number
+--- @return number
+--- Returns 1 if `x` is positive, 0 if it is zero, -1 otherwise
+function math.sign0(x)
+    return x ~= 0 and (x > 0 and 1 or -1) or 0
+end
+
+--- @param a number
+--- @param b number
+--- @param t number
+--- @return number
+--- Linearly interpolates between `a` and `b` using delta `t`
+function math.lerp(a, b, t)
+    return a + (b - a) * t
+end
+
+--- @param a number
+--- @param b number
+--- @param x number
+--- @return number
+--- Determines where `x` linearly lies between `a` and `b`. It's the inverse of `math.lerp`
+function math.invlerp(a, b, x)
+    return (x - a) / (b - a)
+end
+
+--- @param a number
+--- @param b number
+--- @param c number
+--- @param d number
+--- @param x number
+--- @return number
+--- Linearly remaps `x` from the source range `[a, b]` to the destination range `[c, d]`
+function math.remap(a, b, c, d, x)
+    return c + (d - c) * ((x - a) / (b - a))
+end
+
+--- @param x number
+--- Rounds `x` to the nearest integer value
+function math.round(x)
+    return x > 0 and __math_floor(x + 0.5) or __math_ceil(x - 0.5)
+end
+
+
+-------------------------
+-- vec types constants --
+-------------------------
+
+--- @type Vec2f
+gVec2fZero = create_read_only_table({x=0,y=0})
+
+--- @type Vec2f
+gVec2fOne = create_read_only_table({x=1,y=1})
+
+--- @type Vec3f
+gVec3fZero = create_read_only_table({x=0,y=0,z=0})
+
+--- @type Vec3f
+gVec3fOne = create_read_only_table({x=1,y=1,z=1})
+
+--- @type Vec3f
+gVec3fX = create_read_only_table({x=1,y=0,z=0})
+
+--- @type Vec3f
+gVec3fY = create_read_only_table({x=0,y=1,z=0})
+
+--- @type Vec3f
+gVec3fZ = create_read_only_table({x=0,y=0,z=1})
+
+--- @type Vec4f
+gVec4fZero = create_read_only_table({x=0,y=0,z=0,w=0})
+
+--- @type Vec4f
+gVec4fOne = create_read_only_table({x=1,y=1,z=1,w=1})
+
+--- @type Vec2i
+gVec2iZero = create_read_only_table({x=0,y=0})
+
+--- @type Vec2i
+gVec2iOne = create_read_only_table({x=1,y=1})
+
+--- @type Vec3i
+gVec3iZero = create_read_only_table({x=0,y=0,z=0})
+
+--- @type Vec3i
+gVec3iOne = create_read_only_table({x=1,y=1,z=1})
+
+--- @type Vec4i
+gVec4iZero = create_read_only_table({x=0,y=0,z=0,w=0})
+
+--- @type Vec4i
+gVec4iOne = create_read_only_table({x=1,y=1,z=1,w=1})
+
+--- @type Vec2s
+gVec2sZero = create_read_only_table({x=0,y=0})
+
+--- @type Vec2s
+gVec2sOne = create_read_only_table({x=1,y=1})
+
+--- @type Vec3s
+gVec3sZero = create_read_only_table({x=0,y=0,z=0})
+
+--- @type Vec3s
+gVec3sOne = create_read_only_table({x=1,y=1,z=1})
+
+--- @type Vec4s
+gVec4sZero = create_read_only_table({x=0,y=0,z=0,w=0})
+
+--- @type Vec4s
+gVec4sOne = create_read_only_table({x=1,y=1,z=1,w=1})
+
+--- @type Mat4
+gMat4Zero = create_read_only_table({m00=0,m01=0,m02=0,m03=0,m10=0,m11=0,m12=0,m13=0,m20=0,m21=0,m22=0,m23=0,m30=0,m31=0,m32=0,m33=0})
+
+--- @type Mat4
+gMat4Identity = create_read_only_table({m00=1,m01=0,m02=0,m03=0,m10=0,m11=1,m12=0,m13=0,m20=0,m21=0,m22=1,m23=0,m30=0,m31=0,m32=0,m33=1})
+
+--- @type Mat4
+gMat4Fullscreen = create_read_only_table({m00=0.00625,m01=0,m02=0,m03=0,m10=0,m11=0.008333333333333333,m12=0,m13=0,m20=0,m21=0,m22=-1,m23=0,m30=-1,m31=-1,m32=-1,m33=1})
+
 
 --- @type integer
 INSTANT_WARP_INDEX_START = 0x00
@@ -2941,7 +2956,6 @@ INT_HIT_FROM_ABOVE        =                       (1 << 6) --- @type Interaction
 INT_HIT_FROM_BELOW        =                       (1 << 7) --- @type InteractionFlag
 INT_TWIRL                 =                       (1 << 8) --- @type InteractionFlag
 INT_GROUND_POUND_OR_TWIRL = (INT_GROUND_POUND | INT_TWIRL) --- @type InteractionFlag
-INT_LUA                   =                      (1 << 31) --- @type InteractionFlag
 
 --- @alias InteractionFlag
 --- | `INT_GROUND_POUND`
@@ -2954,7 +2968,6 @@ INT_LUA                   =                      (1 << 31) --- @type Interaction
 --- | `INT_HIT_FROM_BELOW`
 --- | `INT_TWIRL`
 --- | `INT_GROUND_POUND_OR_TWIRL`
---- | `INT_LUA`
 
 --- @type integer
 INT_ATTACK_NOT_FROM_BELOW = (INT_GROUND_POUND_OR_TWIRL | INT_PUNCH | INT_KICK | INT_TRIP | INT_SLIDE_KICK | INT_FAST_ATTACK_OR_SHELL | INT_HIT_FROM_ABOVE)
@@ -7808,7 +7821,8 @@ HOOK_ON_INTERACTIONS                        = 52 --- @type LuaHookedEventType
 HOOK_ALLOW_FORCE_WATER_ACTION               = 53 --- @type LuaHookedEventType
 HOOK_BEFORE_WARP                            = 54 --- @type LuaHookedEventType
 HOOK_ON_INSTANT_WARP                        = 55 --- @type LuaHookedEventType
-HOOK_MAX                                    = 56 --- @type LuaHookedEventType
+HOOK_MARIO_OVERRIDE_FLOOR_CLASS             = 56 --- @type LuaHookedEventType
+HOOK_MAX                                    = 57 --- @type LuaHookedEventType
 
 --- @alias LuaHookedEventType
 --- | `HOOK_UPDATE`
@@ -7867,6 +7881,7 @@ HOOK_MAX                                    = 56 --- @type LuaHookedEventType
 --- | `HOOK_ALLOW_FORCE_WATER_ACTION`
 --- | `HOOK_BEFORE_WARP`
 --- | `HOOK_ON_INSTANT_WARP`
+--- | `HOOK_MARIO_OVERRIDE_FLOOR_CLASS`
 --- | `HOOK_MAX`
 
 ACTION_HOOK_EVERY_FRAME = 0 --- @type LuaActionHookType
@@ -10767,6 +10782,53 @@ OBJECT_CUSTOM_FIELDS_START = (OBJECT_NUM_REGULAR_FIELDS)
 --- @type integer
 OBJECT_NUM_FIELDS = (OBJECT_CUSTOM_FIELDS_START + OBJECT_NUM_CUSTOM_FIELDS)
 
+MARIO_ANIM_PART_NONE          =  0 --- @type MarioAnimPart
+MARIO_ANIM_PART_ROOT          =  1 --- @type MarioAnimPart
+MARIO_ANIM_PART_BUTT          =  2 --- @type MarioAnimPart
+MARIO_ANIM_PART_TORSO         =  3 --- @type MarioAnimPart
+MARIO_ANIM_PART_HEAD          =  4 --- @type MarioAnimPart
+MARIO_ANIM_PART_UPPER_LEFT    =  5 --- @type MarioAnimPart
+MARIO_ANIM_PART_LEFT_ARM      =  6 --- @type MarioAnimPart
+MARIO_ANIM_PART_LEFT_FOREARM  =  7 --- @type MarioAnimPart
+MARIO_ANIM_PART_LEFT_HAND     =  8 --- @type MarioAnimPart
+MARIO_ANIM_PART_UPPER_RIGHT   =  9 --- @type MarioAnimPart
+MARIO_ANIM_PART_RIGHT_ARM     = 10 --- @type MarioAnimPart
+MARIO_ANIM_PART_RIGHT_FOREARM = 11 --- @type MarioAnimPart
+MARIO_ANIM_PART_RIGHT_HAND    = 12 --- @type MarioAnimPart
+MARIO_ANIM_PART_LOWER_LEFT    = 13 --- @type MarioAnimPart
+MARIO_ANIM_PART_LEFT_THIGH    = 14 --- @type MarioAnimPart
+MARIO_ANIM_PART_LEFT_LEG      = 15 --- @type MarioAnimPart
+MARIO_ANIM_PART_LEFT_FOOT     = 16 --- @type MarioAnimPart
+MARIO_ANIM_PART_LOWER_RIGHT   = 17 --- @type MarioAnimPart
+MARIO_ANIM_PART_RIGHT_THIGH   = 18 --- @type MarioAnimPart
+MARIO_ANIM_PART_RIGHT_LEG     = 19 --- @type MarioAnimPart
+MARIO_ANIM_PART_RIGHT_FOOT    = 20 --- @type MarioAnimPart
+MARIO_ANIM_PART_MAX           = 21 --- @type MarioAnimPart
+
+--- @alias MarioAnimPart
+--- | `MARIO_ANIM_PART_NONE`
+--- | `MARIO_ANIM_PART_ROOT`
+--- | `MARIO_ANIM_PART_BUTT`
+--- | `MARIO_ANIM_PART_TORSO`
+--- | `MARIO_ANIM_PART_HEAD`
+--- | `MARIO_ANIM_PART_UPPER_LEFT`
+--- | `MARIO_ANIM_PART_LEFT_ARM`
+--- | `MARIO_ANIM_PART_LEFT_FOREARM`
+--- | `MARIO_ANIM_PART_LEFT_HAND`
+--- | `MARIO_ANIM_PART_UPPER_RIGHT`
+--- | `MARIO_ANIM_PART_RIGHT_ARM`
+--- | `MARIO_ANIM_PART_RIGHT_FOREARM`
+--- | `MARIO_ANIM_PART_RIGHT_HAND`
+--- | `MARIO_ANIM_PART_LOWER_LEFT`
+--- | `MARIO_ANIM_PART_LEFT_THIGH`
+--- | `MARIO_ANIM_PART_LEFT_LEG`
+--- | `MARIO_ANIM_PART_LEFT_FOOT`
+--- | `MARIO_ANIM_PART_LOWER_RIGHT`
+--- | `MARIO_ANIM_PART_RIGHT_THIGH`
+--- | `MARIO_ANIM_PART_RIGHT_LEG`
+--- | `MARIO_ANIM_PART_RIGHT_FOOT`
+--- | `MARIO_ANIM_PART_MAX`
+
 --- @type integer
 PLAY_MODE_NORMAL = 0
 
@@ -10798,7 +10860,7 @@ COOP_OBJ_FLAG_NON_SYNC = (1 << 2)
 COOP_OBJ_FLAG_INITIALIZED = (1 << 3)
 
 --- @type string
-SM64COOPDX_VERSION = "v1.3.1"
+SM64COOPDX_VERSION = "v1.3.2"
 
 --- @type string
 VERSION_TEXT = "v"
@@ -10807,7 +10869,7 @@ VERSION_TEXT = "v"
 VERSION_NUMBER = 40
 
 --- @type integer
-MINOR_VERSION_NUMBER = 1
+MINOR_VERSION_NUMBER = 2
 
 --- @type integer
 MAX_VERSION_LENGTH = 128

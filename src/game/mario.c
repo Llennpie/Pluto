@@ -419,6 +419,13 @@ bool mario_is_crouching(struct MarioState *m) {
         m->action == ACT_CROUCH_SLIDE;
 }
 
+bool mario_is_ground_pound_landing(struct MarioState *m) {
+    if (!m) { return false; }
+
+    return m->action == ACT_GROUND_POUND_LAND ||
+        (!(m->action & ACT_FLAG_AIR) && (determine_interaction(m, m->marioObj) & INT_GROUND_POUND));
+}
+
 bool mario_can_bubble(struct MarioState* m) {
     if (!m) { return false; }
     if (!gServerSettings.bubbleDeath) { return false; }
@@ -523,6 +530,9 @@ s32 mario_get_floor_class(struct MarioState *m) {
     if (m->action == ACT_CRAWLING && m->floor && m->floor->normal.y > 0.5f && floorClass == SURFACE_CLASS_DEFAULT) {
         floorClass = SURFACE_CLASS_NOT_SLIPPERY;
     }
+
+    s32 returnValue = 0;
+    if (smlua_call_event_hooks_mario_param_and_int_ret_int(HOOK_MARIO_OVERRIDE_FLOOR_CLASS, m, floorClass, &returnValue)) return returnValue;
 
     return floorClass;
 }
@@ -1138,7 +1148,7 @@ static u32 set_mario_action_cutscene(struct MarioState *m, u32 action, UNUSED u3
 u32 set_mario_action(struct MarioState *m, u32 action, u32 actionArg) {
     if (!m) { return FALSE; }
     u32 returnValue = 0;
-    smlua_call_event_hooks_mario_action_params_ret_int(HOOK_BEFORE_SET_MARIO_ACTION, m, action, &returnValue);
+    smlua_call_event_hooks_mario_action_and_arg_ret_int(HOOK_BEFORE_SET_MARIO_ACTION, m, action, actionArg, &returnValue);
     if (returnValue == 1) { return TRUE; } else if (returnValue) { action = returnValue; }
 
     switch (action & ACT_GROUP_MASK) {
@@ -1498,7 +1508,7 @@ void update_mario_joystick_inputs(struct MarioState *m) {
         } else if (get_first_person_enabled()) {
             m->intendedYaw = atan2s(-controller->stickY, controller->stickX) + gLakituState.yaw;
         } else {
-            m->intendedYaw = atan2s(-controller->stickY, controller->stickX) - newcam_yaw + 0x4000;
+            m->intendedYaw = atan2s(-controller->stickY, controller->stickX) - gNewCamera.yaw + 0x4000;
         }
         m->input |= INPUT_NONZERO_ANALOG;
     } else {

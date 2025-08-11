@@ -3198,7 +3198,7 @@ const BehaviorScript bhvUnusedFakeStar[] = {
 };
 
 // What is this?
-static const BehaviorScript unused_1[] = {
+UNUSED static const BehaviorScript unused_1[] = {
     BREAK(),
     BREAK(),
     BREAK(),
