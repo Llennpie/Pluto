@@ -223,7 +223,7 @@ const char *sys_user_path(void)
         return NULL;
     }
 
-    LPCWSTR subdirs[] = { L"sm64coopdx", L"sm64ex-coop", L"sm64coopdx", NULL };
+    LPCWSTR subdirs[] = { L"Llennpie/Pluto", L"Llennpie\\Pluto", NULL };
 
     for (int i = 0; NULL != subdirs[i]; i++)
     {
@@ -303,20 +303,7 @@ const char *sys_user_path(void) {
 
     char const *subdirs[] = { "sm64coopdx", "sm64ex-coop", "sm64coopdx", NULL };
 
-    char *sdlPath = NULL;
-    for (int i = 0; NULL != subdirs[i]; i++)
-    {
-        if (sdlPath) {
-            // Previous dir likely just created with SDL_GetPrefPath.
-            fs_sys_rmdir(sdlPath);
-            SDL_free(sdlPath);
-        }
-
-        sdlPath = SDL_GetPrefPath("", subdirs[i]);
-
-        // Choose this directory if it already exists and is not empty.
-        if (sdlPath && !fs_sys_dir_is_empty(sdlPath)) { break; }
-    }
+    char *sdlpath = SDL_GetPrefPath("Llennpie", "Pluto");
 
     if (NULL == sdlPath) { return NULL; }
 

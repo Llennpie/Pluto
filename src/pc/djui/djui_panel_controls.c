@@ -3,6 +3,7 @@
 #include "djui_panel_menu.h"
 #include "djui_panel_controls_n64.h"
 #include "djui_panel_controls_extra.h"
+#include "djui_panel_controls_pluto.h"
 #include "pc/utils/misc.h"
 #include "pc/configfile.h"
 #include "pc/controller/controller_api.h"
@@ -36,6 +37,7 @@ void djui_panel_controls_create(struct DjuiBase* caller) {
         djui_button_create(body, DLANG(CONTROLS, N64_BINDS), DJUI_BUTTON_STYLE_NORMAL, djui_panel_controls_n64_create);
         djui_button_create(body, DLANG(CONTROLS, EXTRA_BINDS), DJUI_BUTTON_STYLE_NORMAL, djui_panel_controls_extra_create);
         djui_button_create(body, DLANG(CONTROLS, ANALOG_STICK_OPTIONS), DJUI_BUTTON_STYLE_NORMAL, djui_panel_controls_analog_stick_options_create);
+        djui_button_create(body, DLANG(CONTROLS, PLUTO_BINDS), DJUI_BUTTON_STYLE_NORMAL, djui_panel_controls_pluto_create);
         djui_checkbox_create(body, DLANG(CONTROLS, BACKGROUND_GAMEPAD), &configBackgroundGamepad, NULL);
 #ifndef HANDHELD
         djui_checkbox_create(body, DLANG(CONTROLS, DISABLE_GAMEPADS), &configDisableGamepads, NULL);

@@ -22,6 +22,8 @@
 #include "game/save_file.h"
 #include "pc/network/network_player.h"
 #include "pc/pc_main.h"
+#include "saturn/saturn.h"
+#include "saturn/saturn_models.h"
 
 #define ARRAY_LEN(arr) (sizeof(arr) / sizeof(arr[0]))
 
@@ -77,12 +79,13 @@ ConfigWindow configWindow       = {
     .exiting_fullscreen = false,
     .settings_changed = false,
     .msaa = 0,
+    .secret_ui = false,
 };
 
 ConfigStick configStick = { 0 };
 
 // display settings
-unsigned int configFiltering                      = 2; // 0 = Nearest, 1 = Bilinear, 2 = Trilinear
+unsigned int configFiltering                      = 1; // 0 = Nearest, 1 = Bilinear, 2 = Trilinear
 bool         configShowFPS                        = false;
 bool         configUncappedFramerate              = true;
 unsigned int configFrameLimit                     = 60;
@@ -101,9 +104,9 @@ unsigned int configKeyB[MAX_BINDS]                = { 0x0033,     0x1001,     0x
 unsigned int configKeyX[MAX_BINDS]                = { 0x0017,     0x1002,     VK_INVALID };
 unsigned int configKeyY[MAX_BINDS]                = { 0x0032,     0x1003,     VK_INVALID };
 unsigned int configKeyStart[MAX_BINDS]            = { 0x0039,     0x1006,     VK_INVALID };
-unsigned int configKeyL[MAX_BINDS]                = { 0x002A,     0x1009,     0x1104     };
-unsigned int configKeyR[MAX_BINDS]                = { 0x0036,     0x100A,     0x101B     };
-unsigned int configKeyZ[MAX_BINDS]                = { 0x0025,     0x1007,     0x101A     };
+unsigned int configKeyL[MAX_BINDS]                = { 0x0010,     0x1009,     0x1104     };
+unsigned int configKeyR[MAX_BINDS]                = { 0x0012,     0x100A,     0x101B     };
+unsigned int configKeyZ[MAX_BINDS]                = { 0x002A,     0x1007,     0x101A     };
 unsigned int configKeyCUp[MAX_BINDS]              = { 0x0148,     VK_INVALID, VK_INVALID };
 unsigned int configKeyCDown[MAX_BINDS]            = { 0x0150,     VK_INVALID, VK_INVALID };
 unsigned int configKeyCLeft[MAX_BINDS]            = { 0x014B,     VK_INVALID, VK_INVALID };
@@ -118,10 +121,19 @@ unsigned int configKeyDUp[MAX_BINDS]              = { 0x0147,     0x100b,     VK
 unsigned int configKeyDDown[MAX_BINDS]            = { 0x014f,     0x100c,     VK_INVALID };
 unsigned int configKeyDLeft[MAX_BINDS]            = { 0x0153,     0x100d,     VK_INVALID };
 unsigned int configKeyDRight[MAX_BINDS]           = { 0x0151,     0x100e,     VK_INVALID };
-unsigned int configKeyConsole[MAX_BINDS]          = { 0x0029,     0x003B,     VK_INVALID };
+unsigned int configKeyConsole[MAX_BINDS]          = { 0x0029,     0x0058,     VK_INVALID };
 unsigned int configKeyPrevPage[MAX_BINDS]         = { 0x0016,     VK_INVALID, VK_INVALID };
 unsigned int configKeyNextPage[MAX_BINDS]         = { 0x0018,     VK_INVALID, VK_INVALID };
 unsigned int configKeyDisconnect[MAX_BINDS]       = { VK_INVALID, VK_INVALID, VK_INVALID };
+
+unsigned int configKeyPlutoMenu[MAX_BINDS]          = { 0x003B, 0x100c, VK_INVALID };
+unsigned int configKeyPlutoScreenshot[MAX_BINDS]    = { 0x003C, VK_INVALID, VK_INVALID };
+unsigned int configKeyPlutoChroma[MAX_BINDS]        = { 0x003D, VK_INVALID, VK_INVALID };
+unsigned int configKeyPlutoFreezeCamera[MAX_BINDS]  = { 0x0021, 0x100b, VK_INVALID };
+unsigned int configKeyPlutoHud[MAX_BINDS]           = { 0x003E, VK_INVALID, VK_INVALID };
+unsigned int configKeyPlutoPlayAnim[MAX_BINDS]      = { 0x0018, 0x100d, VK_INVALID };
+unsigned int configKeyPlutoPauseAnim[MAX_BINDS]     = { 0x0019, 0x100e, VK_INVALID };
+
 unsigned int configStickDeadzone                  = 16;
 unsigned int configRumbleStrength                 = 50;
 unsigned int configGamepadNumber                  = 0;
@@ -129,14 +141,14 @@ bool         configBackgroundGamepad              = true;
 bool         configDisableGamepads                = false;
 bool         configUseStandardKeyBindingsChat     = false;
 // free camera settings
-bool         configEnableFreeCamera               = false;
-bool         configFreeCameraAnalog               = false;
+bool         configEnableFreeCamera               = true;
+bool         configFreeCameraAnalog               = true;
 bool         configFreeCameraLCentering           = false;
 bool         configFreeCameraDPadBehavior         = false;
 bool         configFreeCameraHasCollision         = true;
-bool         configFreeCameraMouse                = false;
-unsigned int configFreeCameraXSens                = 50;
-unsigned int configFreeCameraYSens                = 50;
+bool         configFreeCameraMouse                = true;
+unsigned int configFreeCameraXSens                = 68;
+unsigned int configFreeCameraYSens                = 68;
 unsigned int configFreeCameraAggr                 = 0;
 unsigned int configFreeCameraPan                  = 0;
 unsigned int configFreeCameraDegrade              = 50; // 0 - 100%
@@ -149,8 +161,8 @@ bool         configRomhackCameraDPadBehavior      = false;
 bool         configRomhackCameraSlowFall          = true;
 
 // common camera settings
-bool         configCameraInvertX                  = false;
-bool         configCameraInvertY                  = true;
+bool         configCameraInvertX                  = true;
+bool         configCameraInvertY                  = false;
 bool         configCameraToxicGas                 = true;
 // debug
 bool         configLuaProfiler                    = false;
@@ -215,12 +227,13 @@ bool configExCoopTheme = false;
 static const struct ConfigOption options[] = {
     // window settings
     {.name = "fullscreen",                     .type = CONFIG_TYPE_BOOL, .boolValue = &configWindow.fullscreen},
-    {.name = "window_x",                       .type = CONFIG_TYPE_UINT, .uintValue = &configWindow.x},
-    {.name = "window_y",                       .type = CONFIG_TYPE_UINT, .uintValue = &configWindow.y},
+    //{.name = "window_x",                       .type = CONFIG_TYPE_UINT, .uintValue = &configWindow.x},
+    //{.name = "window_y",                       .type = CONFIG_TYPE_UINT, .uintValue = &configWindow.y},
     {.name = "window_w",                       .type = CONFIG_TYPE_UINT, .uintValue = &configWindow.w},
     {.name = "window_h",                       .type = CONFIG_TYPE_UINT, .uintValue = &configWindow.h},
     {.name = "vsync",                          .type = CONFIG_TYPE_BOOL, .boolValue = &configWindow.vsync},
     {.name = "msaa",                           .type = CONFIG_TYPE_UINT, .uintValue = &configWindow.msaa},
+    {.name = "secret_ui",                      .type = CONFIG_TYPE_BOOL, .boolValue = &configWindow.secret_ui},
     // display settings
     {.name = "texture_filtering",              .type = CONFIG_TYPE_UINT, .uintValue = &configFiltering},
     {.name = "show_fps",                       .type = CONFIG_TYPE_BOOL, .boolValue = &configShowFPS},
@@ -262,6 +275,15 @@ static const struct ConfigOption options[] = {
     {.name = "key_prev",                       .type = CONFIG_TYPE_BIND, .uintValue = configKeyPrevPage},
     {.name = "key_next",                       .type = CONFIG_TYPE_BIND, .uintValue = configKeyNextPage},
     {.name = "key_disconnect",                 .type = CONFIG_TYPE_BIND, .uintValue = configKeyDisconnect},
+
+    {.name = "key_pluto_menu",                 .type = CONFIG_TYPE_BIND, .uintValue = configKeyPlutoMenu},
+    {.name = "key_pluto_screenshot",           .type = CONFIG_TYPE_BIND, .uintValue = configKeyPlutoScreenshot},
+    {.name = "key_pluto_auto_chroma",          .type = CONFIG_TYPE_BIND, .uintValue = configKeyPlutoChroma},
+    {.name = "key_pluto_freeze_camera",        .type = CONFIG_TYPE_BIND, .uintValue = configKeyPlutoFreezeCamera},
+    {.name = "key_pluto_hud",                  .type = CONFIG_TYPE_BIND, .uintValue = configKeyPlutoHud},
+    {.name = "key_pluto_play_anim",            .type = CONFIG_TYPE_BIND, .uintValue = configKeyPlutoPlayAnim},
+    {.name = "key_pluto_pause_anim",           .type = CONFIG_TYPE_BIND, .uintValue = configKeyPlutoPauseAnim},
+
     {.name = "stick_deadzone",                 .type = CONFIG_TYPE_UINT, .uintValue = &configStickDeadzone},
     {.name = "rumble_strength",                .type = CONFIG_TYPE_UINT, .uintValue = &configRumbleStrength},
     {.name = "gamepad_number",                 .type = CONFIG_TYPE_UINT, .uintValue = &configGamepadNumber},
@@ -312,14 +334,14 @@ static const struct ConfigOption options[] = {
     // player settings
     {.name = "coop_player_name",               .type = CONFIG_TYPE_STRING, .stringValue = (char*)&configPlayerName, .maxStringLength = MAX_CONFIG_STRING},
     {.name = "coop_player_model",              .type = CONFIG_TYPE_UINT,   .uintValue   = &configPlayerModel},
-    {.name = "coop_player_palette_pants",      .type = CONFIG_TYPE_COLOR,  .colorValue  = &configPlayerPalette.parts[PANTS]},
+    /*{.name = "coop_player_palette_pants",      .type = CONFIG_TYPE_COLOR,  .colorValue  = &configPlayerPalette.parts[PANTS]},
     {.name = "coop_player_palette_shirt",      .type = CONFIG_TYPE_COLOR,  .colorValue  = &configPlayerPalette.parts[SHIRT]},
     {.name = "coop_player_palette_gloves",     .type = CONFIG_TYPE_COLOR,  .colorValue  = &configPlayerPalette.parts[GLOVES]},
     {.name = "coop_player_palette_shoes",      .type = CONFIG_TYPE_COLOR,  .colorValue  = &configPlayerPalette.parts[SHOES]},
     {.name = "coop_player_palette_hair",       .type = CONFIG_TYPE_COLOR,  .colorValue  = &configPlayerPalette.parts[HAIR]},
     {.name = "coop_player_palette_skin",       .type = CONFIG_TYPE_COLOR,  .colorValue  = &configPlayerPalette.parts[SKIN]},
     {.name = "coop_player_palette_cap",        .type = CONFIG_TYPE_COLOR,  .colorValue  = &configPlayerPalette.parts[CAP]},
-    {.name = "coop_player_palette_emblem",     .type = CONFIG_TYPE_COLOR,  .colorValue  = &configPlayerPalette.parts[EMBLEM]},
+    {.name = "coop_player_palette_emblem",     .type = CONFIG_TYPE_COLOR,  .colorValue  = &configPlayerPalette.parts[EMBLEM]},*/
     // coop settings
     {.name = "amount_of_players",              .type = CONFIG_TYPE_UINT,   .uintValue   = &configAmountOfPlayers},
     {.name = "bubble_death",                   .type = CONFIG_TYPE_BOOL,   .boolValue   = &configBubbleDeath},
@@ -479,6 +501,7 @@ void enable_queued_dynos_packs(void) {
             const char* pack = dynos_pack_get_name(i);
             if (!strcmp(path, pack)) {
                 dynos_pack_set_enabled(i, true);
+                LoadModelData(i, true, true);
                 break;
             }
         }

@@ -27,6 +27,8 @@
 
 #include "pc/djui/djui.h"
 
+#include "saturn/ui/saturn_imgui.h"
+
 #define MAX_JOYBINDS 32
 #define MAX_MOUSEBUTTONS 8 // arbitrary
 #define MAX_JOYBUTTONS 32  // arbitrary; includes virtual keys for triggers
@@ -125,7 +127,7 @@ static void controller_sdl_init(void) {
                 joy_axis_binds[i] = -1;
     }
 
-    if (newcam_mouse == 1 && gMenuMode == -1 && !gDjuiChatBoxFocus && !gDjuiConsoleFocus) {
+    if (newcam_mouse == 1 && gMenuMode == -1 && !gDjuiChatBoxFocus && !gDjuiConsoleFocus && !show_menu) {
         controller_mouse_enter_relative();
     }
     controller_mouse_read_relative();
@@ -153,7 +155,7 @@ extern s16 gMenuMode;
 static void controller_sdl_read(OSContPad *pad) {
     if (!init_ok) return;
 
-    if (newcam_mouse == 1 && gMenuMode == -1 && !gDjuiChatBoxFocus && !gDjuiConsoleFocus) {
+    if (newcam_mouse == 1 && gMenuMode == -1 && !gDjuiChatBoxFocus && !gDjuiConsoleFocus && !show_menu) {
         controller_mouse_enter_relative();
     } else {
         controller_mouse_leave_relative();

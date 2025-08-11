@@ -41,6 +41,7 @@
 #define GRAPH_NODE_TYPE_ROTATION              0x017
 #define GRAPH_NODE_TYPE_OBJECT                0x018
 #define GRAPH_NODE_TYPE_ANIMATED_PART         0x019
+#define GRAPH_NODE_TYPE_MCOMP_EXTRA           0x022
 #define GRAPH_NODE_TYPE_BILLBOARD             0x01A
 #define GRAPH_NODE_TYPE_DISPLAY_LIST          0x01B
 #define GRAPH_NODE_TYPE_SCALE                 0x01C
@@ -413,6 +414,8 @@ struct GraphNodeObject *init_graph_node_object(struct DynamicPool *pool, struct 
 struct GraphNodeCullingRadius *init_graph_node_culling_radius(struct DynamicPool *pool, struct GraphNodeCullingRadius *graphNode, s16 radius);
 struct GraphNodeAnimatedPart *init_graph_node_animated_part(struct DynamicPool *pool, struct GraphNodeAnimatedPart *graphNode,
                                                             s32 drawingLayer, void *displayList, Vec3s translation);
+struct GraphNodeAnimatedPart *init_graph_node_mcomp_extra(struct DynamicPool *pool, struct GraphNodeAnimatedPart *graphNode,
+                                                          s32 drawingLayer, void *displayList, Vec3s translation);
 struct GraphNodeBillboard *init_graph_node_billboard(struct DynamicPool *pool, struct GraphNodeBillboard *graphNode,
                                                      s32 drawingLayer, void *displayList, Vec3s translation);
 struct GraphNodeDisplayList *init_graph_node_display_list(struct DynamicPool *pool, struct GraphNodeDisplayList *graphNode,

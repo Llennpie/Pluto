@@ -465,7 +465,7 @@ bool DynOS_Tex_Get(const char* aTexName, struct TextureInfo* aOutTexInfo) {
         /* translate bit size */ \
         switch (_Data->mRawSize) { \
             case G_IM_SIZ_8b:  aOutTexInfo->bitSize = 8; break; \
-            case G_IM_SIZ_16b: aOutTexInfo->bitSize = 16; break; \
+            case G_IM_SIZ_16b: aOutTexInfo->bitSize = 32; break; \
             case G_IM_SIZ_32b: aOutTexInfo->bitSize = 32; break; \
             default: return false; \
         } \

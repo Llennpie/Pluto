@@ -44,6 +44,8 @@
 #include "pc/mods/mod_import.h"
 #include "pc/rom_checker.h"
 
+#include "src/saturn/ui/saturn_imgui.h"
+
 #ifndef GL_MAX_SAMPLES
 #define GL_MAX_SAMPLES 0x8D57
 #endif
@@ -96,8 +98,8 @@ static void gfx_sdl_reset_dimension_and_pos(void) {
     }
 
     if (configWindow.reset) {
-        configWindow.x = WAPI_WIN_CENTERPOS;
-        configWindow.y = WAPI_WIN_CENTERPOS;
+        configWindow.x = SDL_WINDOWPOS_CENTERED;
+        configWindow.y = SDL_WINDOWPOS_CENTERED;
         configWindow.w = DESIRED_SCREEN_WIDTH;
         configWindow.h = DESIRED_SCREEN_HEIGHT;
         configWindow.reset = false;
@@ -105,8 +107,8 @@ static void gfx_sdl_reset_dimension_and_pos(void) {
         return;
     }
 
-    int xpos = (configWindow.x == WAPI_WIN_CENTERPOS) ? SDL_WINDOWPOS_CENTERED : configWindow.x;
-    int ypos = (configWindow.y == WAPI_WIN_CENTERPOS) ? SDL_WINDOWPOS_CENTERED : configWindow.y;
+    int xpos = SDL_WINDOWPOS_CENTERED;
+    int ypos = SDL_WINDOWPOS_CENTERED;
 
     SDL_SetWindowSize(wnd, configWindow.w, configWindow.h);
     SDL_SetWindowPosition(wnd, xpos, ypos);
@@ -123,13 +125,6 @@ static void gfx_sdl_init(const char *window_title) {
     SDL_Init(SDL_INIT_VIDEO);
     SDL_StartTextInput();
 
-    if (configWindow.msaa > 0) {
-        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, configWindow.msaa);
-    } else {
-        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 0);
-    }
-
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
@@ -139,15 +134,17 @@ static void gfx_sdl_init(const char *window_title) {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 #endif
 
-    int xpos = (configWindow.x == WAPI_WIN_CENTERPOS) ? SDL_WINDOWPOS_CENTERED : configWindow.x;
-    int ypos = (configWindow.y == WAPI_WIN_CENTERPOS) ? SDL_WINDOWPOS_CENTERED : configWindow.y;
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
     wnd = SDL_CreateWindow(
         window_title,
-        xpos, ypos, configWindow.w, configWindow.h,
+        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, configWindow.w, configWindow.h,
         SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
     );
     ctx = SDL_GL_CreateContext(wnd);
+
+    imgui_init_backend(wnd, ctx);
 
     gfx_sdl_set_vsync(configWindow.vsync);
 
@@ -160,6 +157,7 @@ static void gfx_sdl_init(const char *window_title) {
 }
 
 static void gfx_sdl_main_loop(void (*run_one_game_iter)(void)) {
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, configWindow.msaa);
     run_one_game_iter();
 }
 
@@ -215,6 +213,7 @@ static void gfx_sdl_ondropfile(char* path) {
 static void gfx_sdl_handle_events(void) {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
+        imgui_handle_events(&event);
         switch (event.type) {
             case SDL_TEXTINPUT:
                 kb_text_input(event.text.text);

@@ -617,4 +617,6 @@
 
 #define MODEL_ERROR_MODEL                 0xF7 // error_model_geo
 
+#define MODEL_ACCESSORY                   0xF8 // accessory_geo
+
 #endif // MODEL_IDS_H

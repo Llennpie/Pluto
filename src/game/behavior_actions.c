@@ -233,6 +233,7 @@ void vec3f_copy_2(Vec3f dest, Vec3f src) {
 #include "behaviors/tox_box.inc.c"
 #include "behaviors/piranha_plant.inc.c"
 #include "behaviors/bowser_puzzle_piece.inc.c"
+#include "behaviors/hat_follow.inc.c"
 
 s32 set_obj_anim_with_accel_and_sound(s16 a0, s16 a1, s32 a2) {
     f32 sp1C;

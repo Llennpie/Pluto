@@ -24,6 +24,8 @@
 
 #include "engine/math_util.h"
 
+#include "saturn/saturn.h"
+
 static enum HudUtilsResolution sResolution = RESOLUTION_DJUI;
 static enum HudUtilsFilter sFilter = FILTER_NEAREST;
 static enum DjuiFontType sFont = FONT_NORMAL;
@@ -316,7 +318,7 @@ f32 djui_hud_measure_text(const char* message) {
 }
 
 void djui_hud_print_text(const char* message, f32 x, f32 y, f32 scale) {
-    if (message == NULL) { return; }
+    if (message == NULL || freeze_camera) { return; }
     gDjuiHudUtilsZ += 0.01f;
 
     if (sLegacy) { scale *= 0.5f; }
@@ -365,7 +367,7 @@ void djui_hud_print_text(const char* message, f32 x, f32 y, f32 scale) {
 }
 
 void djui_hud_print_text_interpolated(const char* message, f32 prevX, f32 prevY, f32 prevScale, f32 x, f32 y, f32 scale) {
-    if (message == NULL) { return; }
+    if (message == NULL || freeze_camera) { return; }
     f32 savedZ = gDjuiHudUtilsZ;
     gDjuiHudUtilsZ += 0.01f;
 
@@ -446,6 +448,8 @@ void djui_hud_render_texture_raw(const u8* texture, u32 bitSize, u32 width, u32 
         return;
     }
 
+    if (freeze_camera) return;
+
     gDjuiHudUtilsZ += 0.01f;
 
     // translate position
@@ -478,6 +482,8 @@ void djui_hud_render_texture_raw(const u8* texture, u32 bitSize, u32 width, u32 
 }
 
 void djui_hud_render_texture_tile_raw(const u8* texture, u32 bitSize, u32 width, u32 height, f32 x, f32 y, f32 scaleW, f32 scaleH, u32 tileX, u32 tileY, u32 tileW, u32 tileH) {
+    if (freeze_camera) return;
+    
     gDjuiHudUtilsZ += 0.01f;
     scaleW *= (f32) tileW / (f32) width;
     scaleH *= (f32) tileH / (f32) height;
@@ -521,6 +527,8 @@ void djui_hud_render_texture_tile(struct TextureInfo* texInfo, f32 x, f32 y, f32
 }
 
 void djui_hud_render_texture_interpolated(struct TextureInfo* texInfo, f32 prevX, f32 prevY, f32 prevScaleW, f32 prevScaleH, f32 x, f32 y, f32 scaleW, f32 scaleH) {
+    if (freeze_camera) return;
+    
     Gfx* savedHeadPos = gDisplayListHead;
     f32 savedZ = gDjuiHudUtilsZ;
 
@@ -545,6 +553,8 @@ void djui_hud_render_texture_interpolated(struct TextureInfo* texInfo, f32 prevX
 }
 
 void djui_hud_render_texture_tile_interpolated(struct TextureInfo* texInfo, f32 prevX, f32 prevY, f32 prevScaleW, f32 prevScaleH, f32 x, f32 y, f32 scaleW, f32 scaleH, u32 tileX, u32 tileY, u32 tileW, u32 tileH) {
+    if (freeze_camera) return;
+    
     Gfx* savedHeadPos = gDisplayListHead;
     f32 savedZ = gDjuiHudUtilsZ;
 
@@ -569,6 +579,8 @@ void djui_hud_render_texture_tile_interpolated(struct TextureInfo* texInfo, f32 
 }
 
 void djui_hud_render_rect(f32 x, f32 y, f32 width, f32 height) {
+    if (freeze_camera) return;
+    
     gDjuiHudUtilsZ += 0.01f;
 
     // translate position
@@ -601,6 +613,8 @@ void djui_hud_render_rect(f32 x, f32 y, f32 width, f32 height) {
 }
 
 void djui_hud_render_rect_interpolated(f32 prevX, f32 prevY, f32 prevWidth, f32 prevHeight, f32 x, f32 y, f32 width, f32 height) {
+    if (freeze_camera) return;
+    
     Gfx* savedHeadPos = gDisplayListHead;
     f32 savedZ = gDjuiHudUtilsZ;
 

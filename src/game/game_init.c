@@ -27,6 +27,7 @@
 #include "bettercamera.h"
 #include "hud.h"
 #include "pc/controller/controller_mouse.h"
+#include "saturn/saturn.h"
 
 // FIXME: I'm not sure all of these variables belong in this file, but I don't
 // know of a good way to split them
@@ -459,6 +460,7 @@ void run_demo_inputs(void) {
 
 // update the controller struct with available inputs if present.
 void read_controller_inputs(void) {
+    if (!allow_game_input) return;
     // If any controllers are plugged in, update the
     // controller information.
     if (gControllerBits) {

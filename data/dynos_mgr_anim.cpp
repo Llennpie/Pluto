@@ -1,4 +1,5 @@
 #include "dynos.cpp.h"
+#include "src/saturn/saturn.h"
 extern "C" {
 #include "object_fields.h"
 #include "game/level_update.h"
@@ -38,9 +39,17 @@ static s32 RetrieveCurrentAnimationIndex(struct Object *aObject) {
     return -1;
 }
 
+extern void saturn_play_pluto_animation();
+extern bool is_editing_panim;
+
 // Must be called twice, before and after geo_set_animation_globals
 void DynOS_Anim_Swap(void *aPtr) {
     if (!aPtr) { return; }
+
+    if (override_anim && (enable_custom_anim || is_editing_panim)) {
+        saturn_play_pluto_animation();
+        return;
+    }
 
     static Animation *pDefaultAnimation = NULL;
     static Animation  sGfxDataAnimation;
@@ -93,7 +102,7 @@ void DynOS_Anim_Swap(void *aPtr) {
 
         // Animation data
         const AnimData *_AnimData = (const AnimData *) _GfxData->mAnimationTable[_AnimIndex].second;
-        if (_AnimData) {
+        if (_AnimData && !(enable_custom_anim && override_anim)) {
             sGfxDataAnimation.flags = _AnimData->mFlags;
             sGfxDataAnimation.animYTransDivisor = _AnimData->mUnk02;
             sGfxDataAnimation.startFrame = _AnimData->mUnk04;

@@ -44,6 +44,8 @@
 #include "pc/network/socket/socket.h"
 #include "bettercamera.h"
 #include "first_person_cam.h"
+#include "saturn/saturn.h"
+#include "saturn/saturn_models.h"
 
 #define MAX_HANG_PREVENTION 64
 
@@ -129,6 +131,11 @@ s16 set_mario_anim_with_accel(struct MarioState *m, s32 targetAnimID, s32 accel)
  * Sets the character specific animation without any acceleration, running at its default rate.
  */
 s16 set_character_animation(struct MarioState *m, enum CharacterAnimID targetAnimID) {
+    if (override_anim) { return 0; }
+    return force_set_character_animation(m, targetAnimID);
+}
+
+s16 force_set_character_animation(struct MarioState *m, enum CharacterAnimID targetAnimID) {
     return mario_set_animation_internal(m, get_character_anim(m, targetAnimID), 0x10000);
 }
 
@@ -383,7 +390,7 @@ void play_mario_heavy_landing_sound_once(struct MarioState *m, u32 soundBits) {
  * Plays action and Mario sounds relevant to what was passed into the function.
  */
 void play_mario_sound(struct MarioState *m, s32 actionSound, s32 marioSound) {
-    if (!m) { return; }
+    if (!m || freeze_camera) { return; }
     if (actionSound == SOUND_ACTION_TERRAIN_JUMP) {
         play_mario_action_sound(m, (m->flags & MARIO_METAL_CAP) ? (s32) SOUND_ACTION_METAL_JUMP
                                                                 : (s32) SOUND_ACTION_TERRAIN_JUMP, 1);
@@ -1382,7 +1389,7 @@ void squish_mario_model(struct MarioState *m) {
     // Also handles the Tiny Mario and Huge Mario cheats.
     u8 squishTimer = (m->squishTimer > m->bounceSquishTimer) ? m->squishTimer : m->bounceSquishTimer;
     if (squishTimer == 0) {
-        vec3f_set(m->marioObj->header.gfx.scale, 1.0f, 1.0f, 1.0f);
+        vec3f_set(m->marioObj->header.gfx.scale, marioScaleX, marioScaleY, marioScaleZ);
         return;
     }
 

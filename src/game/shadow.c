@@ -14,6 +14,8 @@
 #include "sm64.h"
 #include "game/hardcoded.h"
 
+#include "saturn/saturn_colors.h"
+
 // Avoid Z-fighting
 #define find_floor_height_and_data 0.4 + find_floor_height_and_data
 
@@ -921,6 +923,7 @@ Gfx *create_shadow_hardcoded_rectangle(f32 xPos, f32 yPos, f32 zPos, UNUSED s16 
  */
 Gfx *create_shadow_below_xyz(f32 xPos, f32 yPos, f32 zPos, s16 shadowScale, u8 shadowSolidity,
                              s8 shadowType) {
+    if (!enable_shadows) return NULL;
     Gfx *displayList = NULL;
     struct Surface *pfloor;
     f32 height = find_floor(xPos, yPos, zPos, &pfloor);

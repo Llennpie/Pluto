@@ -32,6 +32,11 @@ s32 update_angle_from_move_flags(s32 *angle);
 /* |description|Spawns strong wind particles relative to the current object|descriptionEnd| */
 void cur_obj_spawn_strong_wind_particles(s32 windSpread, f32 scale, f32 relPosX, f32 relPosY, f32 relPosZ);
 
+/* |description|Behavior init function for Pluto accessories|descriptionEnd| */
+void bhv_hat_follow_init(void);
+/* |description|Behavior loop function for Pluto accessories|descriptionEnd| */
+void bhv_hat_follow_loop(void);
+
 /* |description|Behavior loop function for Star Door|descriptionEnd| */
 void bhv_star_door_loop_2(void);
 /* |description|Behavior loop function for Cap Switch|descriptionEnd| */

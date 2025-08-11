@@ -206,7 +206,7 @@ static void DynOS_Actor_Generate(const SysPath &aPackFolder, Array<Pair<u64, Str
         DynOS_Anim_ScanFolder(_GfxData, _AnimsFolder);
 
         // Create table for player model animations
-        if ((_GeoRootName == "mario_geo" || _GeoRootName == "luigi_geo" || _GeoRootName == "toad_player_geo" || _GeoRootName == "wario_geo" || _GeoRootName == "waluigi_geo") && !_GfxData->mAnimations.Empty()) {
+        if ((_GeoRootName == "mario_geo" || _GeoRootName == "luigi_geo" || _GeoRootName == "toad_player_geo" || _GeoRootName == "wario_geo" || _GeoRootName == "waluigi_geo" || _GeoRootName == "accessory_geo") && !_GfxData->mAnimations.Empty()) {
             _GfxData->mAnimationTable.Resize(256);
             for (s32 i = 0; i != 256; ++i) {
                 String _AnimName("anim_%02X", i);

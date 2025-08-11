@@ -27,6 +27,9 @@
 #include "pc/network/network.h"
 #include "pc/lua/smlua_hooks.h"
 #include "pc/mods/mods.h"
+#include "saturn/saturn.h"
+#include "saturn/saturn_textures.h"
+#include "saturn/saturn_models.h"
 
 #define TOAD_STAR_1_REQUIREMENT gBehaviorValues.ToadStar1Requirement
 #define TOAD_STAR_2_REQUIREMENT gBehaviorValues.ToadStar2Requirement
@@ -370,6 +373,7 @@ Gfx* geo_mirror_mario_set_alpha(s32 callContext, struct GraphNode* node, UNUSED 
 
     if (callContext == GEO_CONTEXT_RENDER) {
         alpha = (bodyState->modelState & 0x100) ? (bodyState->modelState & 0xFF) : 255;
+        if (switch_state_powerup == 2 || switch_state_powerup == 4) alpha = vanish_transparency;
         gfx = make_gfx_mario_alpha(asGenerated, alpha);
     }
     return gfx;
@@ -400,18 +404,8 @@ Gfx* geo_switch_mario_eyes(s32 callContext, struct GraphNode* node, UNUSED Mat4*
     s16 blinkFrame;
 
     if (callContext == GEO_CONTEXT_RENDER) {
-        if (bodyState->eyeState == 0) {
-            blinkFrame = ((switchCase->parameter * 32 + (gAreaUpdateCounter + geo_get_processing_object_index() * 32)) >> 1) & 0x1F;
-            if (blinkFrame < 7) {
-                switchCase->selectedCase = gMarioBlinkAnimation[blinkFrame];
-            }
-            else {
-                switchCase->selectedCase = 0;
-            }
-        }
-        else {
-            switchCase->selectedCase = bodyState->eyeState - 1;
-        }
+        blinkFrame = ((switchCase->parameter * 32 + (gAreaUpdateCounter + geo_get_processing_object_index() * 32)) >> 1) & 0x1F;
+        saturn_custom_blink(&switchCase->selectedCase, blinkFrame, bodyState->eyeState);
     }
     return NULL;
 }
@@ -452,6 +446,18 @@ Gfx* geo_mario_tilt_torso(s32 callContext, struct GraphNode* node, Mat4* mtx) {
     return NULL;
 }
 
+struct Object *find_hat_object(void) {
+    struct ObjectNode *list = &gObjectLists[OBJ_LIST_DEFAULT];
+    struct Object *obj;
+
+    for (obj = (struct Object *)list->next; obj != (struct Object *)list; obj = (struct Object *)obj->header.next) {
+        if (obj->behavior == segmented_to_virtual(bhvHatFollow)) {
+            return obj;
+        }
+    }
+    return NULL;
+}
+
 /**
  * Makes Mario's head rotate with the camera angle when in C-up mode
  */
@@ -469,9 +475,9 @@ Gfx* geo_mario_head_rotation(s32 callContext, struct GraphNode* node, Mat4* c) {
 
         if (!marioActive) {
             node->flags &= ~GRAPH_RENDER_ACTIVE;
-        } else if (((plrIdx == 0) && (camera->mode == CAMERA_MODE_C_UP)) || ((plrIdx != 0) && (action == ACT_FIRST_PERSON))) {
-            rotNode->rotation[0] = gPlayerCameraState[plrIdx].headRotation[1];
-            rotNode->rotation[2] = gPlayerCameraState[plrIdx].headRotation[0];
+        } else if (((plrIdx == 0) && (camera->mode == CAMERA_MODE_C_UP)) || ((plrIdx != 0) && (action == ACT_FIRST_PERSON)) || freeze_camera) {
+            rotNode->rotation[0] = (freeze_camera) ? head_rotation[1] : gPlayerCameraState[plrIdx].headRotation[1];
+            rotNode->rotation[2] = (freeze_camera) ? head_rotation[0] : gPlayerCameraState[plrIdx].headRotation[0];
         }
         else if (action & ACT_FLAG_WATER_OR_TEXT || bodyState->allowPartRotation) {
             rotNode->rotation[0] = bodyState->headAngle[1];
@@ -492,6 +498,21 @@ Gfx* geo_mario_head_rotation(s32 callContext, struct GraphNode* node, Mat4* c) {
         get_pos_from_transform_mtx(bodyState->headPos,
                                    *c,
                                    *gCurGraphNodeCamera->matrixPtr);
+
+        // Spawn and update the object to follow Mario's head
+        if (find_hat_object() == NULL) {
+            if (active_accessory_index != -1 && active_saturn_model_index != -1)
+                spawn_object(gMarioObjects[plrIdx], MODEL_ACCESSORY, bhvHatFollow); // Replace MODEL_STAR and bhvStar with desired model and behavior
+        } else {
+            if (active_accessory_index == -1 || active_saturn_model_index == -1) {
+                struct Object *hatObj = find_hat_object();
+                if (hatObj != NULL) {
+                    obj_mark_for_deletion(hatObj);
+                    active_accessory_index = -1;
+                }
+            }
+        }
+
         bodyState->updateHeadPosTime = gGlobalTimer;
     }
     return NULL;
@@ -519,6 +540,10 @@ Gfx* geo_switch_mario_hand(s32 callContext, struct GraphNode* node, UNUSED Mat4*
                 switchCase->selectedCase =
                     (bodyState->handState < 2) ? bodyState->handState : MARIO_HAND_FISTS;
             }
+        }
+        switch(switchCase->parameter) {
+            case 0: if (switch_state_hand_right != 0) switchCase->selectedCase = switch_state_hand_right - 1; break;
+            default: if (switch_state_hand_left != 0) switchCase->selectedCase = switch_state_hand_left - 1;
         }
     }
     return NULL;
@@ -569,6 +594,7 @@ Gfx* geo_switch_mario_cap_effect(s32 callContext, struct GraphNode* node, UNUSED
 
     if (callContext == GEO_CONTEXT_RENDER) {
         switchCase->selectedCase = bodyState->modelState >> 8;
+        if (switch_state_powerup != 0) switchCase->selectedCase = switch_state_powerup - 1;
     }
     return NULL;
 }
@@ -588,7 +614,7 @@ Gfx* geo_switch_mario_cap_on_off(s32 callContext, struct GraphNode* node, UNUSED
         switchCase->selectedCase = bodyState->capState & 1;
         while (next && (next != node)) {
             if (next->type == GRAPH_NODE_TYPE_TRANSLATION_ROTATION) {
-                if (bodyState->capState & 2) {
+                if (bodyState->capState & 2 || switch_state_cap == 2) {
                     next->flags |= GRAPH_RENDER_ACTIVE;
                 }
                 else {
@@ -597,6 +623,7 @@ Gfx* geo_switch_mario_cap_on_off(s32 callContext, struct GraphNode* node, UNUSED
             }
             next = next->next;
         }
+        if (switch_state_cap != 0) switchCase->selectedCase = switch_state_cap;
     }
     return NULL;
 }
@@ -763,6 +790,7 @@ static struct PlayerColor geo_mario_get_player_color(const struct PlayerPalette 
     struct PlayerColor color = { 0 };
     u8 index = geo_get_processing_object_index();
     struct MarioBodyState* bodyState = &gBodyStates[index];
+    if (index == 0) palette = &DEFAULT_MARIO_PALETTE;
     for (s32 part = 0; part != PLAYER_PART_MAX; ++part) {
         color.parts[part] = (Lights1) gdSPDefLights1(
             // Shadow

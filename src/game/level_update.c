@@ -51,6 +51,8 @@
 
 #include "engine/level_script.h"
 
+#include "src/saturn/saturn.h"
+
 #define MENU_LEVEL_MIN 0
 #define MENU_LEVEL_MAX 17
 
@@ -1305,8 +1307,8 @@ s32 play_mode_normal(void) {
         update_camera(gCurrentArea->camera);
     }
 
-    initiate_painting_warp(-1);
-    initiate_delayed_warp();
+    if (!freeze_camera) initiate_painting_warp(-1);
+    if (!freeze_camera) initiate_delayed_warp();
 
     // If either initiate_painting_warp or initiate_delayed_warp initiated a
     // warp, change play mode accordingly.

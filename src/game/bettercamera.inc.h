@@ -10,6 +10,7 @@
 #include "pc/configfile.h"
 #include "pc/controller/controller_mouse.h"
 #include "pc/lua/utils/smlua_camera_utils.h"
+#include "saturn/ui/saturn_imgui.h"
 
 #if defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR) 
 //quick and dirty fix for some older MinGW.org mingwrt
@@ -426,7 +427,7 @@ static void newcam_rotate_button(void) {
             newcam_tilt_accel -= (newcam_tilt_accel*((f32)newcam_degrade/100));
     }
 
-    if ((newcam_mouse == 1) && !gDjuiInMainMenu && !gDjuiChatBoxFocus && !gDjuiConsoleFocus) {
+    if ((newcam_mouse == 1) && !gDjuiInMainMenu && !gDjuiChatBoxFocus && !gDjuiConsoleFocus && !show_menu) {
         if (!newcam_use_dpad || !newcam_direction_locked) {
             newcam_yaw += (f32)ivrt(0) * (f32)mouse_x * 16.0f * ((f32)newcam_sensitivityX / 250.0f);
         }

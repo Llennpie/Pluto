@@ -34,6 +34,8 @@
 #include "pc/lua/smlua_hooks.h"
 #include "pc/lua/utils/smlua_obj_utils.h"
 
+#include "src/saturn/saturn.h"
+
 u8 sDelayInvincTimer;
 s16 gInteractionInvulnerable;
 
@@ -1013,7 +1015,7 @@ u32 interact_bbh_entrance(struct MarioState *m, UNUSED u32 interactType, struct 
 }
 
 u32 interact_warp(struct MarioState *m, UNUSED u32 interactType, struct Object *o) {
-    if (!m || !o) { return FALSE; }
+    if (!m || !o || freeze_camera) { return FALSE; }
     u32 action;
 
     if (m->skipWarpInteractionsTimer > 0) {
@@ -1088,6 +1090,10 @@ u8 prevent_interact_door(struct MarioState* m, struct Object* o) {
 
 u32 interact_warp_door(struct MarioState *m, UNUSED u32 interactType, struct Object *o) {
     if (!m || !o) { return FALSE; }
+    if (freeze_camera) {
+        interact_door(m, interactType, o);
+        return FALSE;
+    }
     u32 doorAction = 0;
     u32 saveFlags = save_file_get_flags();
     s16 warpDoorId = o->oBehParams >> 24;

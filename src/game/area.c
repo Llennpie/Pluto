@@ -29,6 +29,7 @@
 #include "pc/djui/djui_panel_pause.h"
 #include "pc/nametags.h"
 #include "engine/lighting_engine.h"
+#include "src/saturn/ui/saturn_imgui.h"
 
 struct SpawnInfo gPlayerSpawnInfos[MAX_PLAYERS];
 struct Area gAreaData[MAX_AREAS];
@@ -456,6 +457,7 @@ void render_game(void) {
             if (gServerSettings.nametags && !gDjuiInMainMenu) {
                 nametags_render();
             }
+            imgui_hud();
             smlua_call_event_on_hud_render_behind(djui_reset_hud_params);
             djui_gfx_displaylist_end();
         }

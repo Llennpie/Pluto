@@ -14,6 +14,8 @@
 #include "sounds.h"
 #include "audio/external.h"
 
+#include "saturn/saturn.h"
+
 #define CALL_CALLBACK(x) if (base->interactable->x != NULL) { base->interactable->x(base); }
 #define CALL_CALLBACK_PARAM(x, y) if (base->interactable->x != NULL) { base->interactable->x(base, y); }
 
@@ -194,6 +196,8 @@ bool djui_interactable_is_input_focus(struct DjuiBase* base) {
 }
 
 bool djui_interactable_on_key_down(int scancode) {
+    if (!allow_game_input) return false;
+
     if (gInteractableBinding != NULL) {
         return true;
     }
@@ -284,7 +288,6 @@ bool djui_interactable_on_key_down(int scancode) {
 }
 
 void djui_interactable_on_key_up(int scancode) {
-
     bool keyFocused = (gInteractableFocus != NULL)
                    && (gInteractableFocus->interactable != NULL)
                    && (gInteractableFocus->interactable->on_key_up != NULL);

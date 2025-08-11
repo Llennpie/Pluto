@@ -3,6 +3,8 @@
 #include "game/rendering_graph_node.h"
 #include "game/skybox.h"
 #include "geo_commands.h"
+#include "saturn/saturn.h"
+#include "saturn/saturn_colors.h"
 
 void set_override_fov(f32 fov) {
     gOverrideFOV = fov;
@@ -62,7 +64,7 @@ u8 get_vertex_color(u8 index) {
 
 void set_vertex_color(u8 index, u8 value) {
     if (index > 2) { return; }
-    gVertexColor[index] = value;
+    gVertexColor[index] = (auto_chroma && !chroma_affects_light) ? 255 : value;
 }
 
 ///

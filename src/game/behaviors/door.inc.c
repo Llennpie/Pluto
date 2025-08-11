@@ -1,5 +1,7 @@
 // door.c.inc
 
+#include "src/saturn/saturn.h"
+
 struct DoorAction
 {
     u32 flag;
@@ -42,7 +44,7 @@ u8 door_allow_walk_through(void) {
 }
 
 void set_door_camera_event(void) {
-    if (gCamera->mode == CAMERA_MODE_NEWCAM) {
+    if (gCamera->mode == CAMERA_MODE_NEWCAM || freeze_camera) {
         return;
     }
 

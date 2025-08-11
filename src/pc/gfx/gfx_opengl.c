@@ -41,6 +41,9 @@
 #include "gfx_rendering_api.h"
 #include "gfx_pc.h"
 
+#include "saturn/ui/saturn_imgui.h"
+#include "saturn/saturn_colors.h"
+
 #define TEX_CACHE_STEP 512
 
 struct ShaderProgram {
@@ -721,20 +724,84 @@ static void gfx_opengl_init(void) {
 static void gfx_opengl_on_resize(void) {
 }
 
+GLuint framebuffer_id;
+GLuint depthbuffer_id;
+GLuint rendertexture_id;
+
 static void gfx_opengl_start_frame(void) {
     frame_count++;
 
+    if (configWindow.msaa == 4) {
+        glEnable(GL_MULTISAMPLE);
+    } else {
+        glDisable(GL_MULTISAMPLE);
+    }
+
+    if (configWindow.secret_ui || (!configWindow.secret_ui && capture_screenshot && (skybox_has_deinit || !auto_chroma))) {
+        if (capture_screenshot) {
+            gfx_current_dimensions.width =  (screenshot_custom_res) ? screenshot_size[0] : gfx_current_dimensions.width * screenshot_multiplier;
+            gfx_current_dimensions.height = (screenshot_custom_res) ? screenshot_size[1] : gfx_current_dimensions.height * screenshot_multiplier;
+        }
+
+        glGenFramebuffers(1, &framebuffer_id);
+        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_id);
+
+        if (configWindow.msaa == 4) {
+            // Generate and bind multisample texture
+            glGenTextures(1, &rendertexture_id);
+            glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, rendertexture_id);
+            glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGBA, gfx_current_dimensions.width, gfx_current_dimensions.height, GL_TRUE);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, rendertexture_id, 0);
+
+            // Generate and bind multisample renderbuffer for depth
+            glGenRenderbuffers(1, &depthbuffer_id);
+            glBindRenderbuffer(GL_RENDERBUFFER, depthbuffer_id);
+            glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, GL_DEPTH_COMPONENT, gfx_current_dimensions.width, gfx_current_dimensions.height);
+            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthbuffer_id);
+        } else {
+            // Generate and bind regular texture
+            glGenTextures(1, &rendertexture_id);
+            glBindTexture(GL_TEXTURE_2D, rendertexture_id);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, gfx_current_dimensions.width, gfx_current_dimensions.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, rendertexture_id, 0);
+
+            // Generate and bind regular renderbuffer for depth
+            glGenRenderbuffers(1, &depthbuffer_id);
+            glBindRenderbuffer(GL_RENDERBUFFER, depthbuffer_id);
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, gfx_current_dimensions.width, gfx_current_dimensions.height);
+            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthbuffer_id);
+        }
+    }
+
     glDisable(GL_SCISSOR_TEST);
     glDepthMask(GL_TRUE); // Must be set to clear Z-buffer
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    //glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_SCISSOR_TEST);
+
+    glEnable(GL_BLEND);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 static void gfx_opengl_end_frame(void) {
+    if (capture_screenshot && (skybox_has_deinit || !auto_chroma))
+        imgui_capture_screenshot((void*)(intptr_t)framebuffer_id);
+
+    if (configWindow.secret_ui) {
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer_id);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        glBlitFramebuffer(0, 0, gfx_current_dimensions.width, gfx_current_dimensions.height, 0, 0, gfx_current_dimensions.width, gfx_current_dimensions.height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    }
+
+    imgui_update();
 }
 
 static void gfx_opengl_finish_render(void) {
+    glDeleteFramebuffers(1, &framebuffer_id);
+    glDeleteRenderbuffers(1, &depthbuffer_id);
+    glDeleteTextures(1, &rendertexture_id);
 }
 
 static void gfx_opengl_shutdown(void) {

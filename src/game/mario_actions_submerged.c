@@ -21,6 +21,7 @@
 #include "pc/network/network.h"
 #include "pc/lua/smlua.h"
 #include "pc/lua/smlua_hooks.h"
+#include "saturn/saturn.h"
 
 #define MIN_SWIM_STRENGTH 160
 #define MIN_SWIM_SPEED 16.0f
@@ -383,7 +384,8 @@ static s32 act_water_idle(struct MarioState *m) {
         val = 0x30000;
     }
 
-    common_idle_step(m, CHAR_ANIM_WATER_IDLE, val);
+    if (freeze_camera && !enable_head_rotation && override_anim) saturn_action_idle(m);
+    else common_idle_step(m, CHAR_ANIM_WATER_IDLE, val);
     return FALSE;
 }
 

@@ -28,6 +28,11 @@
 #include "pc/djui/djui_panel_pause.h"
 #include "pc/djui/djui_hud_utils.h"
 
+#include "saturn/ui/saturn_imgui.h"
+
+#include "saturn/saturn.h"
+#include "saturn/ui/saturn_imgui.h"
+
 #define MAX_JOYBINDS 32
 #define MAX_MOUSEBUTTONS 8 // arbitrary
 #define MAX_JOYBUTTONS 32  // arbitrary; includes virtual keys for triggers
@@ -174,6 +179,7 @@ static inline void update_button(const int i, const bool new) {
     }
     if (unpressed) {
         djui_interactable_on_key_up(VK_BASE_SDL_GAMEPAD + i);
+        imgui_handle_binds(VK_BASE_SDL_GAMEPAD + i);
     }
 }
 
@@ -181,7 +187,7 @@ extern s16 gMenuMode;
 static void controller_sdl_read(OSContPad *pad) {
     if (!init_ok) { return; }
 
-    if ((newcam_mouse == 1 || get_first_person_enabled() || gDjuiHudLockMouse) && !is_game_paused() && !gDjuiPanelPauseCreated && !gDjuiInMainMenu && !gDjuiChatBoxFocus && !gDjuiConsoleFocus && WAPI.has_focus()) {
+    if ((newcam_mouse == 1 || get_first_person_enabled() || gDjuiHudLockMouse) && !is_game_paused() && !gDjuiPanelPauseCreated && !gDjuiInMainMenu && !gDjuiChatBoxFocus && !gDjuiConsoleFocus && WAPI.has_focus() && !show_menu) {
         controller_mouse_enter_relative();
     } else {
         controller_mouse_leave_relative();
@@ -191,7 +197,7 @@ static void controller_sdl_read(OSContPad *pad) {
     controller_mouse_read_relative();
     u32 mouse = mouse_buttons;
 
-    if (!gInteractableOverridePad) {
+    if (!gInteractableOverridePad && !show_menu) {
         for (u32 i = 0; i < num_mouse_binds; ++i)
             if (mouse & SDL_BUTTON(mouse_binds[i][0]))
                 pad->button |= mouse_binds[i][1];

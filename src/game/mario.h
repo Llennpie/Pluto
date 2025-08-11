@@ -32,6 +32,7 @@ Useful for controlling animation timing, e.g., slow-motion or fast-forward effec
 |descriptionEnd| */
 s16 set_mario_anim_with_accel(struct MarioState *m, s32 targetAnimID, s32 accel);
 
+s16 force_set_character_animation(struct MarioState *m, enum CharacterAnimID targetAnimID);
 /* |description|
 Sets the character-specific animation at its default rate (no acceleration)
 |descriptionEnd| */

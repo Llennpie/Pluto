@@ -61,6 +61,15 @@
 #include "behavior_table.h"
 #include "behavior_commands.h"
 
+const BehaviorScript bhvHatFollow[] = {
+    BEGIN(OBJ_LIST_DEFAULT),
+    ID(id_bhvMrIBody),
+    OR_INT(oFlags, OBJ_FLAG_UPDATE_GFX_POS_AND_ANGLE),
+    CALL_NATIVE(bhv_hat_follow_init),
+    BEGIN_LOOP(),
+        CALL_NATIVE(bhv_hat_follow_loop),
+    END_LOOP(),
+};
 
 const BehaviorScript bhvStarDoor[] = {
     BEGIN(OBJ_LIST_SURFACE),

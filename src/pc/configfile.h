@@ -25,6 +25,7 @@ typedef struct {
     bool exiting_fullscreen;
     bool settings_changed;
     unsigned int msaa;
+    bool secret_ui;
 } ConfigWindow;
 
 typedef struct {
@@ -81,6 +82,13 @@ extern unsigned int configKeyConsole[MAX_BINDS];
 extern unsigned int configKeyPrevPage[MAX_BINDS];
 extern unsigned int configKeyNextPage[MAX_BINDS];
 extern unsigned int configKeyDisconnect[MAX_BINDS];
+extern unsigned int configKeyPlutoMenu[];
+extern unsigned int configKeyPlutoScreenshot[];
+extern unsigned int configKeyPlutoChroma[];
+extern unsigned int configKeyPlutoFreezeCamera[];
+extern unsigned int configKeyPlutoHud[];
+extern unsigned int configKeyPlutoPlayAnim[];
+extern unsigned int configKeyPlutoPauseAnim[];
 extern unsigned int configStickDeadzone;
 extern unsigned int configRumbleStrength;
 extern unsigned int configGamepadNumber;

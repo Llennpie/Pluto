@@ -178,7 +178,7 @@ void first_person_update(void) {
             level_trigger_warp(m, WARP_OP_LOOK_UP);
         }
 
-        m->marioBodyState->modelState = 0x100;
+        m->marioObj->header.gfx.node.flags |= GRAPH_RENDER_INVISIBLE;
         if (m->heldObj) {
             Vec3f camDir = {
                 m->area->camera->focus[0] - m->area->camera->pos[0],

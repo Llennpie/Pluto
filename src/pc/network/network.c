@@ -37,6 +37,9 @@
 #include "engine/math_util.h"
 #include "engine/lighting_engine.h"
 
+#include "src/saturn/saturn.h"
+#include "src/saturn/ui/saturn_imgui.h"
+
 #ifdef DISCORD_SDK
 #include "pc/discord/discord.h"
 #endif
@@ -639,6 +642,9 @@ static inline void color_set(Color color, u8 r, u8 g, u8 b) {
 
 void network_shutdown(bool sendLeaving, bool exiting, bool popup, bool reconnecting) {
     smlua_call_event_hooks(HOOK_ON_EXIT);
+
+    freeze_camera = false;
+    show_menu = false;
 
     if (gDjuiChatBox != NULL) {
         djui_base_destroy(&gDjuiChatBox->base);

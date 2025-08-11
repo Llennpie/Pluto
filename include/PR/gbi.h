@@ -136,6 +136,7 @@
 #define G_TRI2			0x06
 #define G_QUAD			0x07
 #define G_LINE3D		0x08
+#define G_SETOBJ        0x09
 #else   /* F3DEX_GBI_2 */
 
 /* DMA commands: */
@@ -2948,6 +2949,13 @@ typedef union {
 {{									\
 	_SHIFTL(G_ENDDL, 24, 8), 0					\
 }}
+
+#define gSPSetObject(pkt, obj)            \
+{                                          \
+	Gfx* _g = (Gfx*)(pkt);                  \
+	_g->words.w0 = _SHIFTL(G_SETOBJ, 24, 8); \
+	_g->words.w1 = (uintptr_t)(obj);          \
+}
 
 #ifdef	F3DEX_GBI_2
 /*

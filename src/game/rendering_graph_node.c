@@ -18,6 +18,14 @@
 #include "game/first_person_cam.h"
 #include "course_table.h"
 #include "skybox.h"
+#include "object_list_processor.h"
+
+#include "saturn/saturn.h"
+#include "saturn/saturn_colors.h"
+#include "saturn/saturn_models.h"
+#include "saturn/ui/saturn_imgui.h"
+#include "pc/lua/utils/smlua_obj_utils.h"
+#include "game/mario_misc.h"
 
 /**
  * This file contains the code that processes the scene graph for rendering.
@@ -637,7 +645,8 @@ static void geo_process_translation_rotation(struct GraphNodeTranslationRotation
     if (!increment_mat_stack()) { return; }
 
     if (node->displayList != NULL) {
-        geo_append_display_list(node->displayList, node->node.flags >> 8);
+        if ((!auto_chroma || (auto_chroma && chroma_show_geo)) || gCurGraphNodeObject != NULL)
+            geo_append_display_list(node->displayList, node->node.flags >> 8);
     }
     if (node->node.children != NULL) {
         geo_process_node_and_siblings(node->node.children);
@@ -666,7 +675,8 @@ static void geo_process_translation(struct GraphNodeTranslation *node) {
     if (!increment_mat_stack()) { return; }
 
     if (node->displayList != NULL) {
-        geo_append_display_list(node->displayList, node->node.flags >> 8);
+        if ((!auto_chroma || (auto_chroma && chroma_show_geo)) || gCurGraphNodeObject != NULL)
+            geo_append_display_list(node->displayList, node->node.flags >> 8);
     }
     if (node->node.children != NULL) {
         geo_process_node_and_siblings(node->node.children);
@@ -701,7 +711,8 @@ static void geo_process_rotation(struct GraphNodeRotation *node) {
     if (!increment_mat_stack()) { return; }
 
     if (node->displayList != NULL) {
-        geo_append_display_list(node->displayList, node->node.flags >> 8);
+        if ((!auto_chroma || (auto_chroma && chroma_show_geo)) || gCurGraphNodeObject != NULL)
+            geo_append_display_list(node->displayList, node->node.flags >> 8);
     }
     if (node->node.children != NULL) {
         geo_process_node_and_siblings(node->node.children);
@@ -782,12 +793,22 @@ static void geo_process_billboard(struct GraphNodeBillboard *node) {
     if (!increment_mat_stack()) { return; }
 
     if (node->displayList != NULL) {
-        geo_append_display_list(node->displayList, node->node.flags >> 8);
+        if ((!auto_chroma || (auto_chroma && chroma_show_geo)) || gCurGraphNodeObject != NULL)
+            geo_append_display_list(node->displayList, node->node.flags >> 8);
     }
     if (node->node.children != NULL) {
         geo_process_node_and_siblings(node->node.children);
     }
     gMatStackIndex--;
+}
+
+static Gfx* create_object_dl(Gfx* dl) {
+    Gfx* gfx = alloc_display_list(sizeof(Gfx) * 3);
+    Gfx* head = gfx;
+    gSPSetObject(head++, gCurrentObject);
+    gSPDisplayList(head++, dl);
+    gSPEndDisplayList(head++);
+    return gfx;
 }
 
 /**
@@ -797,7 +818,8 @@ static void geo_process_billboard(struct GraphNodeBillboard *node) {
  */
 static void geo_process_display_list(struct GraphNodeDisplayList *node) {
     if (node->displayList != NULL) {
-        geo_append_display_list(node->displayList, node->node.flags >> 8);
+        if ((!auto_chroma || (auto_chroma && chroma_show_geo)) || gCurGraphNodeObject != NULL)
+            geo_append_display_list(node->displayList, node->node.flags >> 8);
     }
     if (node->node.children != NULL) {
         geo_process_node_and_siblings(node->node.children);
@@ -813,7 +835,8 @@ static void geo_process_generated_list(struct GraphNodeGenerated *node) {
         Gfx *list = node->fnNode.func(GEO_CONTEXT_RENDER, &node->fnNode.node, gMatStack[gMatStackIndex]);
 
         if (list != NULL) {
-            geo_append_display_list((void *) VIRTUAL_TO_PHYSICAL(list), node->fnNode.node.flags >> 8);
+            if ((!auto_chroma || (auto_chroma && chroma_show_geo)) || gCurGraphNodeObject != NULL)
+                geo_append_display_list((void *) VIRTUAL_TO_PHYSICAL(list), node->fnNode.node.flags >> 8);
         }
     }
     if (node->fnNode.node.children != NULL) {
@@ -828,6 +851,11 @@ static void geo_process_generated_list(struct GraphNodeGenerated *node) {
  */
 static void geo_process_background(struct GraphNodeBackground *node) {
     Gfx *list = NULL;
+
+    if (capture_screenshot && auto_chroma) {
+        skybox_has_deinit = true;
+        return;
+    }
 
     if (node->fnNode.func != NULL) {
         Vec3f posCopy;
@@ -859,7 +887,7 @@ static void geo_process_background(struct GraphNodeBackground *node) {
 
         gDPPipeSync(gfx++);
         gDPSetCycleType(gfx++, G_CYC_FILL);
-        gDPSetFillColor(gfx++, node->background);
+        gDPSetFillColor(gfx++, (auto_chroma) ? gChromaKeyColor : node->background);
         gDPFillRectangle(gfx++, GFX_DIMENSIONS_RECT_FROM_LEFT_EDGE(0), BORDER_HEIGHT,
         GFX_DIMENSIONS_RECT_FROM_RIGHT_EDGE(0) - 1, SCREEN_HEIGHT - BORDER_HEIGHT - 1);
         gDPPipeSync(gfx++);
@@ -953,6 +981,24 @@ static void geo_process_animated_part(struct GraphNodeAnimatedPart *node) {
         geo_process_node_and_siblings(node->node.children);
     }
     gMatStackIndex--;
+}
+
+/**
+ * Render an animated part. The current animation state is not part of the node
+ * but set in global variables. If an animated part is skipped, everything afterwards desyncs.
+ */
+static void geo_process_mcomp_extra(struct GraphNodeAnimatedPart *node) {
+    // To-do: This
+    if (override_anim && enable_custom_anim && mcomp_extra_bone) {
+        geo_process_animated_part(node);
+    } else {
+        if (node->displayList != NULL) {
+            geo_append_display_list(node->displayList, node->node.flags >> 8);
+        }
+        if (node->node.children != NULL) {
+            geo_process_node_and_siblings(node->node.children);
+        }
+    }
 }
 
 /**
@@ -1212,16 +1258,29 @@ static void geo_sanitize_object_gfx(void) {
     geo_append_display_list(obj_sanitize_gfx, LAYER_TRANSPARENT);
 }
 
+bool node_is_any_player(struct Object *node) {
+    for (s32 i = 0; i < MAX_PLAYERS; i++) {
+        if (gMarioStates[i].marioObj == node) {
+            return true;
+        }
+    }
+    return false;
+}
+
 /**
  * Process an object node.
  */
 static void geo_process_object(struct Object *node) {
+    if (auto_chroma && !chroma_show_objects && !node_is_any_player(node)) return;
+
     struct Object* lastProcessingObject = gCurGraphNodeProcessingObject;
     struct MarioState* lastMarioState = gCurGraphNodeMarioState;
     gCurGraphNodeProcessingObject = node;
     Mat4 mtxf;
     s32 hasAnimation = (node->header.gfx.node.flags & GRAPH_RENDER_HAS_ANIMATION) != 0;
     Vec3f scalePrev;
+
+    gCurrentObject = node;
 
     // Sanity check our stack index, If we above or equal to our stack size. Return to prevent OOB.
     if ((gMatStackIndex + 1) >= MATRIX_STACK_SIZE) { LOG_ERROR("Preventing attempt to exceed the maximum size %i for our matrix stack with size of %i.", MATRIX_STACK_SIZE - 1, gMatStackIndex); return; }
@@ -1591,6 +1650,9 @@ void geo_process_node_and_siblings(struct GraphNode *firstNode) {
                         break;
                     case GRAPH_NODE_TYPE_ANIMATED_PART:
                         geo_process_animated_part((struct GraphNodeAnimatedPart *) curGraphNode);
+                        break;
+                    case GRAPH_NODE_TYPE_MCOMP_EXTRA:
+                        geo_process_mcomp_extra((struct GraphNodeAnimatedPart *) curGraphNode);
                         break;
                     case GRAPH_NODE_TYPE_BILLBOARD:
                         geo_process_billboard((struct GraphNodeBillboard *) curGraphNode);

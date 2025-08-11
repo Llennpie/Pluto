@@ -100,13 +100,13 @@ s64 DynOS_Gfx_ParseGfxConstants(const String& _Arg, bool* found) {
 
     // Image formats
     gfx_constant(G_IM_FMT_RGBA);
-    gfx_constant(G_IM_FMT_YUV);
-    gfx_constant(G_IM_FMT_CI);
-    gfx_constant(G_IM_FMT_IA);
-    gfx_constant(G_IM_FMT_I);
-    gfx_constant(G_IM_SIZ_4b);
-    gfx_constant(G_IM_SIZ_8b);
-    gfx_constant(G_IM_SIZ_16b);
+    if (_Arg == "G_IM_FMT_YUV") return G_IM_FMT_RGBA;
+    if (_Arg == "G_IM_FMT_CI") return G_IM_FMT_RGBA;
+    if (_Arg == "G_IM_FMT_IA") return G_IM_FMT_RGBA;
+    if (_Arg == "G_IM_FMT_I") return G_IM_FMT_RGBA;
+    if (_Arg == "G_IM_SIZ_4b") return G_IM_SIZ_32b;
+    if (_Arg == "G_IM_SIZ_8b") return G_IM_SIZ_32b;
+    if (_Arg == "G_IM_SIZ_16b") return G_IM_SIZ_32b;
     gfx_constant(G_IM_SIZ_32b);
     gfx_constant(G_IM_SIZ_DD);
 
@@ -123,9 +123,9 @@ s64 DynOS_Gfx_ParseGfxConstants(const String& _Arg, bool* found) {
     gfx_constant(G_IM_SIZ_32b_BYTES);
     gfx_constant(G_IM_SIZ_32b_TILE_BYTES);
     gfx_constant(G_IM_SIZ_32b_LINE_BYTES);
-    gfx_constant(G_IM_SIZ_4b_LOAD_BLOCK);
-    gfx_constant(G_IM_SIZ_8b_LOAD_BLOCK);
-    gfx_constant(G_IM_SIZ_16b_LOAD_BLOCK);
+    if (_Arg == "G_IM_SIZ_4b_LOAD_BLOCK") return G_IM_SIZ_32b_LOAD_BLOCK;
+    if (_Arg == "G_IM_SIZ_8b_LOAD_BLOCK") return G_IM_SIZ_32b_LOAD_BLOCK;
+    if (_Arg == "G_IM_SIZ_16b_LOAD_BLOCK") return G_IM_SIZ_32b_LOAD_BLOCK;
     gfx_constant(G_IM_SIZ_32b_LOAD_BLOCK);
     gfx_constant(G_IM_SIZ_4b_SHIFT);
     gfx_constant(G_IM_SIZ_8b_SHIFT);

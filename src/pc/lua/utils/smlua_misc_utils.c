@@ -29,6 +29,9 @@
 #include "pc/lua/utils/smlua_math_utils.h"
 #include "pc/lua/utils/smlua_audio_utils.h"
 
+#include "saturn/saturn.h"
+#include "saturn/saturn_colors.h"
+
 #ifdef DISCORD_SDK
 #include "pc/discord/discord.h"
 #endif
@@ -166,7 +169,7 @@ void hud_show(void) {
 }
 
 bool hud_is_hidden(void) {
-    return gOverrideHideHud;
+    return gOverrideHideHud || freeze_camera;;
 }
 
 s32 hud_get_value(enum HudDisplayValue type) {

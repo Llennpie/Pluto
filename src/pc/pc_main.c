@@ -71,6 +71,10 @@
 #include <windows.h>
 #endif
 
+#include "saturn/ui/saturn_imgui.h"
+#include "saturn/saturn_colors.h"
+#include "saturn/saturn_models.h"
+
 extern Vp D_8032CF00;
 
 OSMesg D_80339BEC;
@@ -322,6 +326,25 @@ void produce_one_frame(void) {
     }
 
     CTX_EXTENT(CTX_RENDER, produce_interpolation_frames_and_delay);
+
+    RefreshActiveExpressions();
+
+    if (refreshEditorPalette && refreshCounter < 10) {
+        show_cap = false;
+        show_overalls = false;
+        show_gloves = false;
+        show_shoes = false;
+        show_skin = false;
+        show_hair = false;
+        show_shirt = false;
+        show_shoulders = false;
+        show_arms = false;
+        show_pelvis = false;
+        show_thigh = false;
+        show_calf = false;
+        spark_enabled = false;
+        refreshCounter++;
+    }
 }
 
 // used for rendering 2D scenes fullscreen like the loading or crash screens
@@ -394,9 +417,9 @@ void* main_game_init(UNUSED void* dummy) {
     enable_queued_dynos_packs();
     sync_objects_init_system();
 
-    if (gCLIOpts.network != NT_SERVER && !gCLIOpts.skipUpdateCheck) {
-        check_for_updates();
-    }
+    //if (gCLIOpts.network != NT_SERVER && !gCLIOpts.skipUpdateCheck) {
+    //    check_for_updates();
+    //}
 
     LOADING_SCREEN_MUTEX(loading_screen_set_segment_text("Loading ROM Assets"));
     rom_assets_load();
@@ -518,6 +541,8 @@ int main(int argc, char *argv[]) {
     djui_init_late();
     djui_console_message_dequeue();
 
+    imgui_init();
+
     show_update_popup();
 
     // initialize network
@@ -569,4 +594,10 @@ int main(int argc, char *argv[]) {
     }
 
     return 0;
+}
+
+void send_palette_to_network() {
+    configPlayerPalette = gNetworkPlayers[0].overridePalette;
+    configfile_save(configfile_name());
+    network_send_player_settings();
 }
