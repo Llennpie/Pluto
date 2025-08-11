@@ -2728,7 +2728,7 @@ s32 exit_c_up(struct Camera *c) {
             transition_next_state(c, 15);
         } else {
             newcam_init_settings();
-            if (newcam_active == 1) {
+            if (gNewCamera.isActive) {
                 if (!freeze_camera) {
                     // Retrieve the previous position and focus
                     vec3f_copy(c->pos, sCameraStoreCUp.pos);
@@ -3200,7 +3200,7 @@ void update_camera_yaw(struct Camera *c) {
     if (!c) { return; }
     c->nextYaw = calculate_yaw(c->focus, c->pos);
     c->yaw = c->nextYaw;
-    newcam_apply_outside_values(c,0);
+    newcam_update_camera_yaw(c, false);
 }
 
 /**
@@ -3328,7 +3328,7 @@ void update_camera(struct Camera *c) {
                 vec3f_copy(gLakituState.focus, c->focus);
                 c->nextYaw = calculate_yaw(c->focus, c->pos);
                 gLakituState.yaw = c->nextYaw;
-                newcam_apply_outside_values(c,0);
+                newcam_update_camera_yaw(c, false);
                 break;
 
             case CAM_NORMAL:
@@ -7371,16 +7371,6 @@ s16 cutscene_object(u8 cutscene, struct Object *o) {
         }
     }
     return status;
-}
-
-/**
- * Update the camera's yaw and nextYaw. This is called from cutscenes to ignore the camera mode's yaw.
- */
-void update_camera_yaw(struct Camera *c) {
-    if (!c) { return; }
-    c->nextYaw = calculate_yaw(c->focus, c->pos);
-    c->yaw = c->nextYaw;
-    newcam_update_camera_yaw(c, false);
 }
 
 void cutscene_reset_spline(void) {

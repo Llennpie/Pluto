@@ -22,7 +22,7 @@
 #include "game/first_person_cam.h"
 #include "pc/lua/smlua.h"
 
-#include "engine/math_util.h"
+#include "src/engine/math_util.h"
 
 #include "saturn/saturn.h"
 

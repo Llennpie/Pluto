@@ -7,6 +7,10 @@
 
 #include "trig_tables.inc.c"
 
+#ifndef M_PI
+#define M_PI  3.14159265358979323846264f  // from CRC
+#endif
+
 inline f32 sins(s16 sm64Angle) {
     return gSineTable[(u16) (sm64Angle) >> 4];
 }

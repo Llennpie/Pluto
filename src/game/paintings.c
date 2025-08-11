@@ -22,6 +22,7 @@
 #include "pc/network/network_player.h"
 #include "print.h"
 #include "hardcoded.h"
+#include "src/engine/math_util.h"
 
 /**
  * @file paintings.c

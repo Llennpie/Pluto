@@ -10,6 +10,8 @@ optimizations and bug reports.
 #ifndef MATH_UTIL_INL
 #define MATH_UTIL_INL
 
+#define M_PI  3.14159265358979323846264f  // from CRC
+
 /* |description|
 Returns `replacement` if `replacement` is not zero. Otherwise, returns `value`
 |descriptionEnd| */

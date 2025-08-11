@@ -61,6 +61,7 @@ struct UnloadedTex {
     const uint8_t *addr;
     uint8_t siz;
     uint8_t tile_number;
+    uint8_t is_expression;
 };
 
 struct TextureTile {
