@@ -853,7 +853,7 @@ static void geo_process_generated_list(struct GraphNodeGenerated *node) {
 static void geo_process_background(struct GraphNodeBackground *node) {
     Gfx *list = NULL;
 
-    if (capture_screenshot && auto_chroma) {
+    if (auto_chroma && (capture_screenshot || chroma_transparent_background)) {
         skybox_has_deinit = true;
         return;
     }

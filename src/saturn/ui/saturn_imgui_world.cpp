@@ -45,18 +45,24 @@ void OpenAutoChromaMenu() {
     ImGui::BeginChild("auto_chroma", ImVec2(175, 108), ImGuiChildFlags_Border);
     ImGui::BeginDisabled(!auto_chroma);
     // Skybox Color
+    ImGui::BeginDisabled(chroma_transparent_background);
     if (ImGui::ColorEdit4("Skybox Color", (float*)&uiChromaColor,   ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_InputRGB |
                                                                     ImGuiColorEditFlags_Uint8 | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoInputs))
         saturn_set_chroma_color(uiChromaColor);
+    ImGui::EndDisabled();
 
-    if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled) && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
         ImGui::OpenPopup("###chromaColorPresets");
     if (ImGui::BeginPopup("###chromaColorPresets")) {
+        ImGui::Checkbox("Transparent", &chroma_transparent_background);
+
+        ImGui::BeginDisabled(chroma_transparent_background);
         if (ImGui::Selectable("Green"))     saturn_set_chroma_color(ImVec4(0.0f / 255.0f, 255.0f / 255.0f, 0.0f / 255.0f, 255.0f / 255.0f));
         if (ImGui::Selectable("Blue"))      saturn_set_chroma_color(ImVec4(0.0f / 255.0f, 0.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f));
         if (ImGui::Selectable("Pink"))      saturn_set_chroma_color(ImVec4(255.0f / 255.0f, 0.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f));
         if (ImGui::Selectable("Black"))     saturn_set_chroma_color(ImVec4(0.0f / 255.0f, 0.0f / 255.0f, 0.0f / 255.0f, 255.0f / 255.0f));
         if (ImGui::Selectable("White"))     saturn_set_chroma_color(ImVec4(255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f));
+        ImGui::EndDisabled();
         ImGui::EndPopup();
     }
     ImGui::Separator();
