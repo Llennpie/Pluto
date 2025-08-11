@@ -92,8 +92,8 @@ unsigned int configFrameLimit                     = 60;
 unsigned int configInterpolationMode              = 1;
 unsigned int configDrawDistance                   = 4;
 // sound settings
-unsigned int configMasterVolume                   = 80; // 0 - MAX_VOLUME
-unsigned int configMusicVolume                    = MAX_VOLUME;
+unsigned int configMasterVolume                   = 50; // 0 - MAX_VOLUME
+unsigned int configMusicVolume                    = 32;
 unsigned int configSfxVolume                      = MAX_VOLUME;
 unsigned int configEnvVolume                      = MAX_VOLUME;
 bool         configFadeoutDistantSounds           = false;
