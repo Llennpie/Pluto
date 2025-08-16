@@ -234,7 +234,7 @@ const void* saturn_bind_texture(const void* input, uint32_t format, uint32_t siz
     const char* outputTexture;
     std::string texName = inputTexture;
 
-    if (texName.find("saturn_") != std::string::npos && (currentObj == gMarioStates[0].marioObj || (find_hat_object() != NULL && currentObj == find_hat_object()))) {
+    if (texName.find("saturn_") != std::string::npos) {
         for (int i = 0; i < current_expressions.size(); i++) {
             Expression expression = current_expressions[i];
             if (expression.CurrentIndex < 0) return input;
