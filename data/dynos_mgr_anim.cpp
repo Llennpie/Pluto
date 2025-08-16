@@ -6,6 +6,7 @@ extern "C" {
 #include "game/object_list_processor.h"
 #include "pc/configfile.h"
 #include "pc/lua/utils/smlua_anim_utils.h"
+#include "src/game/mario_misc.h"
 }
 
 //
@@ -115,6 +116,12 @@ void DynOS_Anim_Swap(void *aPtr) {
             sGfxDataAnimation.indexLength = _AnimData->mIndex.second.Count();
             sGfxDataAnimation.length = _AnimData->mLength;
             _Object->header.gfx.animInfo.curAnim = &sGfxDataAnimation;
+
+            struct Object* accessory = find_hat_object();
+            if (accessory != NULL) {
+                accessory->header.gfx.animInfo.curAnim = &sGfxDataAnimation;
+                accessory->header.gfx.animInfo.animYTrans = 0xBD;
+            }
         }
 
     // Restore the default animation
