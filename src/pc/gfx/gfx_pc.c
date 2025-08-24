@@ -830,6 +830,30 @@ static void OPTIMIZE_O3 gfx_sp_vertex(size_t n_vertices, size_t dest_index, cons
             int g = rsp.current_lights[rsp.current_num_lights - 1].col[1];
             int b = rsp.current_lights[rsp.current_num_lights - 1].col[2];
 
+            signed char nx = vn->n[0];
+            signed char ny = vn->n[1];
+            signed char nz = vn->n[2];
+
+            if (rsp.geometry_mode & G_PACKED_NORMALS_EXT) {
+                unsigned short packedNormal = vn->flag;
+                int xo = packedNormal >> 8;
+                int yo = packedNormal & 0xFF;
+
+                nx = xo & 0x7F;
+                ny = yo & 0x7F;
+                nz = (nx + ny) ^ 0x7F;
+
+                if (nz & 0x80) {
+                    nx ^= 0x7F;
+                    ny ^= 0x7F;
+                }
+
+                nx = (xo & 0x80) ? -nx : nx;
+                ny = (yo & 0x80) ? -ny : ny;
+
+                SUPPORT_CHECK(ABS(nx) + ABS(ny) + ABS(nz) == 127);
+            }
+
             if (gCurrentObject != NULL && gMarioStates[0].marioBodyState != NULL) {
                 cc_mario_cap = (r == 0x7f && g == 0x00 && b == 0x00) | (r == 0x7E && g == 0x00 && b == 0x00);
                 cc_mario_overalls = (r == 0x00 && g == 0x00 && b == 0x7f) | (r == 0x00 && g == 0x00 && b == 0x7E);
@@ -934,9 +958,9 @@ static void OPTIMIZE_O3 gfx_sp_vertex(size_t n_vertices, size_t dest_index, cons
 
             for (int32_t i = 0; i < rsp.current_num_lights - 1; i++) {
                 float intensity = 0;
-                intensity += vn->n[0] * rsp.current_lights_coeffs[i][0];
-                intensity += vn->n[1] * rsp.current_lights_coeffs[i][1];
-                intensity += vn->n[2] * rsp.current_lights_coeffs[i][2];
+                intensity += nx * rsp.current_lights_coeffs[i][0];
+                intensity += ny * rsp.current_lights_coeffs[i][1];
+                intensity += nz * rsp.current_lights_coeffs[i][2];
                 intensity /= 127.0f;
                 if (intensity > 0.0f) {
                     if (gCurrentObject != NULL && gMarioStates[0].marioBodyState != NULL) {
@@ -1015,14 +1039,23 @@ static void OPTIMIZE_O3 gfx_sp_vertex(size_t n_vertices, size_t dest_index, cons
             d->color.g = g > 255 ? 255 : g;
             d->color.b = b > 255 ? 255 : b;
 
+            if (rsp.geometry_mode & G_PACKED_NORMALS_EXT) {
+                float vtxR = (v->cn[0] / 255.0f);
+                float vtxG = (v->cn[1] / 255.0f);
+                float vtxB = (v->cn[2] / 255.0f);
+                d->color.r *= vtxR;
+                d->color.g *= vtxG;
+                d->color.b *= vtxB;
+            }
+
             if (rsp.geometry_mode & G_TEXTURE_GEN) {
                 float dotx = 0, doty = 0;
-                dotx += vn->n[0] * rsp.current_lookat_coeffs[0][0];
-                dotx += vn->n[1] * rsp.current_lookat_coeffs[0][1];
-                dotx += vn->n[2] * rsp.current_lookat_coeffs[0][2];
-                doty += vn->n[0] * rsp.current_lookat_coeffs[1][0];
-                doty += vn->n[1] * rsp.current_lookat_coeffs[1][1];
-                doty += vn->n[2] * rsp.current_lookat_coeffs[1][2];
+                dotx += nx * rsp.current_lookat_coeffs[0][0];
+                dotx += ny * rsp.current_lookat_coeffs[0][1];
+                dotx += nz * rsp.current_lookat_coeffs[0][2];
+                doty += nx * rsp.current_lookat_coeffs[1][0];
+                doty += ny * rsp.current_lookat_coeffs[1][1];
+                doty += nz * rsp.current_lookat_coeffs[1][2];
 
                 U = (int32_t)((dotx / 127.0f + 1.0f) / 4.0f * rsp.texture_scaling_factor.s);
                 V = (int32_t)((doty / 127.0f + 1.0f) / 4.0f * rsp.texture_scaling_factor.t);
