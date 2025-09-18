@@ -128,15 +128,28 @@ void saturn_file_browser_clear() {
     extension_filter = "";
 }
 
+std::map<std::string, bool> was_searching = {};
 bool saturn_file_browser_create_imgui(FileBrowserEntry dir, std::string path, std::string browser_id, bool do_search, int exp_index) {
     bool clicked = false;
     for (FileBrowserEntry& entry : dir.dir()) {
         if (entry.name() == "eyes") continue;
         if (entry.is_dir()) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(strlen(search_terms[browser_id]) > 0 ? ImGuiCol_TextDisabled : ImGuiCol_Text));
+
+            if (strlen(search_terms[browser_id]) > 0) {
+                ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+                was_searching[browser_id] = true;
+            } else if (strlen(search_terms[browser_id]) == 0 && was_searching[browser_id]) {
+                ImGui::SetNextItemOpen(false, ImGuiCond_Always);
+            }
+
             if (ImGui::TreeNode(entry.name().c_str())) {
+                ImGui::PopStyleColor();
                 clicked |= saturn_file_browser_create_imgui(entry, path + entry.name() + "/", browser_id, do_search, exp_index);
+                ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(strlen(search_terms[browser_id]) > 0 ? ImGuiCol_TextDisabled : ImGuiCol_Text));
                 ImGui::TreePop();
             }
+            ImGui::PopStyleColor();
         } else {
             std::string filename = entry.name();
             std::transform(filename.begin(), filename.end(), filename.begin(), ::tolower);
@@ -180,6 +193,9 @@ bool saturn_file_browser_create_imgui(FileBrowserEntry dir, std::string path, st
             }
         }
     }
+    if (strlen(search_terms[browser_id]) == 0) {
+        was_searching[browser_id] = false;
+    }
     return clicked;
 }
 
@@ -198,7 +214,7 @@ void saturn_file_browser_tools(std::string id, bool search, int exp_index) {
     if (search) {
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ImGui::GetWindowWidth()-35);
-        ImGui::InputTextWithHint(("###searchbar_file_browser_" + id).c_str(), "Search...", search_terms[id], 256);
+        ImGui::InputTextWithHint(("###searchbar_file_browser_" + id).c_str(), "Search...", search_terms[id], 256, ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_CharsLowercase);
     }
     ImGui::Separator();
 }
