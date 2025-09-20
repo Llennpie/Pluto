@@ -8,6 +8,10 @@
 #ifdef COOPNET
 #include "pc/network/coopnet/coopnet.h"
 #endif
+#include "saturn/saturn.h"
+#include "saturn/saturn_colors.h"
+#include "game/area.h"
+#include "game/level_update.h"
 
 extern struct DiscordApplication app;
 struct DiscordActivity sCurActivity = { 0 };
@@ -68,47 +72,62 @@ static void strncat_len(char* destination, char* source, size_t destinationLengt
 }
 
 static void discord_populate_details(char* buffer, int bufferLength) {
-    // get version
-    const char* version = get_version();
-    int versionLength = strlen(version);
-    snprintf(buffer, bufferLength, "%s", version);
-    buffer += versionLength;
-    bufferLength -= versionLength;
 
-    // get mod strings
-    if (gActiveMods.entryCount <= 0) { return; }
-    char* strings[gActiveMods.entryCount];
-    for (int i = 0; i < gActiveMods.entryCount; i++) {
-        strings[i] = gActiveMods.entries[i]->name;
+    if (gActiveMods.entryCount > 0) {
+        // add mod count
+        int written = snprintf(buffer, bufferLength, "%d mod%s", gActiveMods.entryCount, (gActiveMods.entryCount == 1) ? "" : "s");
+        buffer += written;
+        bufferLength -= written;
+
+        // add comma if we have models too
+        if (dynos_pack_get_count() > 0) {
+            snprintf(buffer, bufferLength, "%s", ", ");
+            buffer += 2;
+            bufferLength -= 2;
+        }
     }
 
-    // add seperator
-    snprintf(buffer, bufferLength, "%s", " - ");
-    buffer += 3;
-    bufferLength -= 3;
-
-    // concat mod strings
-    str_seperator_concat(buffer, bufferLength, strings, gActiveMods.entryCount, ", ");
+    if (dynos_pack_get_count() <= 0) {
+        return;
+    } else {
+        // add pack count to end of buffer
+        int written = snprintf(buffer, bufferLength, "%d model pack%s", dynos_pack_get_count(), (dynos_pack_get_count() == 1) ? "" : "s");
+        buffer += written;
+        bufferLength -= written;
+    }
 }
 
 void discord_activity_update(void) {
     sCurActivity.type = DiscordActivityType_Playing;
 
-    strncpy(sCurActivity.assets.large_image, "https://poly.dance/swag.gif", 128);
-    //strncpy(sCurActivity.assets.large_text, "sm64coopdx Characters", 128);
-    //strncpy(sCurActivity.assets.small_image, "icon", 128);
-    //strncpy(sCurActivity.assets.small_text, "sm64coopdx Icon", 128);
+    const char* largeImageKey = "play-icon-bg";
+    const char* smallImageKey = "NULL";
+    if (auto_chroma) {
+        largeImageKey = "chroma";
+        smallImageKey = "play-icon-bg";
+    } else {
+        switch (gCurrLevelNum) {
+            case LEVEL_CASTLE_GROUNDS:      largeImageKey = "castle"; smallImageKey = "play-icon-bg"; break;
+            case LEVEL_CASTLE:              largeImageKey = "castle-inside"; smallImageKey = "play-icon-bg"; break;
+            default:                        largeImageKey = "play-icon-bg"; smallImageKey = "NULL"; break;
+        }
+    }
+
+    strncpy(sCurActivity.assets.large_image, largeImageKey, 128);
+    //strncpy(sCurActivity.assets.large_text, "Pluto", 128);
+    strncpy(sCurActivity.assets.small_image, smallImageKey, 128);
+    snprintf(sCurActivity.assets.small_text, 128, "Pluto %s", get_version());
 
     if (gNetworkType != NT_NONE && gNetworkSystem) {
         gNetworkSystem->get_lobby_id(sCurActivity.party.id, 128);
         gNetworkSystem->get_lobby_secret(sCurActivity.secrets.join, 128);
-        //sCurActivity.party.size.current_size = network_player_connected_count();
-        //sCurActivity.party.size.max_size = gServerSettings.maxPlayers;
+        sCurActivity.party.size.current_size = network_player_connected_count();
+        sCurActivity.party.size.max_size = gServerSettings.maxPlayers;
     } else {
         snprintf(sCurActivity.party.id, 128, "%s", "");
         snprintf(sCurActivity.secrets.join, 128, "%s", "");
-        //sCurActivity.party.size.current_size = 1;
-        //sCurActivity.party.size.max_size = 1;
+        sCurActivity.party.size.current_size = 1;
+        sCurActivity.party.size.max_size = 1;
     }
 
     if (sCurActivity.party.size.current_size > 1 || configAmountofPlayers == 1) {
@@ -121,12 +140,12 @@ void discord_activity_update(void) {
         if (sCurActivity.party.size.max_size < 1) { sCurActivity.party.size.max_size = 1; }
     }
 
-    //char details[128] = { 0 };
-    //discord_populate_details(details, 128);
+    char details[128] = { 0 };
+    discord_populate_details(details, 128);
 
-    //if (snprintf(sCurActivity.details, 128, "%s", details) < 0) {
-    //    LOG_INFO("truncating details");
-    //}
+    if (snprintf(sCurActivity.details, 128, "%s", details) < 0) {
+        LOG_INFO("truncating details");
+    }
 
     if (!has_set_time) {
         sCurActivity.timestamps.start = (int64_t)time(0);
@@ -161,7 +180,7 @@ void discord_activity_update_check(void) {
     }
 #endif
 
-    if (gNetworkType == NT_NONE) { return; }
+    //if (gNetworkType == NT_NONE) { return; }
     bool shouldUpdate = false;
     u8 connectedCount = network_player_connected_count();
 
@@ -171,9 +190,9 @@ void discord_activity_update_check(void) {
         }
     }
 
-    static int updateTimer = 30 * 60;
+    static int updateTimer = 30 * 2;
     if (--updateTimer <= 0) {
-        updateTimer = 30 * 60;
+        updateTimer = 30 * 2;
         shouldUpdate = true;
     }
 
