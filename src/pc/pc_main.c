@@ -406,23 +406,27 @@ void* dynos_thread_func(void* arg) {
             queued_enabled = false;
             queued_first_use = false;
         }
-        usleep(25 * 1000);
+        usleep(10 * 1000);
         
         // Auto-reload models
         if (configAutoReloadModels == true) {
             if (CheckModelNeedsReload() && canBeReloaded) {
                 sprintf(status_text, "Reloading model %d ...", active_saturn_model_index);
                 dynos_pack_reset_and_regenerate();
-                if (gMarioStates[0].marioObj != NULL) spawn_object(gMarioStates[0].marioObj, MODEL_BUBBLE, bhvGoldenCoinSparkles);
+                    int old_powerup_state = switch_state_powerup;
+                    int old_vanish_transparency = vanish_transparency;
+                    switch_state_powerup = 2;
+                    vanish_transparency = 128;
                 dynos_gfx_init();
                 dynos_packs_init();
                 LoadModelData(active_saturn_model_index, true, false, true);
-                if (gMarioStates[0].marioObj != NULL) spawn_object(gMarioStates[0].marioObj, MODEL_BUBBLE, bhvGoldenCoinSparkles);
+                    switch_state_powerup = old_powerup_state;
+                    vanish_transparency = old_vanish_transparency;
                 canBeReloaded = ModelGeoBinExists(active_saturn_model_index);
                 status_text[0] = '\0';
             }
         }
-        usleep(25 * 1000);
+        usleep(10 * 1000);
     }
     return NULL;
 }
