@@ -113,6 +113,17 @@ void discord_activity_update(void) {
         }
     }
 
+    if (gActiveMods.entryCount > 0) {
+        for (u16 i = 0; i < gActiveMods.entryCount; i++) {
+            struct Mod* mod = gActiveMods.entries[i];
+            if (strstr(mod->incompatible, "romhack")) {
+                largeImageKey = "glowshire";
+                smallImageKey = "play-icon-bg";
+                break;
+            }
+        }
+    }
+
     strncpy(sCurActivity.assets.large_image, largeImageKey, 128);
     //strncpy(sCurActivity.assets.large_text, "Pluto", 128);
     strncpy(sCurActivity.assets.small_image, smallImageKey, 128);
