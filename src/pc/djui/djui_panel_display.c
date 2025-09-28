@@ -103,8 +103,6 @@ void djui_panel_display_create(struct DjuiBase* caller) {
             msaa = djui_selectionbox_create(body, DLANG(DISPLAY, ANTIALIASING), msaaChoices, 2, &sMsaaSelection, djui_panel_display_msaa_change);
         }
 
-        djui_checkbox_create(body, "Hide from OBS", &configWindow.secret_ui, djui_panel_display_apply);
-
         char* drawDistanceChoices[6] = { DLANG(DISPLAY, D0P5X), DLANG(DISPLAY, D1X), DLANG(DISPLAY, D1P5X), DLANG(DISPLAY, D3X), DLANG(DISPLAY, D10X), DLANG(DISPLAY, D100X) };
         djui_selectionbox_create(body, DLANG(DISPLAY, DRAW_DISTANCE), drawDistanceChoices, 6, &configDrawDistance, NULL);
 
