@@ -53,7 +53,6 @@ bool loop_anim;
 bool enable_custom_anim;
 
 bool bone_count_matches;
-int model_bone_count = 0;
 
 bool is_spinning;
 float spinning_speed = 1.f;
@@ -196,5 +195,5 @@ void saturn_action_idle(struct MarioState *m) {
 
     // Check if the model's bone count matches the current PlutoAnim's bone count
     // This determines if we animate MCOMP extra bones or not
-    bone_count_matches = current_pluto_anim.BoneCount == model_bone_count;
+    bone_count_matches = current_pluto_anim.BoneCount > 20;
 }

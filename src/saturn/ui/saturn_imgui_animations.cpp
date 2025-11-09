@@ -72,11 +72,17 @@ const char* GetBoneName(int boneIndex) {
     }
     
     // For custom models with different bone counts, use generic names
-    snprintf(bone_label, sizeof(bone_label), "Bone %d", boneIndex);
+    snprintf(bone_label, sizeof(bone_label), "Unassigned %d", boneIndex);
     return bone_label;
 }
 
+bool UseBoneDivider(int bone_name_index) {
+    return (bone_name_index == 2 || bone_name_index == 5 || bone_name_index == 9 ||
+        bone_name_index == 13 || bone_name_index == 17 || bone_name_index == 21);
+}
+
 void BoneEditorWindow() {
+    if (current_bone_count.size() <= 0) return;
     if (current_pluto_anim.Values.size() > 0 && pause_anim && is_editing_panim && override_anim) {
         ImGui::Begin("Animation Pose Editor", &is_editing_panim, ImGuiWindowFlags_AlwaysAutoResize);
         ImGui::PushItemWidth(150);
@@ -88,10 +94,64 @@ void BoneEditorWindow() {
         if (bone_rotations.size() != bone_count) {
             bone_rotations.resize(bone_count);
         }
+
+        // Calculate max bones once for both warning and loop
+        int max_bones = current_pluto_anim.BoneCount > 20 ? current_pluto_anim.BoneCount - 20 : 0;
+        
+        // Check if we'll have inactive custom bones and show warning
+        int total_custom_bones = 0;
+        for (int j = 0; j < current_bone_count.size(); j++) {
+            if (current_bone_count[j].second) total_custom_bones++;
+        }
+        if (total_custom_bones > max_bones) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.0f, 1.0f)); // Yellow warning color
+            ImGui::TextWrapped("Warning: %d custom bone(s) exceed the animation limit (%d allowed). Excess bones are disabled.", 
+                              total_custom_bones - max_bones, max_bones);
+            ImGui::PopStyleColor();
+        }
+
+        int bone_name_index = 0;
+        int custom_bone_count = 0;
         
         for (int i = 0; i < bone_count; i++) {
-            const char* bone_name = GetBoneName(i);
+            if (UseBoneDivider(bone_name_index)) ImGui::Separator();
+            
+            const char* bone_name;
+            bool is_custom_bone = i > 0 && current_bone_count[i-1].second;
+            if (is_custom_bone) custom_bone_count++;
+            
+            if (is_custom_bone) {
+                if (!UseBoneDivider(bone_name_index)) ImGui::Separator();
+                bone_name = ("> Custom " + std::to_string(i) + " <").c_str();
+            } else {
+                bone_name = GetBoneName(bone_name_index);
+                bone_name_index++;
+            }
+            bool is_disabled = i > current_bone_count.size() || (is_custom_bone && custom_bone_count > max_bones);
+            ImGui::BeginDisabled(is_disabled);
             ImGui::DragFloat3(bone_name, bone_rotations[i], 1.0f, 0.0f, 0.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::EndDisabled();
+
+            // Add button for custom bones to shift values down
+            if (is_custom_bone && custom_bone_count <= max_bones) {
+                ImGui::PushID(i);
+                if (ImGui::SmallButton("Push Values Down")) {
+                    // Shift all values from current position downward
+                    for (int j = bone_count - 1; j > i; j--) {
+                        if (j - 1 >= 0) {
+                            bone_rotations[j][0] = bone_rotations[j-1][0];
+                            bone_rotations[j][1] = bone_rotations[j-1][1];
+                            bone_rotations[j][2] = bone_rotations[j-1][2];
+                        }
+                    }
+                    // Reset current bone to 0
+                    bone_rotations[i][0] = 0.0f;
+                    bone_rotations[i][1] = 0.0f;
+                    bone_rotations[i][2] = 0.0f;
+                }
+                ImGui::PopID();
+                if (!UseBoneDivider(bone_name_index)) ImGui::Separator();
+            }
         }
         
         ImGui::PopItemWidth();

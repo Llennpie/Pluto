@@ -355,7 +355,7 @@ void saturn_play_pluto_animation() {
     if (override_anim && freeze_camera &&
         current_pluto_anim.Values.size() > 0 && current_pluto_anim.Indices.size() > 0) {
             // Get the bone count from current animation
-            int bone_count = current_pluto_anim.BoneCount + 1;
+            int bone_count = (current_bone_count.size() > current_pluto_anim.BoneCount ? current_bone_count.size() : current_pluto_anim.BoneCount) + 1;
             
             // Resize bone_rotations vector to match the current animation's bone count
             bone_rotations.resize(bone_count);
@@ -435,4 +435,29 @@ bool saturn_check_for_chainer() {
     }
 
     return false;
+}
+
+// index, is_custom
+std::vector<std::pair<int, bool>> current_bone_count;
+int processed_bones = 0;
+
+void AddToBoneCountList(bool is_custom) {
+    for (auto& pair : current_bone_count) {
+        if (pair.first == current_bone_count.size()) {
+            pair.second = is_custom;
+            return;
+        }
+    }
+    current_bone_count.push_back(std::make_pair(current_bone_count.size(), is_custom));
+}
+void ResetBoneCountList() {
+    current_bone_count.clear();
+    processed_bones = 0;
+}
+
+bool CanProcessExtraBone() {
+    if (current_pluto_anim.BoneCount <= 20) return false;
+    int max_bones = current_pluto_anim.BoneCount - 20;
+    processed_bones++;
+    return processed_bones <= max_bones;
 }

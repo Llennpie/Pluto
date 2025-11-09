@@ -22,6 +22,7 @@
 #include "saturn/saturn.h"
 #include "saturn/saturn_colors.h"
 #include "saturn/saturn_models.h"
+#include "saturn/saturn_animations.h"
 #include "saturn/ui/saturn_imgui.h"
 #include "pc/lua/utils/smlua_obj_utils.h"
 #include "game/mario_misc.h"
@@ -1031,7 +1032,7 @@ bool mcomp_bone_detected;
  */
 static void geo_process_mcomp_extra(struct GraphNodeAnimatedPart *node) {
     // To-do: This
-    if (override_anim && enable_custom_anim && mcomp_bone_detected && bone_count_matches) {
+    if (override_anim && enable_custom_anim && mcomp_bone_detected && CanProcessExtraBone()) {
         geo_process_animated_part(node);
     } else {
         if (node->displayList != NULL) {
@@ -1313,9 +1314,8 @@ bool node_is_any_player(struct Object *node) {
  * Process an object node.
  */
 static void geo_process_object(struct Object *node) {
-    if (node == gMarioObject) {
-        model_bone_count = 0;
-    }
+    if (node == gMarioObject)
+        ResetBoneCountList();
 
     // Chroma Key: Objects
     if (auto_chroma && !chroma_show_objects && !node_is_any_player(node)) return;
@@ -1687,12 +1687,12 @@ void geo_process_node_and_siblings(struct GraphNode *firstNode) {
                         geo_process_object((struct Object *) curGraphNode);
                         break;
                     case GRAPH_NODE_TYPE_ANIMATED_PART:
-                        if (gCurGraphNodeObject == &gMarioObject->header.gfx) model_bone_count += 1;
+                        if (gCurGraphNodeObject == &gMarioObject->header.gfx) AddToBoneCountList(false);
                         geo_process_animated_part((struct GraphNodeAnimatedPart *) curGraphNode);
                         break;
                     case GRAPH_NODE_TYPE_MCOMP_EXTRA:
                         mcomp_bone_detected = true;
-                        if (gCurGraphNodeObject == &gMarioObject->header.gfx) model_bone_count += 1;
+                        if (gCurGraphNodeObject == &gMarioObject->header.gfx) AddToBoneCountList(true);
                         geo_process_mcomp_extra((struct GraphNodeAnimatedPart *) curGraphNode);
                         break;
                     case GRAPH_NODE_TYPE_BILLBOARD:

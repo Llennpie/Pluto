@@ -46,7 +46,6 @@ extern "C" {
     extern bool loop_anim;
     extern bool enable_custom_anim;
     extern bool bone_count_matches;
-    extern int model_bone_count;
 
     extern bool is_spinning;
     extern float spinning_speed;
