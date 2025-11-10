@@ -1035,12 +1035,42 @@ static void geo_process_mcomp_extra(struct GraphNodeAnimatedPart *node) {
     if (override_anim && enable_custom_anim && mcomp_bone_detected && CanProcessExtraBone()) {
         geo_process_animated_part(node);
     } else {
+        Mat4 matrix;
+        Vec3f translation;
+        Vec3f translationPrev;
+
+        // Sanity check our stack index, If we above or equal to our stack size. Return to prevent OOB.
+        if ((gMatStackIndex + 1) >= MATRIX_STACK_SIZE) { 
+            LOG_ERROR("Preventing attempt to exceed the maximum size %i for our matrix stack with size of %i.", MATRIX_STACK_SIZE - 1, gMatStackIndex); 
+            return; 
+        }
+
+        vec3f_set(translation, node->translation[0], node->translation[1], node->translation[2]);
+        vec3f_copy(translationPrev, translation);
+
+        mtxf_rotate_xyz_and_translate(matrix, translation, gVec3sZero);
+        mtxf_mul(gMatStack[gMatStackIndex + 1], matrix, gMatStack[gMatStackIndex]);
+
+        mtxf_rotate_xyz_and_translate(matrix, translationPrev, gVec3sZero);
+        mtxf_mul(gMatStackPrev[gMatStackIndex + 1], matrix, gMatStackPrev[gMatStackIndex]);
+
+        // Increment the matrix stack, If we fail to do so. Just return.
+        if (!increment_mat_stack()) { return; }
+
+        if (gCurGraphNodeMarioState != NULL) {
+            Vec3f translated = { 0 };
+            get_pos_from_transform_mtx(translated, gMatStack[gMatStackIndex], *gCurGraphNodeCamera->matrixPtr);
+            gCurGraphNodeMarioState->minimumBoneY = fmin(gCurGraphNodeMarioState->minimumBoneY, translated[1] - gCurGraphNodeMarioState->marioObj->header.gfx.pos[1]);
+        }
         if (node->displayList != NULL) {
             geo_append_display_list(node->displayList, node->node.flags >> 8);
+            gMatStackIndex -= matStackOffset;
+            matStackOffset = 0;
         }
         if (node->node.children != NULL) {
             geo_process_node_and_siblings(node->node.children);
         }
+        gMatStackIndex--;
     }
 }
 
