@@ -125,25 +125,23 @@ void JoystickSlider(float& _x, float& _y, float scale = 100.f, float b_scale = 1
     ImGui::ButtonBehavior(ImRect({ button_x - b_scale, button_y - b_scale}, { button_x + b_scale, button_y + b_scale }), ImGui::GetCurrentWindow()->ID, nullptr, nullptr, 0);
     
     float distance_to_center = sqrtf(pow(mouse.x - (p.x + scale), 2) + pow(mouse.y - (p.y + scale), 2));
-    if (distance_to_center < scale - b_scale) {
-        if (sqrtf(pow(mouse.x - button_x, 2) + pow(mouse.y - button_y, 2)) < b_scale)
-            if (ImGui::GetIO().MouseClicked[mouse_button])
-                button_clicked = true;
-        if (!ImGui::GetIO().MouseDown[mouse_button])
-            button_clicked = false;
-        if (button_clicked) {
-            button_x = mouse.x;
-            button_y = mouse.y;
-        };
-        toward = -atan2(button_x - p.x - scale, button_y - p.y - scale);
-        if (sqrtf(pow(p.x - button_x + scale, 2) + pow(p.y - button_y + scale, 2)) > scale - b_scale) {
-            button_x = p.x + scale + cos(toward - 0.5f * 3.14f) * -(scale-b_scale);
-            button_y = p.y + scale + sin(toward - 0.5f * 3.14f) * -(scale-b_scale);
-        };
-        
-        _x = (button_x - p.x - scale) / (scale - b_scale);
-        _y = (button_y - p.y - scale) / (scale - b_scale);
-    }
+    if (sqrtf(pow(mouse.x - button_x, 2) + pow(mouse.y - button_y, 2)) < b_scale)
+        if (ImGui::GetIO().MouseClicked[mouse_button])
+            button_clicked = true;
+    if (!ImGui::GetIO().MouseDown[mouse_button])
+        button_clicked = false;
+    if (button_clicked) {
+        button_x = mouse.x;
+        button_y = mouse.y;
+    };
+    toward = atan2(button_y - p.y - scale, button_x - p.x - scale);
+    if (sqrtf(pow(p.x - button_x + scale, 2) + pow(p.y - button_y + scale, 2)) > scale - b_scale) {
+        button_x = p.x + scale + cos(toward - 0.5f * M_PI) * (scale - b_scale);
+        button_y = p.y + scale - sin(toward - 0.5f * M_PI) * (scale - b_scale);
+    };
+    
+    _x = (button_x - p.x - scale) / (scale - b_scale);
+    _y = (button_y - p.y - scale) / (scale - b_scale);
 
     ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(button_x, button_y), b_scale, ImGui::GetColorU32(ImGuiCol_ButtonActive), 25);
     ImGui::Dummy(ImVec2(scale*2, scale*2));
@@ -152,13 +150,12 @@ void JoystickSlider(float& _x, float& _y, float scale = 100.f, float b_scale = 1
 void OpenQuickOptions() {
     ImGui::Checkbox("Custom Lighting", &shade_lighting_enabled);
     if (shade_lighting_enabled) {
-        ImGui::BeginChild("##lighting", ImVec2(175, 115), ImGuiChildFlags_Border);
+        ImGui::BeginChild("##lighting", ImVec2(175, 140), ImGuiChildFlags_Border);
         JoystickSlider(shade_lighting_dir[0], shade_lighting_dir[1], 35.f, 7.f);
         ImGui::SameLine();
         ImGui::VSliderFloat("##lighting_z", ImVec2(20, 35*2), &shade_lighting_dir[2], -1.f, 1.f, "");
         ImGui::SameLine();
         ImGui::BeginChild("##lighting_dir", ImVec2(69, 35*2+5), ImGuiChildFlags_None, ImGuiWindowFlags_None);
-        ImGui::TextDisabled("X %.2f\nY %.2f\nZ %.2f", shade_lighting_dir[0], shade_lighting_dir[1], shade_lighting_dir[2]);
         if (ImGui::MenuItem("Reset")) {
             shade_lighting_dir[0] = 0.f;
             shade_lighting_dir[1] = 0.f;
@@ -191,6 +188,8 @@ void OpenQuickOptions() {
             Color4Widget("Fog Color", &uiFogColor, shade_lighting_fog);
             ImGui::EndPopup();
         }
+        ImGui::SetNextItemWidth(155);
+        ImGui::DragFloat3("##lighting_pos", shade_lighting_dir, 0.01f, -1.f, 1.f, "%.2f");
         ImGui::EndChild();
     }
 
