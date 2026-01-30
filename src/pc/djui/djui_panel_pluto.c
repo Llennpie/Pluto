@@ -25,5 +25,6 @@ void djui_panel_pluto_create(struct DjuiBase* caller) {
     djui_checkbox_create(body, "Hide UI from OBS", &configWindow.secret_ui, djui_panel_pluto_apply);
     djui_checkbox_create(body, "Auto Reload Models", &configAutoReloadModels, djui_panel_pluto_apply);
 
+    djui_button_create(body, DLANG(MENU, BACK), DJUI_BUTTON_STYLE_BACK, djui_panel_menu_back);
     djui_panel_add(caller, panel, NULL);
 }

@@ -109,6 +109,7 @@ unsigned int configKeyPlutoFreezeCamera[MAX_BINDS]  = { 0x0021, 0x100b, VK_INVAL
 unsigned int configKeyPlutoHud[MAX_BINDS]           = { 0x003E, VK_INVALID, VK_INVALID };
 unsigned int configKeyPlutoPlayAnim[MAX_BINDS]      = { 0x0018, 0x100d, VK_INVALID };
 unsigned int configKeyPlutoPauseAnim[MAX_BINDS]     = { 0x0019, 0x100e, VK_INVALID };
+unsigned int configKeyPlutoCreateDialog[MAX_BINDS] = { 0x003f, VK_INVALID, VK_INVALID };
 unsigned int configKeyPlutoFlushTextures[MAX_BINDS] = { 0x0057, VK_INVALID, VK_INVALID };
 unsigned int configStickDeadzone = 16; // 16*DEADZONE_STEP=4960 (the original default deadzone)
 unsigned int configRumbleStrength = 50;
@@ -227,6 +228,7 @@ static const struct ConfigOption options[] = {
     {.name = "key_pluto_hud",                  .type = CONFIG_TYPE_BIND, .uintValue = configKeyPlutoHud},
     {.name = "key_pluto_play_anim",            .type = CONFIG_TYPE_BIND, .uintValue = configKeyPlutoPlayAnim},
     {.name = "key_pluto_pause_anim",           .type = CONFIG_TYPE_BIND, .uintValue = configKeyPlutoPauseAnim},
+    {.name = "key_pluto_create_dialog",        .type = CONFIG_TYPE_BIND, .uintValue = configKeyPlutoCreateDialog},
     {.name = "key_pluto_flush_textures",       .type = CONFIG_TYPE_BIND, .uintValue = configKeyPlutoFlushTextures},
 
     {.name = "stick_deadzone",                 .type = CONFIG_TYPE_UINT, .uintValue = &configStickDeadzone},

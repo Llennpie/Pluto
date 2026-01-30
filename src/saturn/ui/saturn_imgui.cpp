@@ -140,10 +140,13 @@ void imgui_handle_binds(int scancode) {
             }
 
             if (scancode == (int)configKeyPlutoFlushTextures[i]) {
+                gfx_texture_cache_clear();
+            }
+
+            if (scancode == (int)configKeyPlutoCreateDialog[i]) {
                 smlua_text_utils_dialog_replace(DIALOG_000,1,6,30,200, uiDialogText);
                 create_dialog_box(DIALOG_000);
             }
-                //gfx_texture_cache_clear();
         }
     }
 }
@@ -178,6 +181,7 @@ void imgui_update() {
             if (player_windows.size() > 0) {
                 for (int i = 0; i < player_windows.size(); i++) {
                     if (!player_windows[i].active) continue;
+                    if (!gNetworkPlayers[i].connected) continue;
 
                     // Player Windows
                     ImGui::SetNextWindowPos(ImVec2(player_windows[i].x, player_windows[i].y));

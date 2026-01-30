@@ -68,6 +68,7 @@ extern unsigned int configKeyPlutoFreezeCamera[];
 extern unsigned int configKeyPlutoHud[];
 extern unsigned int configKeyPlutoPlayAnim[];
 extern unsigned int configKeyPlutoPauseAnim[];
+extern unsigned int configKeyPlutoCreateDialog[];
 extern unsigned int configKeyPlutoFlushTextures[];
 extern unsigned int configStickDeadzone;
 extern unsigned int configRumbleStrength;
