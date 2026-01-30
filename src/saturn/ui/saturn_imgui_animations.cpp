@@ -244,7 +244,7 @@ void OpenAnimationsMenu() {
         }
         ImGui::EndTabBar();
     }
-    if (ImGui::IsItemClicked()) {
+    if (ImGui::IsItemClicked() && pluto_animations_list.size() > 0) {
         selected_panim_index = 0;
         current_pluto_anim = LoadPAnim(pluto_animations_list[0].FilePath);
         loop_anim = current_pluto_anim.Looping;

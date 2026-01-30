@@ -394,7 +394,7 @@ void* dynos_thread_func(void* arg) {
             // Wait for up to 0.25s, then show status if still running
             while (1) {
                 double elapsed = clock_elapsed_f64() - start_time;
-                int res = pthread_tryjoin_np(loader_thread, NULL);
+                int res = pthread_join(loader_thread, NULL);
                 if (res == 0) break; // finished
                 if (elapsed > 0.25 && queued_enabled) {
                     sprintf(status_text, "Loading model %d ...", queued_index);

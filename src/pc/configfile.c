@@ -125,7 +125,7 @@ bool         configCameraAnalog  = true;
 bool         configCameraCUp     = false;
 bool         configCameraMouse   = true;
 // coop-specific
-bool         configSkipIntro                      = 0;
+bool         configSkipIntro                      = 1;
 bool         configBubbleDeath                    = true;
 unsigned int configAmountofPlayers                = 16;
 char         configJoinIp[MAX_CONFIG_STRING]      = "";
@@ -138,7 +138,7 @@ unsigned int configStayInLevelAfterStar           = 0;
 bool         configNametags                       = true;
 unsigned int configBouncyLevelBounds              = 0;
 unsigned int configNetworkSystem                  = 0;
-char         configPlayerName[MAX_PLAYER_STRING]  = "";
+char         configPlayerName[MAX_PLAYER_STRING]  = "Player";
 unsigned int configPlayerModel                    = 0;
 bool         configMenuStaffRoll                  = true;
 unsigned int configMenuLevel                      = 0;

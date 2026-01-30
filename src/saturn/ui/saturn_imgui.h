@@ -8,6 +8,11 @@
 
 #include <string>
 
+struct PlayerWindow {
+    bool active, hovered;
+    int x, y, size;
+};
+
 extern "C" {
 #endif
     extern bool show_menu;
