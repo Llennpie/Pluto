@@ -71,7 +71,7 @@ public:
 
     /* Returns true if the expression's textures are formatted for a checkbox */
     bool IsToggleFormat() {
-        return (this->Textures.size() >= 2 && this->Folders.size() == 0);
+        return (this->Textures.size() == 2 && this->Folders.size() == 0);
     }
 
     void Refresh();

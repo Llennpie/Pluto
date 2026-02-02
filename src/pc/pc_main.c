@@ -60,6 +60,7 @@
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
+#define pthread_tryjoin_np _pthread_tryjoin
 #endif
 
 #include "saturn/ui/saturn_imgui.h"
@@ -393,7 +394,7 @@ void* dynos_thread_func(void* arg) {
             // Wait for up to 0.25s, then show status if still running
             while (1) {
                 double elapsed = clock_elapsed_f64() - start_time;
-                int res = _pthread_tryjoin(loader_thread, NULL);
+                int res = pthread_join(loader_thread, NULL);
                 if (res == 0) break; // finished
                 if (elapsed > 0.25 && queued_enabled) {
                     sprintf(status_text, "Loading model %d ...", queued_index);

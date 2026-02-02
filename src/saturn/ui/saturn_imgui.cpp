@@ -47,6 +47,7 @@ extern "C" {
     #include "pc/djui/djui_console.h"
     #include "pc/djui/djui_interactable.h"
     #include "pc/djui/djui_hud_utils.h"
+    #include "pc/lua/utils/smlua_text_utils.h"
     #include "pc/network/network_player.h"
     #include "game/object_collision.h"
     #include "game/camera.h"
@@ -68,6 +69,7 @@ bool show_window_cc_editor = true;
 bool show_window_model_settings = true;
 bool show_window_animations = true;
 
+std::vector<PlayerWindow> player_windows;
 bool show_window_mario = false;
 int modelw_x, modelw_y, modelw_s;
 
@@ -77,6 +79,8 @@ int screenshot_multiplier = 1;
 int screenshot_size[2] = { 320, 240 };
 
 char status_text[256] = { 0 };
+
+char uiDialogText[1024 * 16] = "";
 
 void imgui_init() {
     std::filesystem::create_directories(std::string(sys_user_path()).append("/dynos/colorcodes"));
@@ -97,6 +101,7 @@ void imgui_init_backend(SDL_Window* window, SDL_GLContext ctx) {
 
     io.WantSetMousePos = false;
     io.ConfigWindowsMoveFromTitleBarOnly = true;
+    io.ConfigFlags |= ImGuiConfigFlags_NavNoCaptureKeyboard;
 
     ImGui::StyleColorsPluto();
 
@@ -134,8 +139,14 @@ void imgui_handle_binds(int scancode) {
                     pause_anim = !pause_anim;
             }
 
-            if (scancode == (int)configKeyPlutoFlushTextures[i])
+            if (scancode == (int)configKeyPlutoFlushTextures[i]) {
                 gfx_texture_cache_clear();
+            }
+
+            if (scancode == (int)configKeyPlutoCreateDialog[i]) {
+                smlua_text_utils_dialog_replace(DIALOG_000,1,6,30,200, uiDialogText);
+                create_dialog_box(DIALOG_000);
+            }
         }
     }
 }
@@ -153,18 +164,45 @@ void imgui_update() {
         if (gMarioStates[0].marioObj != NULL) {
         SDL_StartTextInput();
 
+        ImGui::Begin("Textbox Engine", NULL, ImGuiWindowFlags_AlwaysAutoResize);
+        ImGui::InputTextMultiline("###dialog_box", uiDialogText, IM_ARRAYSIZE(uiDialogText),
+            ImVec2(150, ImGui::GetTextLineHeight() * 6.5f), ImGuiInputTextFlags_None);
+        
+        if (ImGui::Button("Create###create_dialog_box")) {
+            smlua_text_utils_dialog_replace(DIALOG_000,1,6,30,200, uiDialogText);
+            create_dialog_box(DIALOG_000);
+        }
+        ImGui::End();
+
         // Model Settings
         PopupModelSettings();
-        if (!gDjuiInMainMenu && !gDjuiChatBoxFocus && !gDjuiConsoleFocus && !gInteractableOverridePad &&
-            AnyModelsEnabled() && active_saturn_model_index != -1) {
+        if (!gDjuiInMainMenu && !gDjuiChatBoxFocus && !gDjuiConsoleFocus && !gInteractableOverridePad) {
 
-                ImGui::SetNextWindowPos(ImVec2(modelw_x, modelw_y));
-                ImGui::SetNextWindowSize(ImVec2(modelw_s, modelw_s));
-                ImGui::SetNextWindowBgAlpha(0.1f);
-                ImGui::Begin("Model", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
-                ImGui::End();
+            if (player_windows.size() > 0) {
+                for (int i = 0; i < player_windows.size(); i++) {
+                    if (!player_windows[i].active) continue;
+                    if (!gNetworkPlayers[i].connected) continue;
 
-                if (show_window_mario) {
+                    // Player Windows
+                    ImGui::SetNextWindowPos(ImVec2(player_windows[i].x, player_windows[i].y));
+                    ImGui::SetNextWindowSize(ImVec2(player_windows[i].size, player_windows[i].size));
+                    ImGui::SetNextWindowBgAlpha(0.1f);
+                    std::string window_name = std::string(gNetworkPlayers[i].name) + "###player_window_" + std::to_string(i);
+                    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoFocusOnAppearing |
+                        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
+                        ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus;
+                    // Remove title bar if only one player is connected
+                    if (network_player_connected_count() <= 1)
+                        window_flags |= ImGuiWindowFlags_NoTitleBar;
+
+                    ImGui::Begin(window_name.c_str(), NULL, window_flags);
+                    ImGui::End();
+                }
+
+                // Right click for model settings
+                // WIP: Currently only works for player 1
+                if (player_windows[0].active && player_windows[0].hovered &&
+                AnyModelsEnabled() && active_saturn_model_index != -1) {
                     if (ImGui::IsMouseReleased(1) && !ImGui::IsAnyItemHovered()) ImGui::OpenPopup("###model_settings");
                     if (!show_window_model_settings) {
                         ImGui::BeginTooltip();
@@ -173,6 +211,7 @@ void imgui_update() {
                         ImGui::EndTooltip();
                     }
                 }
+            }
         }
 
         // Main Menu
@@ -399,17 +438,23 @@ void imgui_capture_screenshot(void* buffer) {
 }
 
 void imgui_hud() {
-    if (!is_player_active(&gMarioStates[0])) return;
-    if (gMarioStates[0].marioObj == NULL) return;
-
+    if (!show_menu) return;
     djui_hud_set_resolution(RESOLUTION_N64);
 
-    if (show_menu) {
+    for (int i = 0; i < MAX_PLAYERS; i++) {
+        if (!is_player_active(&gMarioStates[i])) continue;
+        if (gMarioStates[i].marioObj == NULL) continue;
+
+        if (player_windows.size() <= i) player_windows.resize(i + 1);
+
         Vec3f pos, out;
-        vec3f_copy(pos, gMarioStates[0].marioObj->header.gfx.pos);
+        vec3f_copy(pos, gMarioStates[i].marioObj->header.gfx.pos);
         if (djui_hud_world_pos_to_screen_pos(pos, out)) {
-            float dist = vec3f_dist(gLakituState.pos, gMarioStates[0].pos);
-            float size = 7.f * 7000.f / dist;
+            float dist = vec3f_dist(gLakituState.pos, gMarioStates[i].pos);
+            float size = marioScaleX * (45.f / camera_fov) * 7.5f * 7000.f / dist;
+
+            player_windows[i].active = dist < 2500.f;
+            if (!player_windows[i].active) continue;
 
             // Find a golden ratio for our resolution and N64 default (320x240)
             float scale_y = gfx_current_dimensions.height / 360.f;
@@ -420,7 +465,7 @@ void imgui_hud() {
             float cursor_x = djui_hud_get_mouse_x() * djui_gfx_get_scale() / scale_y;
             float cursor_y = djui_hud_get_mouse_y() * djui_gfx_get_scale() / scale_y;
 
-            out[1] += 4;
+            out[1] -= 4.f / dist / 100.f - 5;
 
             // Calculate the box coordinates
             float box_top_left = (out[0] - size / 2) * 1.5f;
@@ -428,10 +473,10 @@ void imgui_hud() {
             float box_bottom_left = (out[1] - size) * 1.5f;
             float box_bottom_right = (out[1]) * 1.5f;
 
-            show_window_mario = (cursor_x >= box_top_left && cursor_y >= box_bottom_left && cursor_x <= box_top_right && cursor_y <= box_bottom_right);
-            modelw_x = box_top_left * scale_y;
-            modelw_y = box_bottom_left * scale_y;
-            modelw_s = size * 1.5f * scale_y;
+            player_windows[i].hovered = (cursor_x >= box_top_left && cursor_y >= box_bottom_left && cursor_x <= box_top_right && cursor_y <= box_bottom_right);
+            player_windows[i].x = box_top_left * scale_y;
+            player_windows[i].y = box_bottom_left * scale_y;
+            player_windows[i].size = size * 1.5f * scale_y;
         }
     }
 }

@@ -155,11 +155,15 @@ void ColorPartDrag(int id) {
     if (ImGui::BeginDragDropTarget()) {
         if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("COLORCODE")) {
             ColorCode dragged = *(ColorCode*)payload->Data;
+            ImGui::LogToClipboard();
+            ImGui::LogText("Dropped color code: %s", dragged.Name.c_str());
+            ImGui::LogFinish();
             if (dragged.GameShark.size() > 0) {
+
                 // Find address position in GameShark string
                 // This should account for all formats; Never assume the string has a consistent order
-                std::string::size_type pos1 = 0;
-                std::string::size_type pos2 = 30;
+                int pos1 = 0;
+                int pos2 = 30;
                 switch(id) {
                     case 0:     /* Shirt */     pos1 = dragged.GameShark.find("07EC40")-2; pos2 = dragged.GameShark.find("07EC42")-2; break;
                     case 1:                     pos1 = dragged.GameShark.find("07EC38")-2; pos2 = dragged.GameShark.find("07EC3A")-2; break;
@@ -187,17 +191,14 @@ void ColorPartDrag(int id) {
                     case 23:                    pos1 = dragged.GameShark.find("07ED28")-2; pos2 = dragged.GameShark.find("07ED2A")-2; break;
                 }
 
-                ImGui::LogToClipboard();
-                ImGui::LogText("%s", dragged.GameShark.c_str());
-                ImGui::LogFinish();
+                //ImGui::LogToClipboard();
+                //ImGui::LogText("%d -> %d, %d", id, pos1, pos2);
+                //ImGui::LogFinish();
 
                 // Verify we didn't load a null value
                 if (pos1 != std::string::npos-2 && pos2 != std::string::npos-2) {
                     // Paste only a small segment
                     PasteGameShark(dragged.GameShark.substr(pos1, 13) + "\n" + dragged.GameShark.substr(pos2, 13), false);
-                    UpdateEditorFromPalette();
-                } else {
-                    PasteGameShark("8107EC40 60C6\n8107EC42 2000\n8107EC38 3063\n8107EC3A 1000\n8107EC28 FFFF\n8107EC2A FF00\n8107EC20 7F7F\n8107EC22 7F00\n8107EC58 61AA\n8107EC5A EC00\n8107EC50 3055\n8107EC52 7600\n8107EC70 8A7A\n8107EC72 2B00\n8107EC68 453D\n8107EC6A 1500\n8107EC88 D961\n8107EC8A 6700\n8107EC80 6C30\n8107EC82 3300\n8107ECA0 8C82\n8107ECA2 BC00\n8107EC98 4641\n8107EC9A 5E00\n8107ECB8 0000\n8107ECBA 0000\n8107ECB0 FFFF\n8107ECB2 0000\n8107ECD0 0000\n8107ECD2 0000\n8107ECC8 0000\n8107ECCA 0000\n8107ECE8 0000\n8107ECEA 0000\n8107ECE0 FFFF\n8107ECE2 FF00\n8107ED00 0000\n8107ED02 0000\n8107ECF8 FFFF\n8107ECFA FF00\n8107ED18 0000\n8107ED1A 0000\n8107ED10 FFFF\n8107ED12 FF00\n8107ED30 0000\n8107ED32 0000\n8107ED28 FFFF\n8107ED2A FF00", false);
                     UpdateEditorFromPalette();
                 }
             }
