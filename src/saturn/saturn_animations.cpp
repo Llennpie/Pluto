@@ -361,7 +361,7 @@ void saturn_play_pluto_animation() {
             bone_rotations.resize(bone_count);
             
             // Pose Editor
-            if (!is_editing_panim) {
+            if (!is_editing_panim && gMarioStates[0].marioObj) {
                 // Copies the current frame's animation data into the pose editor when launched
                 struct AnimInfo* anim_info = &gMarioStates[0].marioObj->header.gfx.animInfo;
                 const u16* index = current_pluto_anim.Indices.data();
@@ -372,7 +372,10 @@ void saturn_play_pluto_animation() {
                         if (frame < index[0]) offset = index[1] + frame;
                         else offset = index[1] + index[0] - 1;
                         index += 2;
-                        bone_rotations[i][j] = (float)(current_pluto_anim.Values[offset]) * (i == 0 ? 1 : 360.f / 65536);
+                        // Bounds check before array access
+                        if (offset >= 0 && offset < (int)current_pluto_anim.Values.size()) {
+                            bone_rotations[i][j] = (float)(current_pluto_anim.Values[offset]) * (i == 0 ? 1 : 360.f / 65536);
+                        }
                     }
                 }
             }

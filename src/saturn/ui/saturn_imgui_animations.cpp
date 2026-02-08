@@ -81,26 +81,33 @@ bool UseBoneDivider(int bone_name_index) {
         bone_name_index == 13 || bone_name_index == 17 || bone_name_index == 21);
 }
 
+bool bone_editor_was_open;
 void BoneEditorWindow() {
     if (GetTotalBoneCount() <= 0) return;
     if (current_pluto_anim.Values.size() > 0 && pause_anim && is_editing_panim && override_anim) {
+        ImGui::SetNextWindowSizeConstraints(ImVec2(0.0f, 0.0f), ImVec2(FLT_MAX, 650.0f));
         ImGui::Begin("Animation Pose Editor", &is_editing_panim, ImGuiWindowFlags_AlwaysAutoResize);
+        bone_editor_was_open = true;
         ImGui::PushItemWidth(150);
         
         // Add 1 to include the "Translation" bone
         int bone_count = GetTotalBoneCount() + 1;
 
-        int bone_name_index = 0, num_custom_bones = 0;
+        int bone_name_index = 0;
         for (int i = 0; i < bone_count; i++) {
+            bool is_custom_bone = i > 0 && i < model_bone_list.size() + 1 && model_bone_list[i-1].second;
+            if (is_custom_bone && !enable_custom_anim) {
+                // Skip vanilla bones if custom anims are disabled
+                bone_count--;
+                is_custom_bone = false;
+            }
             
             if (UseBoneDivider(bone_name_index)) ImGui::Separator();
             const char* bone_name;
-            bool is_custom_bone = i > 0 && i < model_bone_list.size() + 1 && model_bone_list[i-1].second;
             
             if (is_custom_bone) {
                 if (!UseBoneDivider(bone_name_index)) ImGui::Separator();
                 bone_name = ("> Custom " + std::to_string(i) + " <").c_str();
-                num_custom_bones++;
             } else {
                 bone_name = GetBoneName(bone_name_index);
                 bone_name_index++;
@@ -135,6 +142,11 @@ void BoneEditorWindow() {
         
         ImGui::PopItemWidth();
         ImGui::End();
+    }
+    else if (bone_editor_was_open && !enable_custom_anim) {
+        override_anim = false;
+        set_character_animation(&gMarioStates[0], CHAR_ANIM_START_CROUCHING);
+        bone_editor_was_open = false;
     }
 }
 
@@ -173,8 +185,10 @@ void OpenAnimationsMenu() {
             ImGui::EndDisabled();
             ImGui::EndTabItem();
         }
-        if (ImGui::IsItemClicked())
+        if (ImGui::IsItemClicked()) {
             force_set_character_animation(&gMarioStates[0], CHAR_ANIM_FIRST_PERSON);
+            loop_anim = false;
+        }
 
         // Pluto Animations
         ImGui::BeginDisabled(pluto_animations_list.size() <= 0 || is_editing_panim);
@@ -243,6 +257,7 @@ void OpenAnimationsMenu() {
         // Force bone count recalculation on next frame
         ResetBoneCountList();
         if (!override_anim) set_character_animation(&gMarioStates[0], CHAR_ANIM_START_CROUCHING);
+        else gMarioStates[0].marioObj->header.gfx.animInfo.animFrame = 0;
     }
     ImGui::Separator();
     ImGui::BeginDisabled(is_editing_panim);
@@ -268,11 +283,10 @@ void OpenAnimationsMenu() {
             current_pluto_anim = ConvertFromVanilla();
             saturn_play_pluto_animation();
         }
-        bool was_editing = is_editing_panim;
         is_editing_panim = !is_editing_panim;
         
         // Auto-push custom bones when entering pose editor mode
-        if (!was_editing && is_editing_panim) {
+        if (is_editing_panim && enable_custom_anim) {
             AutoPushCustomBones();
         }
         
