@@ -57,6 +57,7 @@ extern "C" {
     #include "engine/math_util.h"
     #include "engine/behavior_script.h"
     #include "game/obj_behaviors.h"
+    //#include "data/dynos.c.h"
 }
 
 #include "data/dynos.cpp.h"
@@ -71,6 +72,8 @@ bool show_window_model_settings = true;
 bool show_window_animations = true;
 bool show_window_dialog = false;
 
+char status_text[256] = { 0 };
+
 std::vector<PlayerWindow> player_windows;
 
 bool capture_screenshot;
@@ -78,9 +81,13 @@ bool screenshot_custom_res;
 int screenshot_multiplier = 1;
 int screenshot_size[2] = { 320, 240 };
 
-char status_text[256] = { 0 };
-
 char uiDialogText[1024 * 16] = "";
+
+bool show_rule_of_thirds = false;
+ALIGNED8 const u8 rule_of_thirds[] = {
+#include "textures/segment2/custom_ruleofthirds.rgba32.inc.c"
+};
+GLuint rot_texture;
 
 void imgui_init() {
     // Create directories for Pluto content
@@ -89,7 +96,6 @@ void imgui_init() {
     std::filesystem::create_directories(std::string(sys_user_path()).append("/dynos/anims"));
     std::filesystem::create_directories(std::string(sys_user_path()).append("/dynos/eyes"));
     std::filesystem::create_directories(std::string(sys_user_path()).append("/dynos/packs"));
-
     pluto_animations_list = GetPAnimList(std::string(sys_user_path()).append("/dynos/anims"));
 }
 
@@ -150,6 +156,7 @@ void imgui_handle_binds(int scancode) {
 
             if (scancode == (int)configKeyPlutoFlushTextures[i]) {
                 gfx_texture_cache_clear();
+                forceReload = true;
             }
 
             if (scancode == (int)configKeyPlutoCreateDialog[i]) {
@@ -168,6 +175,23 @@ void imgui_update() {
     allow_game_input = !ImGui::GetIO().WantTextInput;
 
     studio_render_notifications();
+    
+    if (show_rule_of_thirds) {
+        if (rot_texture == 0) {
+            glGenTextures(1, &rot_texture);
+            glBindTexture(GL_TEXTURE_2D, rot_texture);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1280, 720, 0, GL_RGBA, GL_UNSIGNED_BYTE, rule_of_thirds);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        }
+        ImGui::SetNextWindowPos(ImVec2(0, 0));
+        ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
+        ImGui::SetNextWindowBgAlpha(0.0f);
+        ImGui::Begin("###rule_of_thirds", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+            ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoInputs);
+        ImGui::Image((ImTextureID)(intptr_t)rot_texture, ImVec2(gfx_current_dimensions.width, gfx_current_dimensions.height));
+        ImGui::End();
+    }
 
     if (show_menu) {
         if (gMarioStates[0].marioObj != NULL) {
@@ -240,6 +264,9 @@ void imgui_update() {
 
             // Machinima Camera
             if (ImGui::BeginMenu("Camera")) {
+                if (ImGui::MenuItem("Rule of Thirds", NULL, show_rule_of_thirds)) show_rule_of_thirds = !show_rule_of_thirds;
+                ImGui::Separator();
+
                 ImGui::Checkbox("Freeze Camera", &freeze_camera);
                 ImGui::BeginDisabled(!freeze_camera);
                 ImGui::PushItemWidth(150);
