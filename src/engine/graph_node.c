@@ -395,6 +395,32 @@ struct GraphNodeAnimatedPart *init_graph_node_mcomp_extra(struct DynamicPool *po
     return graphNode;
 }
 
+struct GraphNodeExtraWiggle *init_graph_node_extra_wiggle(struct DynamicPool *pool,
+                                                          struct GraphNodeExtraWiggle *graphNode,
+                                                          s32 drawingLayer, void *displayList,
+                                                          Vec3s translation,
+                                                          f32 wiggleSmooth, f32 wiggleMaxDist,
+                                                          f32 wiggleSnapSmooth,
+                                                          f32 springK, f32 springDamp) {
+    if (pool != NULL) {
+        graphNode = dynamic_pool_alloc(pool, sizeof(struct GraphNodeExtraWiggle));
+    }
+
+    if (graphNode != NULL) {
+        init_scene_graph_node_links(&graphNode->node, GRAPH_NODE_TYPE_EXTRA_WIGGLE);
+        vec3s_copy(graphNode->translation, translation);
+        graphNode->node.flags = (drawingLayer << 8) | (graphNode->node.flags & 0xFF);
+        graphNode->displayList = displayList;
+        graphNode->wiggleSmooth = wiggleSmooth;
+        graphNode->wiggleMaxDist = wiggleMaxDist;
+        graphNode->wiggleSnapSmooth = wiggleSnapSmooth;
+        graphNode->springK = springK;
+        graphNode->springDamp = springDamp;
+    }
+
+    return graphNode;
+}
+
 /**
  * Allocates and returns a newly created billboard node
  */

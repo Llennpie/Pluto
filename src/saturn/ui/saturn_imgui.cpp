@@ -38,6 +38,7 @@ bool is_wayland() {
 #include "saturn/libs/imgui/imgui_impl_sdl.h"
 #include "saturn/libs/imgui/imgui_impl_opengl3.h"
 #include "saturn/ui/studio_notifications.h"
+#include "libc/math.h"
 
 extern "C" {
     #include "pc/pc_main.h"
@@ -57,6 +58,7 @@ extern "C" {
     #include "engine/math_util.h"
     #include "engine/behavior_script.h"
     #include "game/obj_behaviors.h"
+    #include "game/rendering_graph_node.h"
     //#include "data/dynos.c.h"
 }
 
@@ -68,8 +70,9 @@ ImGuiIO io;
 bool show_menu;
 bool show_window_machinima = true;
 bool show_window_cc_editor = true;
-bool show_window_model_settings = true;
+bool show_window_model_settings = false;
 bool show_window_animations = true;
+bool saturn_any_bone_dot_hovered = false;
 bool show_window_dialog = false;
 
 char status_text[256] = { 0 };
@@ -229,13 +232,8 @@ void imgui_update() {
                 // WIP: Currently only works for player 1
                 if (player_windows[0].active && player_windows[0].hovered &&
                 AnyModelsEnabled() && active_saturn_model_index != -1) {
-                    if (ImGui::IsMouseReleased(1) && !ImGui::IsAnyItemHovered()) ImGui::OpenPopup("###model_settings");
-                    if (!show_window_model_settings) {
-                        ImGui::BeginTooltip();
-                        ImGui::Text(DynOS_Pack_GetFromIndex(active_saturn_model_index)->mDisplayName.begin());
-                        ImGui::TextDisabled("Right-click to open settings");
-                        ImGui::EndTooltip();
-                    }
+                    if ((ImGui::IsMouseReleased(1)) && !ImGui::IsAnyItemHovered() && !saturn_any_bone_dot_hovered)
+                        OpenModelSettingsAtCursor();
                 }
             }
         }
@@ -532,4 +530,5 @@ void imgui_hud() {
             player_windows[i].size = size * 1.5f * scale_y;
         }
     }
+
 }

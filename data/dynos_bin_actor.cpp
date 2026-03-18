@@ -1,6 +1,24 @@
 #include "dynos.cpp.h"
 
-// Free data pointers, but keep nodes and tokens intact
+// Read bone names from a plain text file (one bone name per line)
+// To-do: Support switch bone nests (i.e. capless and hands) and other bone settings in the future, if needed
+static void DynOS_Bones_Read(GfxData *aGfxData, const SysPath &aFilename) {
+    FILE *f = fopen(aFilename.c_str(), "rb");
+    if (!f) return;
+    char line[256];
+    while (fgets(line, sizeof(line), f)) {
+        s32 len = (s32) strlen(line);
+        while (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r' || line[len-1] == ' '))
+            line[--len] = '\0';
+        if (len > 0) {
+            if (len >= STRING_SIZE) line[STRING_SIZE - 1] = '\0';
+            aGfxData->mBoneNames.Add(String(line));
+        }
+    }
+    fclose(f);
+    if (!aGfxData->mBoneNames.Empty())
+        PrintConsole("  Bone names: %d bones\n", aGfxData->mBoneNames.Count());
+}
 // Delete nodes generated from GfxDynCmds
 template <typename T>
 void ClearGfxDataNodes(DataNodes<T> &aDataNodes) {
@@ -69,6 +87,23 @@ static bool DynOS_Actor_WriteBinary(const SysPath &aOutputFilename, GfxData *aGf
     }
     DynOS_Anim_Write(_File, aGfxData);
     DynOS_Anim_Table_Write(_File, aGfxData);
+
+    // Write metadata if present
+    if (!aGfxData->mModelName.Empty() || !aGfxData->mModelAuthor.Empty() || !aGfxData->mModelVersion.Empty()) {
+        _File->Write<u8>(DATA_TYPE_METADATA);
+        aGfxData->mModelName.Write(_File);
+        aGfxData->mModelAuthor.Write(_File);
+        aGfxData->mModelVersion.Write(_File);
+    }
+
+    // Write bone names if present
+    if (!aGfxData->mBoneNames.Empty()) {
+        _File->Write<u8>(DATA_TYPE_BONE_NAMES);
+        _File->Write<u32>((u32) aGfxData->mBoneNames.Count());
+        for (s32 i = 0; i < aGfxData->mBoneNames.Count(); i++)
+            aGfxData->mBoneNames[i].Write(_File);
+    }
+
     BinFile::Close(_File);
     return DynOS_Bin_Compress(aOutputFilename);
 }
@@ -108,6 +143,22 @@ GfxData *DynOS_Actor_LoadFromBinary(const SysPath &aPackFolder, const char *aAct
                 case DATA_TYPE_ANIMATION:       DynOS_Anim_Load      (_File, _GfxData); break;
                 case DATA_TYPE_ANIMATION_TABLE: DynOS_Anim_Table_Load(_File, _GfxData); break;
                 case DATA_TYPE_GFXDYNCMD:       DynOS_GfxDynCmd_Load (_File, _GfxData); break;
+                case DATA_TYPE_METADATA:
+                    _GfxData->mModelName.Read(_File);
+                    _GfxData->mModelAuthor.Read(_File);
+                    _GfxData->mModelVersion.Read(_File);
+                    PrintConsole("  Metadata: Name = \"%s\", Author = \"%s\", Version = \"%s\"\n", _GfxData->mModelName.begin(), _GfxData->mModelAuthor.begin(), _GfxData->mModelVersion.begin());
+                    break;
+                case DATA_TYPE_BONE_NAMES: {
+                    u32 count = _File->Read<u32>();
+                    for (u32 j = 0; j < count; j++) {
+                        String name;
+                        name.Read(_File);
+                        _GfxData->mBoneNames.Add(name);
+                    }
+                    PrintConsole("  Loaded %u bone name(s)\n", count);
+                    break;
+                }
                 default:                        _Done = true;                           break;
             }
         }
@@ -121,6 +172,16 @@ GfxData *DynOS_Actor_LoadFromBinary(const SysPath &aPackFolder, const char *aAct
         } else {
             _Pack = DynOS_Pack_Add(aPackFolder);
             DynOS_Pack_AddActor(_Pack, aActorName, _GfxData);
+        }
+        // Propagate metadata to pack on first actor that has it
+        if (_GfxData && !_GfxData->mModelName.Empty() && _Pack->mModelName.Empty()) {
+            _Pack->mModelName = _GfxData->mModelName;
+        }
+        if (_GfxData && !_GfxData->mModelAuthor.Empty() && _Pack->mModelAuthor.Empty()) {
+            _Pack->mModelAuthor = _GfxData->mModelAuthor;
+        }
+        if (_GfxData && !_GfxData->mModelVersion.Empty() && _Pack->mModelVersion.Empty()) {
+            _Pack->mModelVersion = _GfxData->mModelVersion;
         }
     }
 
@@ -204,6 +265,11 @@ static void DynOS_Actor_Generate(const SysPath &aPackFolder, Array<Pair<u64, Str
         String _ActorFolder = GetActorFolder(_ActorsFolders, _GfxData->mModelIdentifier);
         SysPath _AnimsFolder = fstring("%s/%s/anims", aPackFolder.c_str(), _ActorFolder.begin());
         DynOS_Anim_ScanFolder(_GfxData, _AnimsFolder);
+
+        // Load bone names for this actor
+        _GfxData->mBoneNames.Clear();
+        if (!_ActorFolder.Empty())
+            DynOS_Bones_Read(_GfxData, fstring("%s/%s/bones.txt", aPackFolder.c_str(), _ActorFolder.begin()));
 
         // Create table for player model animations
         if ((_GeoRootName == "mario_geo" || _GeoRootName == "luigi_geo" || _GeoRootName == "toad_player_geo" || _GeoRootName == "wario_geo" || _GeoRootName == "waluigi_geo" || _GeoRootName == "accessory_geo") && !_GfxData->mAnimations.Empty()) {

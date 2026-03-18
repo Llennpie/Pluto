@@ -23,7 +23,12 @@ extern "C" {
 bool freeze_camera;
 float freeze_camera_speed = 1.f;
 float camera_follow_speed = 1.f;
-
+float wiggle_intensity = 1.0f;
+bool wind_enabled = false;
+float wind_angle = 0.f;
+float wind_strength = 1.0f;
+float wind_sway = 1.f;
+bool wiggle_bone_detected = false;
 bool enable_hud;
 bool enable_torso_rotation = true;
 int head_rotation[2] = { 0, 0 };
@@ -211,7 +216,7 @@ void saturn_action_idle(struct MarioState *m) {
     } else {
         pause_anim = false;
         is_editing_panim = false;
-        bone_rotations.clear();
+        g_root_offset[0] = g_root_offset[1] = g_root_offset[2] = 0.0f;
     }
 
     // Check if the model's bone count matches the current PlutoAnim's bone count

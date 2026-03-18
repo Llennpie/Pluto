@@ -25,6 +25,7 @@ extern "C" {
     #include "game/mario.h"
     #include "game/mario_misc.h"
     #include "game/level_update.h"
+    #include "engine/math_util.h"
     #include "pc/network/network_player.h"
     #include "saturn/libs/json2panim.h"
 }
@@ -244,16 +245,26 @@ const char* saturn_animations[] = {
 PlutoAnim current_pluto_anim;
 std::vector<PlutoAnim> pluto_animations_list;
 bool is_editing_panim;
-std::vector<Vec3fWrapper> bone_rotations;
+Vec3f g_root_offset = {};
 
-s16 ReadS16(std::vector<char> data, int index) {
+struct BoneFlagEntry { bool BoneHidden, WiggleDisabled, WindDisabled; };
+static std::vector<BoneFlagEntry> s_bone_flags;
+static bool s_flags_need_restore = false;
+
+// Persistent bone flags loaded from the model pack's bone_flags.cfg
+// I don't like that we're going back to model configs but these are only saved once edited, thank god
+// Format is just a text file with lines like "Bone 5: Hidden, NoWiggle" that get loaded on anim load and saved on edit
+// To-do: Wipe them each time we export from SFast64 since adding/removing bones desyncs the indices
+struct PersistentFlagEntry { bool BoneHidden, WiggleDisabled, WindDisabled, valid; };
+static std::vector<PersistentFlagEntry> s_pending_bone_flags;
+
+s16 ReadS16(const std::vector<char>& data, int index) {
     return ((unsigned int)(unsigned char)data[index] << 8) | (unsigned int)(unsigned char)data[index + 1];
 }
 
 /* Loads a PlutoAnim struct from a given filepath */
-PlutoAnim LoadPAnim(std::string filePath) {
+PlutoAnim LoadPAnim(const std::string& filePath) {
     PlutoAnim plutoAnim;
-    if (pluto_animations_list.size() <= 0) return plutoAnim;
 
     std::ifstream input(filePath, std::ios::binary);
 
@@ -263,16 +274,17 @@ PlutoAnim LoadPAnim(std::string filePath) {
     input.close();
 
     if (bytes.size() > 0) {
-        // Metadata
-        for (int i = 0x00; i < 0x40; i++) {plutoAnim.Name += bytes[i];}
-        for (int j = 0x40; j < 0x60; j++) {plutoAnim.Author += bytes[j];}
-        
+        // Metadata - read fixed-length name/author fields, trim trailing nulls
+        plutoAnim.Name.assign(bytes.data(), 0x40);
+        { auto p = plutoAnim.Name.find('\0'); if (p != std::string::npos) plutoAnim.Name.resize(p); }
+        plutoAnim.Author.assign(bytes.data() + 0x40, 0x20);
+        { auto p = plutoAnim.Author.find('\0'); if (p != std::string::npos) plutoAnim.Author.resize(p); }
+
         int length1 = (uint8_t)bytes[0x61];
         int length2 = (uint8_t)bytes[0x62];
         plutoAnim.Length = (length1<<8)|(length2);
 
         plutoAnim.Looping = (uint8_t)bytes[0x60] != 0x00;
-        plutoAnim.Nodes = (uint8_t)bytes[0x63];
 
         std::size_t values_pos = 0x6A;
         std::size_t indices_pos;
@@ -287,16 +299,93 @@ PlutoAnim LoadPAnim(std::string filePath) {
         }
 
         // Indices
-        for (int i = indices_pos; i < bytes.size(); i += 2) {
+        std::size_t translations_pos = 0;
+        for (int i = indices_pos; i < (int)bytes.size(); i += 2) {
+            if (i + 12 <= (int)bytes.size() && strncmp(bytes.data() + i, "translations", 12) == 0) {
+                translations_pos = i + 12;
+                break;
+            }
             plutoAnim.Indices.push_back(ReadS16(bytes, i));
         }
+
+        // Translations (optional: sparse bitmask format, custom bones only)
+        // Format: [2 bytes frame_count][2 bytes custom_count][ceil(custom_count/8) bytes bitmask][data]
+        if (translations_pos > 0 && translations_pos + 4 <= (int)bytes.size()) {
+            int frame_count  = ((uint8_t)bytes[translations_pos]     << 8) | (uint8_t)bytes[translations_pos + 1];
+            int custom_count = ((uint8_t)bytes[translations_pos + 2] << 8) | (uint8_t)bytes[translations_pos + 3];
+            int bitmask_off  = translations_pos + 4;
+            int bitmask_bytes = (custom_count + 7) / 8;
+            int data_pos     = bitmask_off + bitmask_bytes;
+            plutoAnim.CustomBoneCount = custom_count;
+            plutoAnim.Translations.assign(custom_count * frame_count * 3, 0);
+            for (int bi = 0; bi < custom_count; bi++) {
+                int bm_byte = bi / 8, bm_bit = bi % 8;
+                bool present = (bitmask_off + bm_byte < (int)bytes.size()) &&
+                               (((uint8_t)bytes[bitmask_off + bm_byte] >> bm_bit) & 1);
+                if (present) {
+                    for (int f = 0; f < frame_count; f++) {
+                        int dst = (bi * frame_count + f) * 3;
+                        int src = data_pos + f * 6;
+                        if (src + 5 < (int)bytes.size()) {
+                            plutoAnim.Translations[dst]   = ReadS16(bytes, src);
+                            plutoAnim.Translations[dst+1] = ReadS16(bytes, src+2);
+                            plutoAnim.Translations[dst+2] = ReadS16(bytes, src+4);
+                        }
+                    }
+                    data_pos += frame_count * 6;
+                }
+            }
+        }
+
+        // Scales (optional: sparse bitmask format, same layout as translations)
+        // Format: b'scales' + [2 bytes frame_count][2 bytes bone_count][bitmask][data]
+        // Scale encoding: s16 / 1024.0f = scale factor (1024 = 1.0x identity)
+        {
+            std::size_t scales_pos = 0;
+            std::size_t scan_start = (translations_pos > 0) ? translations_pos : indices_pos;
+            for (int i = (int)scan_start; i + 6 <= (int)bytes.size(); i++) {
+                if (strncmp(bytes.data() + i, "scales", 6) == 0) {
+                    scales_pos = i + 6;
+                    break;
+                }
+            }
+            if (scales_pos > 0 && scales_pos + 4 <= (int)bytes.size()) {
+                int frame_count  = ((uint8_t)bytes[scales_pos]     << 8) | (uint8_t)bytes[scales_pos + 1];
+                int custom_count = ((uint8_t)bytes[scales_pos + 2] << 8) | (uint8_t)bytes[scales_pos + 3];
+                int bitmask_off  = scales_pos + 4;
+                int bitmask_bytes = (custom_count + 7) / 8;
+                int data_pos     = bitmask_off + bitmask_bytes;
+                plutoAnim.CustomBoneCountScale = custom_count;
+                // Default all entries to identity (1024)
+                plutoAnim.Scales.assign(custom_count * frame_count * 3, 1024);
+                for (int bi = 0; bi < custom_count; bi++) {
+                    int bm_byte = bi / 8, bm_bit = bi % 8;
+                    bool present = (bitmask_off + bm_byte < (int)bytes.size()) &&
+                                   (((uint8_t)bytes[bitmask_off + bm_byte] >> bm_bit) & 1);
+                    if (present) {
+                        for (int f = 0; f < frame_count; f++) {
+                            int dst = (bi * frame_count + f) * 3;
+                            int src = data_pos + f * 6;
+                            if (src + 5 < (int)bytes.size()) {
+                                plutoAnim.Scales[dst]   = ReadS16(bytes, src);
+                                plutoAnim.Scales[dst+1] = ReadS16(bytes, src+2);
+                                plutoAnim.Scales[dst+2] = ReadS16(bytes, src+4);
+                            }
+                        }
+                        data_pos += frame_count * 6;
+                    }
+                }
+            }
+        }
+
+        // I'm sure this can be improved and less complicated so please reach out if you think you can do it!
 
         plutoAnim.BoneCount = plutoAnim.Indices.size() / 6 - 1;
     }
     return plutoAnim;
 }
 
-std::vector<PlutoAnim> GetPAnimList(std::string folderPath) {
+std::vector<PlutoAnim> GetPAnimList(const std::string& folderPath) {
     std::vector<PlutoAnim> panim_list;
 
     std::filesystem::create_directory(folderPath);
@@ -340,8 +429,8 @@ PlutoAnim ConvertFromVanilla() {
     plutoAnim.Author = "Super Mario 64";
     plutoAnim.Length = vanillaAnim->loopEnd - vanillaAnim->loopStart;
     plutoAnim.Looping = (vanillaAnim->flags & ANIM_FLAG_NOLOOP) == 0;
-    plutoAnim.Values = std::vector<s16>(vanillaAnim->values, vanillaAnim->values + vanillaAnim->length);
-    plutoAnim.Indices = std::vector<u16>(vanillaAnim->index, vanillaAnim->index + vanillaAnim->length);
+    plutoAnim.Values = std::vector<s16>(vanillaAnim->values, vanillaAnim->values + vanillaAnim->valuesLength);
+    plutoAnim.Indices = std::vector<u16>(vanillaAnim->index, vanillaAnim->index + vanillaAnim->indexLength);
     plutoAnim.BoneCount = 20;
 
     return plutoAnim;
@@ -352,84 +441,127 @@ std::vector<u16> bone_anim_indices;
 
 /* Overwrites the currently played animation with the actively selected PlutoAnim */
 void saturn_play_pluto_animation() {
-    if (override_anim && freeze_camera &&
-        current_pluto_anim.Values.size() > 0 && current_pluto_anim.Indices.size() > 0) {
-            // Get the bone count from current animation
-            int bone_count = GetTotalBoneCount() + 1;
+    if (!(override_anim && freeze_camera &&
+          !current_pluto_anim.Values.empty() && !current_pluto_anim.Indices.empty()))
+        return;
 
-            // Resize bone_rotations vector to match the current animation's bone count
-            bone_rotations.resize(bone_count);
-            
-            // Pose Editor
-            if (!is_editing_panim && gMarioStates[0].marioObj) {
-                // Copies the current frame's animation data into the pose editor when launched
-                struct AnimInfo* anim_info = &gMarioStates[0].marioObj->header.gfx.animInfo;
-                const u16* index = current_pluto_anim.Indices.data();
-                for (int i = 0; i < bone_count; i++) {
-                    for (int j = 0; j < 3; j++) {
-                        int frame = anim_info->animFrame;
-                        int offset = 0;
-                        if (frame < index[0]) offset = index[1] + frame;
-                        else offset = index[1] + index[0] - 1;
-                        index += 2;
-                        // Bounds check before array access
-                        if (offset >= 0 && offset < (int)current_pluto_anim.Values.size()) {
-                            bone_rotations[i][j] = (float)(current_pluto_anim.Values[offset]) * (i == 0 ? 1 : 360.f / 65536);
+    int bone_count = GetTotalBoneCount() + 1;
+
+    // Send current animation frame into Bones[] so pose editor starts from the correct pose
+    if (!is_editing_panim && gMarioStates[0].marioObj) {
+        if ((int)current_pluto_anim.Bones.size() < bone_count - 1)
+            current_pluto_anim.Bones.resize(bone_count - 1);
+
+        // Restore user bone flags after switching to PAnim (bones may appear/disappear)
+        if (s_flags_need_restore) {
+            for (int i = 0; i < (int)s_bone_flags.size() && i < (int)current_pluto_anim.Bones.size(); i++) {
+                current_pluto_anim.Bones[i].BoneHidden    = s_bone_flags[i].BoneHidden;
+                current_pluto_anim.Bones[i].WiggleDisabled = s_bone_flags[i].WiggleDisabled;
+                current_pluto_anim.Bones[i].WindDisabled   = s_bone_flags[i].WindDisabled;
+            }
+            s_flags_need_restore = false;
+        }
+
+        struct AnimInfo* anim_info = &gMarioStates[0].marioObj->header.gfx.animInfo;
+        const u16* index = current_pluto_anim.Indices.data();
+        for (int i = 0; i < bone_count; i++) {
+            for (int j = 0; j < 3; j++) {
+                int frame  = anim_info->animFrame;
+                int offset = (frame < index[0]) ? index[1] + frame : index[1] + index[0] - 1;
+                index += 2;
+                if (offset >= 0 && offset < (int)current_pluto_anim.Values.size()) {
+                    float val = (float)current_pluto_anim.Values[offset] * (i == 0 ? 1.0f : 360.f / 65536.f);
+                    if (i == 0) g_root_offset[j] = val;
+                    else if (i - 1 < (int)current_pluto_anim.Bones.size()) current_pluto_anim.Bones[i-1].Rotation[j] = val;
+                }
+            }
+            if (i > 0 && i - 1 < (int)current_pluto_anim.Bones.size()) {
+                PlutoBone& bone = current_pluto_anim.Bones[i - 1];
+                int panim_idx = i - 2;
+                vec3s_set(bone.Translation, 0, 0, 0);
+                if (panim_idx >= 0 && !current_pluto_anim.Translations.empty()) {
+                    int tc = current_pluto_anim.CustomBoneCount;
+                    if (tc > 0 && panim_idx < tc) {
+                        int fc = (int)current_pluto_anim.Translations.size() / (tc * 3);
+                        if (fc > 0) {
+                            int f = anim_info->animFrame;
+                            f = f < 0 ? 0 : (f >= fc ? fc - 1 : f);
+                            int base = (panim_idx * fc + f) * 3;
+                            bone.Translation[0] = current_pluto_anim.Translations[base];
+                            bone.Translation[1] = current_pluto_anim.Translations[base + 1];
+                            bone.Translation[2] = current_pluto_anim.Translations[base + 2];
+                        }
+                    }
+                }
+                bone.Scale[0] = bone.Scale[1] = bone.Scale[2] = 1.0f;
+                if (panim_idx >= 0 && !current_pluto_anim.Scales.empty()) {
+                    int tc = current_pluto_anim.CustomBoneCountScale;
+                    if (tc > 0 && panim_idx < tc) {
+                        int fc = (int)current_pluto_anim.Scales.size() / (tc * 3);
+                        if (fc > 0) {
+                            int f = anim_info->animFrame;
+                            f = f < 0 ? 0 : (f >= fc ? fc - 1 : f);
+                            int base = (panim_idx * fc + f) * 3;
+                            bone.Scale[0] = current_pluto_anim.Scales[base]     / 1024.0f;
+                            bone.Scale[1] = current_pluto_anim.Scales[base + 1] / 1024.0f;
+                            bone.Scale[2] = current_pluto_anim.Scales[base + 2] / 1024.0f;
                         }
                     }
                 }
             }
-            
-            // Initialize vectors with proper size based on bone count
-            bone_anim_values.resize(bone_count * 3);  // bone_count × 3 components (XYZ)
-            bone_anim_indices.resize(bone_count * 6); // bone_count × 6 indices per bone
-            
-            // Generate values
-            for (int i = 0; i < bone_count; i++) {
-                for (int j = 0; j < 3; j++) {
-                    bone_anim_values[i * 3 + j] = bone_rotations[i][j] * (i == 0 ? 1 : 65536 / 360);
-                }
-            }
-            
-            // Generate indices with repeating pattern: 0x0001, bone_index
-            for (int i = 0; i < bone_count; i++) {
-                int base_index = i * 6;
-                for (int j = 0; j < 3; j++) {
-                    bone_anim_indices[base_index + j * 2] = 0x0001;
-                    bone_anim_indices[base_index + j * 2 + 1] = i * 3 + j;
-                }
-            }
+        }
+    }
 
-            // Create the custom animation struct
-            static Animation custom_animation;
-            custom_animation.flags = is_editing_panim ? ANIM_FLAG_2 : 0;
-            custom_animation.animYTransDivisor = 0;
-            custom_animation.startFrame = 0;
-            custom_animation.loopStart = 0;
-            custom_animation.loopEnd = (s16)current_pluto_anim.Length;
-            custom_animation.values =       (is_editing_panim) ? bone_anim_values.data() : current_pluto_anim.Values.data();
-            custom_animation.valuesLength = (is_editing_panim) ? bone_anim_values.size() : current_pluto_anim.Values.size();
-            custom_animation.index =        (is_editing_panim) ? bone_anim_indices.data() : current_pluto_anim.Indices.data();
-            custom_animation.indexLength =  (is_editing_panim) ? bone_anim_indices.size() : current_pluto_anim.Indices.size();
-            custom_animation.length = (s16)current_pluto_anim.Length;
-            gMarioStates[0].marioObj->header.gfx.animInfo.curAnim = &custom_animation;
-            gMarioStates[0].marioObj->header.gfx.animInfo.animYTrans = 0xBD;
+    bone_anim_values.resize(bone_count * 3);
+    bone_anim_indices.resize(bone_count * 6);
 
-            struct Object* accessory = find_hat_object();
-            if (accessory != NULL) {
-                accessory->header.gfx.animInfo.curAnim = &custom_animation;
-                accessory->header.gfx.animInfo.animYTrans = 0xBD;
-            }
+    for (int i = 0; i < bone_count; i++) {
+        for (int j = 0; j < 3; j++) {
+            float val = (i == 0) ? g_root_offset[j]
+                      : (i - 1 < (int)current_pluto_anim.Bones.size()) ? current_pluto_anim.Bones[i-1].Rotation[j] : 0.0f;
+            bone_anim_values[i * 3 + j] = val * (i == 0 ? 1 : 65536 / 360);
+        }
+    }
+
+    for (int i = 0; i < bone_count; i++) {
+        int base = i * 6;
+        for (int j = 0; j < 3; j++) {
+            bone_anim_indices[base + j * 2]     = 0x0001;
+            bone_anim_indices[base + j * 2 + 1] = i * 3 + j;
+        }
+    }
+
+    static Animation custom_animation;
+    custom_animation.flags             = is_editing_panim ? ANIM_FLAG_2 : 0;
+    custom_animation.animYTransDivisor = 0;
+    custom_animation.startFrame        = 0;
+    custom_animation.loopStart         = 0;
+    custom_animation.loopEnd           = (s16)current_pluto_anim.Length;
+    custom_animation.values            = is_editing_panim ? bone_anim_values.data()   : current_pluto_anim.Values.data();
+    custom_animation.valuesLength      = is_editing_panim ? bone_anim_values.size()   : current_pluto_anim.Values.size();
+    custom_animation.index             = is_editing_panim ? bone_anim_indices.data()  : current_pluto_anim.Indices.data();
+    custom_animation.indexLength       = is_editing_panim ? bone_anim_indices.size()  : current_pluto_anim.Indices.size();
+    custom_animation.length            = (s16)current_pluto_anim.Length;
+    gMarioStates[0].marioObj->header.gfx.animInfo.curAnim    = &custom_animation;
+    gMarioStates[0].marioObj->header.gfx.animInfo.animYTrans = 0xBD;
+
+    struct Object* accessory = find_hat_object();
+    if (accessory) {
+        accessory->header.gfx.animInfo.curAnim    = &custom_animation;
+        accessory->header.gfx.animInfo.animYTrans = 0xBD;
     }
 }
 
 /* Returns true if the next custom animation is part of the "Chainer queue" i.e. anim_00.panim, anim_01.panim, anim_02.panim... */
+// To be removed for a better implementation
+// 5/19/26 probably just gonna remove this entirely and have Pluto merge all files into one
 bool saturn_check_for_chainer() {
     if (!enable_custom_anim) return false;
     if (selected_panim_index >= pluto_animations_list.size() - 1) return false;
 
     if (pluto_animations_list[selected_panim_index].HasQueue() && pluto_animations_list[selected_panim_index+1].HasQueue()) {
         selected_panim_index += 1;
+        PreserveBoneFlagsAsPending();
         current_pluto_anim = LoadPAnim(pluto_animations_list[selected_panim_index+1].FilePath);
         gMarioStates[0].marioObj->header.gfx.animInfo.animFrame = 0;
         override_anim = true;
@@ -439,44 +571,286 @@ bool saturn_check_for_chainer() {
     return false;
 }
 
-// index, is_custom
-std::vector<std::pair<int, bool>> model_bone_list;
-int cached_total_bone_count = 0;
-int cached_custom_bone_count = 0;
-bool bone_count_dirty = true;
+static int s_add_bone_idx = 0;
+static int s_vanilla_bone_idx = 0;
+static int s_apply_bone_idx = 0;
+static int s_translation_lookup_idx = 0;
+static int s_scale_apply_idx = 0;
+static int s_scale_lookup_idx = 0;
+static int s_store_pos_idx = 0;
+static std::vector<std::string> s_ActiveBoneNames;
 
-void AddToBoneCountList(bool is_custom) {
-    for (auto& pair : model_bone_list) {
-        if (pair.first == model_bone_list.size()) {
-            pair.second = is_custom;
-            return;
+void SaveAndScheduleRestoreBoneFlags() {
+    s_bone_flags.resize(current_pluto_anim.Bones.size());
+    for (int i = 0; i < (int)current_pluto_anim.Bones.size(); i++)
+        s_bone_flags[i] = { current_pluto_anim.Bones[i].BoneHidden,
+                            current_pluto_anim.Bones[i].WiggleDisabled,
+                            current_pluto_anim.Bones[i].WindDisabled };
+    s_flags_need_restore = true;
+}
+
+// Feeds the current live bone flags back into s_pending_bone_flags so that
+// AddToBoneCountList re-applies them unconditionally on the next frame.
+// Use this before any LoadPAnim call to survive the fresh-Bones replacement
+void PreserveBoneFlagsAsPending() {
+    s_pending_bone_flags.resize(current_pluto_anim.Bones.size(), { false, false, false, false });
+    for (int i = 0; i < (int)current_pluto_anim.Bones.size(); i++) {
+        const auto& b = current_pluto_anim.Bones[i];
+        s_pending_bone_flags[i] = { b.BoneHidden, b.WiggleDisabled, b.WindDisabled,
+                                    b.BoneHidden || b.WiggleDisabled || b.WindDisabled };
+    }
+}
+
+void ClearBoneFlags() {
+    s_bone_flags.clear();
+    s_flags_need_restore = false;
+}
+
+// Clears the in-memory flag state on all bones without touching the config file
+// or s_pending_bone_flags, so a subsequent LoadBoneFlagsFromPackDir + model reload
+// will re-apply them from disk
+void ResetBoneFlagsInMemory() {
+    for (auto& bone : current_pluto_anim.Bones) {
+        bone.BoneHidden     = false;
+        bone.WiggleDisabled = false;
+        bone.WindDisabled   = false;
+    }
+}
+
+void SetActiveBoneNames(const std::vector<std::string>& names) {
+    s_ActiveBoneNames = names;
+    ClearBoneFlags(); // new model loaded - bone flags from previous model no longer apply
+}
+
+void LoadBoneFlagsFromPackDir(const std::string& pack_path) {
+    s_pending_bone_flags.clear();
+    std::string path = pack_path + "/bone_flags.cfg";
+    std::ifstream file(path);
+    if (!file.is_open()) return;
+    std::string line;
+    while (std::getline(file, line)) {
+        if (line.empty() || line[0] == '#') continue;
+        int idx, hidden, wiggle, wind;
+        if (sscanf(line.c_str(), "%d %d %d %d", &idx, &hidden, &wiggle, &wind) == 4 && idx >= 0) {
+            if (idx >= (int)s_pending_bone_flags.size())
+                s_pending_bone_flags.resize(idx + 1, { false, false, false, false });
+            s_pending_bone_flags[idx] = { (bool)hidden, (bool)wiggle, (bool)wind, true };
         }
     }
-    model_bone_list.push_back(std::make_pair(model_bone_list.size(), is_custom));
+}
+
+void SaveBoneFlagsToPackDir(const std::string& pack_path) {
+    std::string path = pack_path + "/bone_flags.cfg";
+    bool any = false;
+    for (const auto& b : current_pluto_anim.Bones)
+        if (b.BoneHidden || b.WiggleDisabled || b.WindDisabled) { any = true; break; }
+    if (!any) {
+        std::filesystem::remove(path);
+        return;
+    }
+    std::ofstream file(path);
+    if (!file.is_open()) return;
+    file << "# Pluto bone flags - bone_index hidden wiggle_disabled wind_disabled\n";
+    for (int i = 0; i < (int)current_pluto_anim.Bones.size(); i++) {
+        const auto& b = current_pluto_anim.Bones[i];
+        if (b.BoneHidden || b.WiggleDisabled || b.WindDisabled)
+            file << i << " " << (int)b.BoneHidden << " " << (int)b.WiggleDisabled << " " << (int)b.WindDisabled << "\n";
+    }
+}
+
+void AddToBoneCountList(bool is_custom, bool is_wiggle, Vec3s rotation) {
+    int idx = s_add_bone_idx++;
+    int vidx = is_custom ? -1 : s_vanilla_bone_idx++;
+    std::string customName = (idx < (int)s_ActiveBoneNames.size()) ? s_ActiveBoneNames[idx] : "";
+    if (idx < (int)current_pluto_anim.Bones.size()) {
+        current_pluto_anim.Bones[idx].Index = idx;
+        current_pluto_anim.Bones[idx].VanillaIndex = vidx;
+        current_pluto_anim.Bones[idx].IsCustom = is_custom;
+        current_pluto_anim.Bones[idx].IsWiggle = is_wiggle;
+        current_pluto_anim.Bones[idx].CustomName = customName;
+        // Apply persistent flags loaded from file (one-shot per model load)
+        if (idx < (int)s_pending_bone_flags.size() && s_pending_bone_flags[idx].valid) {
+            current_pluto_anim.Bones[idx].BoneHidden    = s_pending_bone_flags[idx].BoneHidden;
+            current_pluto_anim.Bones[idx].WiggleDisabled = s_pending_bone_flags[idx].WiggleDisabled;
+            current_pluto_anim.Bones[idx].WindDisabled   = s_pending_bone_flags[idx].WindDisabled;
+            s_pending_bone_flags[idx].valid = false;
+        }
+        // BoneHidden, WiggleDisabled, WindDisabled are otherwise preserved (bone existed)
+    } else {
+        PlutoBone bone;
+        bone.Index = idx;
+        bone.VanillaIndex = vidx;
+        bone.IsCustom = is_custom;
+        bone.IsWiggle = is_wiggle;
+        bone.CustomName = customName;
+        // Apply persistent flags loaded from file (one-shot per model load)
+        if (idx < (int)s_pending_bone_flags.size() && s_pending_bone_flags[idx].valid) {
+            bone.BoneHidden    = s_pending_bone_flags[idx].BoneHidden;
+            bone.WiggleDisabled = s_pending_bone_flags[idx].WiggleDisabled;
+            bone.WindDisabled   = s_pending_bone_flags[idx].WindDisabled;
+            s_pending_bone_flags[idx].valid = false;
+        }
+        current_pluto_anim.Bones.push_back(std::move(bone));
+    }
 }
 
 void ResetBoneCountList() {
-    model_bone_list.clear();
-    bone_count_dirty = true;
+    if (!is_editing_panim && s_add_bone_idx > 0) {
+        if ((int)current_pluto_anim.Bones.size() > s_add_bone_idx)
+            current_pluto_anim.Bones.resize(s_add_bone_idx);
+    }
+    s_add_bone_idx = 0;
+    s_vanilla_bone_idx = 0;
+    s_apply_bone_idx = 0;
+    s_translation_lookup_idx = 0;
+    s_scale_apply_idx = 0;
+    s_scale_lookup_idx = 0;
+    s_store_pos_idx = 0;
+}
+
+// Unholy anmount of helper functions we feed to the graph node
+
+bool SaturnShouldApplyBoneTranslation(void) {
+    return is_editing_panim || (override_anim && !current_pluto_anim.Translations.empty());
+}
+
+bool SaturnShouldApplyBoneScale(void) {
+    return is_editing_panim || (override_anim && !current_pluto_anim.Scales.empty());
+}
+
+bool SaturnIsEditingPAnim(void) {
+    return is_editing_panim;
+}
+
+void BumpBoneTranslationCounter(void) {
+    s_apply_bone_idx++;
+}
+
+void BumpBoneScaleCounter(void) {
+    s_scale_apply_idx++;
+}
+
+void ResetBoneApplyCounters(void) {
+    s_apply_bone_idx = 0;
+    s_translation_lookup_idx = 0;
+    s_scale_apply_idx = 0;
+    s_scale_lookup_idx = 0;
+}
+
+extern s16 gPrevAnimFrame;
+
+void ApplyBoneTranslation(Vec3s out, Vec3s out_prev) {
+    int idx = s_apply_bone_idx++;
+    vec3s_set(out, 0, 0, 0);
+    vec3s_set(out_prev, 0, 0, 0);
+
+    // Bone 0 (root) translation is driven by the SM64 animation system directly
+    if (idx == 0) return;
+
+    // Pose editor: use static per-bone translation
+    if (is_editing_panim) {
+        // idx=0 already returned early; Bones[N] corresponds to animated part N (same traversal order)
+        if (idx < (int)current_pluto_anim.Bones.size()) {
+            vec3s_copy(out, current_pluto_anim.Bones[idx].Translation);
+            vec3s_copy(out_prev, current_pluto_anim.Bones[idx].Translation);
+        }
+        return;
+    }
+
+    if (!override_anim || current_pluto_anim.Translations.empty()) return;
+
+    // Use a dedicated lookup counter that only advances in the IF (in-bounds) path.
+    // BumpBoneTranslationCounter (ELSE path) only advances s_apply_bone_idx, not this.
+    int bone_idx = s_translation_lookup_idx++;
+    int total_count = current_pluto_anim.CustomBoneCount;
+    if (total_count <= 0 || bone_idx >= total_count) return;
+
+    int frame_count = (int)current_pluto_anim.Translations.size() / (total_count * 3);
+    if (frame_count <= 0) return;
+
+    int frame = gMarioStates[0].marioObj->header.gfx.animInfo.animFrame;
+    frame = frame < 0 ? 0 : (frame >= frame_count ? frame_count - 1 : frame);
+    int base = (bone_idx * frame_count + frame) * 3;
+    out[0] = current_pluto_anim.Translations[base];
+    out[1] = current_pluto_anim.Translations[base + 1];
+    out[2] = current_pluto_anim.Translations[base + 2];
+
+    int prev_frame = gPrevAnimFrame;
+    prev_frame = prev_frame < 0 ? 0 : (prev_frame >= frame_count ? frame_count - 1 : prev_frame);
+    int prev_base = (bone_idx * frame_count + prev_frame) * 3;
+    out_prev[0] = current_pluto_anim.Translations[prev_base];
+    out_prev[1] = current_pluto_anim.Translations[prev_base + 1];
+    out_prev[2] = current_pluto_anim.Translations[prev_base + 2];
+}
+
+void StoreBoneWorldPosition(Vec3f pos) {
+    int idx = s_store_pos_idx++;
+    if (idx >= (int)current_pluto_anim.Bones.size()) return;
+    vec3f_copy(current_pluto_anim.Bones[idx].WorldPosition, pos);
+}
+
+void ApplyBoneScale(Vec3f out, Vec3f out_prev) {
+    int idx = s_scale_apply_idx++;
+    out[0] = out[1] = out[2] = 1.0f;
+    out_prev[0] = out_prev[1] = out_prev[2] = 1.0f;
+    // Bone 0 (root) scale not supported
+    if (idx == 0) return;
+
+    // Pose editor: use static per-bone scale
+    if (is_editing_panim) {
+        // idx=0 already returned early; Bones[N] corresponds to animated part N (same traversal order)
+        if (idx < (int)current_pluto_anim.Bones.size()) {
+            out[0] = current_pluto_anim.Bones[idx].Scale[0];
+            out[1] = current_pluto_anim.Bones[idx].Scale[1];
+            out[2] = current_pluto_anim.Bones[idx].Scale[2];
+            out_prev[0] = out[0];
+            out_prev[1] = out[1];
+            out_prev[2] = out[2];
+        }
+        return;
+    }
+
+    if (!override_anim || current_pluto_anim.Scales.empty()) return;
+
+    int bone_idx = s_scale_lookup_idx++;
+    int total_count = current_pluto_anim.CustomBoneCountScale;
+    if (total_count <= 0 || bone_idx >= total_count) return;
+
+    int frame_count = (int)current_pluto_anim.Scales.size() / (total_count * 3);
+    if (frame_count <= 0) return;
+
+    int frame = gMarioStates[0].marioObj->header.gfx.animInfo.animFrame;
+    frame = frame < 0 ? 0 : (frame >= frame_count ? frame_count - 1 : frame);
+    int base = (bone_idx * frame_count + frame) * 3;
+    out[0] = current_pluto_anim.Scales[base]     / 1024.0f;
+    out[1] = current_pluto_anim.Scales[base + 1] / 1024.0f;
+    out[2] = current_pluto_anim.Scales[base + 2] / 1024.0f;
+
+    int prev_frame = gPrevAnimFrame;
+    prev_frame = prev_frame < 0 ? 0 : (prev_frame >= frame_count ? frame_count - 1 : prev_frame);
+    int prev_base = (bone_idx * frame_count + prev_frame) * 3;
+    out_prev[0] = current_pluto_anim.Scales[prev_base]     / 1024.0f;
+    out_prev[1] = current_pluto_anim.Scales[prev_base + 1] / 1024.0f;
+    out_prev[2] = current_pluto_anim.Scales[prev_base + 2] / 1024.0f;
 }
 
 void CacheBoneCount() {
-    if (bone_count_dirty && model_bone_list.size() > 0) {
-        cached_total_bone_count = model_bone_list.size();
-        cached_custom_bone_count = 0;
-        
-        for (const auto& pair : model_bone_list) {
-            if (pair.second) {
-                cached_custom_bone_count++;
-            }
-        }
-        
-        bone_count_dirty = false;
+    // Reset bone-add counter for next frame; trim Bones[] to actual geo count if it grew larger.
+    // Do NOT touch current_pluto_anim.BoneCount - that value comes from the animation file and
+    // is used by ExtraBoneInBounds to decide how many custom bones this animation handles.
+    if (!is_editing_panim && s_add_bone_idx > 0) {
+        if ((int)current_pluto_anim.Bones.size() > s_add_bone_idx)
+            current_pluto_anim.Bones.resize(s_add_bone_idx);
     }
+    s_add_bone_idx = 0;
+    s_vanilla_bone_idx = 0;
 }
 
 int GetTotalBoneCount() {
-    if (pause_anim && cached_total_bone_count > 0) return cached_total_bone_count;
+    if (pause_anim) {
+        int n = (int)current_pluto_anim.Bones.size();
+        if (n > 0) return n;
+    }
     return current_pluto_anim.BoneCount + 1;
 }
 
@@ -487,19 +861,35 @@ bool ExtraBoneInBounds(int index) {
     return index <= current_pluto_anim.BoneCount - 20;
 }
 
+/* Returns the hidden state for the bone most recently registered via AddToBoneCountList.
+ * Called from the renderer immediately after AddToBoneCountList for any bone type. */
+bool SaturnCurrentBoneIsHidden(void) {
+    int idx = s_add_bone_idx - 1;
+    if (idx < 0 || idx >= (int)current_pluto_anim.Bones.size()) return false;
+    return current_pluto_anim.Bones[idx].BoneHidden;
+}
+
+bool SaturnCurrentBoneWiggleDisabled(void) {
+    int idx = s_add_bone_idx - 1;
+    if (idx < 0 || idx >= (int)current_pluto_anim.Bones.size()) return false;
+    return current_pluto_anim.Bones[idx].WiggleDisabled;
+}
+
+bool SaturnCurrentBoneWindDisabled(void) {
+    int idx = s_add_bone_idx - 1;
+    if (idx < 0 || idx >= (int)current_pluto_anim.Bones.size()) return false;
+    return current_pluto_anim.Bones[idx].WindDisabled;
+}
+
 /* Automatically pushes custom bone values down when entering pose editor */
 void AutoPushCustomBones() {
-    if (model_bone_list.size() <= 0) return;
+    if (current_pluto_anim.Bones.size() <= 0) return;
     
     int bone_count = GetTotalBoneCount() + 1;
-    if (bone_rotations.size() != bone_count) {
-        bone_rotations.resize(bone_count);
-    }
-    
-    // Count how many custom bones we have
+
     int custom_bone_count = 0;
-    for (const auto& pair : model_bone_list) {
-        if (pair.second) {
+    for (const auto& bone : current_pluto_anim.Bones) {
+        if (bone.IsCustom) {
             custom_bone_count++;
         }
     }
@@ -507,33 +897,62 @@ void AutoPushCustomBones() {
     // If we have no custom bones, nothing to push
     if (custom_bone_count == 0) return;
     
-    // Calculate how many custom bones to push down based on PlutoAnim bone count vs default (20)
     int default_bone_count = 20;
     int bones_to_push = custom_bone_count - (current_pluto_anim.BoneCount - default_bone_count);
-    
-    // If we don't need to push any bones, return early
     if (bones_to_push <= 0) return;
     
     // Find and push down the first N custom bones (where N = bones_to_push)
     int pushed_count = 0;
     for (int i = 1; i < bone_count && pushed_count < bones_to_push; i++) {
-        bool is_custom_bone = i < model_bone_list.size() + 1 && model_bone_list[i-1].second;
+        bool is_custom_bone = i < (int)current_pluto_anim.Bones.size() + 1 && current_pluto_anim.Bones[i-1].IsCustom;
         
         if (is_custom_bone) {
             // Perform push down operation for this custom bone
             for (int j = bone_count - 1; j > i; j--) {
-                if (j - 1 >= 0) {
-                    bone_rotations[j][0] = bone_rotations[j-1][0];
-                    bone_rotations[j][1] = bone_rotations[j-1][1];
-                    bone_rotations[j][2] = bone_rotations[j-1][2];
-                }
+                current_pluto_anim.Bones[j-1].Rotation[0] = current_pluto_anim.Bones[j-2].Rotation[0];
+                current_pluto_anim.Bones[j-1].Rotation[1] = current_pluto_anim.Bones[j-2].Rotation[1];
+                current_pluto_anim.Bones[j-1].Rotation[2] = current_pluto_anim.Bones[j-2].Rotation[2];
             }
             // Reset current bone to 0
-            bone_rotations[i][0] = 0.0f;
-            bone_rotations[i][1] = 0.0f;
-            bone_rotations[i][2] = 0.0f;
+            current_pluto_anim.Bones[i-1].Rotation[0] = 0.0f;
+            current_pluto_anim.Bones[i-1].Rotation[1] = 0.0f;
+            current_pluto_anim.Bones[i-1].Rotation[2] = 0.0f;
             
             pushed_count++;
+        }
+    }
+
+    // Sync translation data into Bones[].Translation using the same two-step approach
+    // as Rotation above: fill sequentially first, then push-down custom bone slots.
+    if (!current_pluto_anim.Translations.empty() && current_pluto_anim.CustomBoneCount > 0) {
+        int frame_count = (int)current_pluto_anim.Translations.size() / (current_pluto_anim.CustomBoneCount * 3);
+        int frame = 0;
+        if (gMarioStates[0].marioObj) {
+            frame = gMarioStates[0].marioObj->header.gfx.animInfo.animFrame;
+            frame = frame < 0 ? 0 : (frame >= frame_count ? frame_count - 1 : frame);
+        }
+        // Step 1: fill sequentially - T[bi] maps to Bones[bi+1], same order as the PAnim player
+        for (int bi = 0; bi < (int)current_pluto_anim.Bones.size() - 1; bi++) {
+            if (bi < current_pluto_anim.CustomBoneCount) {
+                int base = (bi * frame_count + frame) * 3;
+                current_pluto_anim.Bones[bi + 1].Translation[0] = current_pluto_anim.Translations[base];
+                current_pluto_anim.Bones[bi + 1].Translation[1] = current_pluto_anim.Translations[base + 1];
+                current_pluto_anim.Bones[bi + 1].Translation[2] = current_pluto_anim.Translations[base + 2];
+            } else {
+                vec3s_set(current_pluto_anim.Bones[bi + 1].Translation, 0, 0, 0);
+            }
+        }
+        // Step 2: apply same push-down as Rotation above - shift custom bone slots down
+        int pushed_trans = 0;
+        for (int i = 1; i < bone_count && pushed_trans < bones_to_push; i++) {
+            bool is_custom_bone = i < (int)current_pluto_anim.Bones.size() + 1 && current_pluto_anim.Bones[i-1].IsCustom;
+            if (is_custom_bone) {
+                for (int j = bone_count - 1; j > i; j--) {
+                    vec3s_copy(current_pluto_anim.Bones[j-1].Translation, current_pluto_anim.Bones[j-2].Translation);
+                }
+                vec3s_set(current_pluto_anim.Bones[i-1].Translation, 0, 0, 0);
+                pushed_trans++;
+            }
         }
     }
 }

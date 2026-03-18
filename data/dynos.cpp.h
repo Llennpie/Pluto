@@ -48,6 +48,8 @@ enum {
     DATA_TYPE_BEHAVIOR_SCRIPT,
     DATA_TYPE_UNUSED,
     DATA_TYPE_LIGHT_0,
+    DATA_TYPE_METADATA,
+    DATA_TYPE_BONE_NAMES,
 };
 
 enum {
@@ -565,6 +567,12 @@ struct GfxData : NoCopy {
     // Skip bin output of children
     Array<DataNode<GeoLayout> *> mChildGeoLayouts;
 
+    // Metadata
+    String mModelName;
+    String mModelAuthor;
+    String mModelVersion;
+    Array<String> mBoneNames;
+
     // Current
     u64 mLoadIndex = 0;
     s32 mErrorCount = 0;
@@ -591,6 +599,9 @@ struct PackData {
     bool mEnabledSet;
     SysPath mPath;
     String mDisplayName;
+    String mModelName;
+    String mModelAuthor;
+    String mModelVersion;
     Array<Pair<const char *, GfxData *>> mGfxData;
     Array<DataNode<TexData>*> mTextures;
     bool mLoaded;

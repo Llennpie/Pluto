@@ -18,6 +18,7 @@ extern "C" {
     void OpenAccessorySettings();
     void OpenModelSettings();
     void PopupModelSettings();
+    void OpenModelSettingsAtCursor();
     void OpenModelSelector();
 #ifdef __cplusplus
 }

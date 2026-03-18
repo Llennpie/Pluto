@@ -421,6 +421,9 @@ void OpenExtraOptions() {
 
         ImGui::Separator();
         ImGui::Checkbox("Movement Particles", &enable_model_particles);
+        if (wiggle_bone_detected) {
+            ImGui::SliderFloat("###wiggle_intensity", &wiggle_intensity, 0.f, 3.f, "Wiggle %.2f", ImGuiSliderFlags_NoRoundToFormat);
+        }
 
         ImGui::PopItemWidth();
     }
@@ -477,6 +480,10 @@ void OpenModelSettings() {
                 ImGui::Separator();
                 ImGui::Checkbox("Show All Expressions", &ignore_expression_visibility);
                 ImGui::Checkbox("Preview Textures", &configExpressionPreviews);
+                if (pack->mModelVersion != "") {
+                    ImGui::Separator();
+                    ImGui::TextDisabled("%s", pack->mModelVersion.begin());
+                }
                 ImGui::EndMenu();
             }
 
@@ -494,6 +501,13 @@ void OpenModelSettings() {
             ImGui::EndMenuBar();
         }
 
+        if (pack->mModelName != "" && pack->mModelAuthor != "") {
+            ImGui::BeginChild("###model_meta", ImVec2(200, ImGui::GetTextLineHeightWithSpacing()*2), ImGuiChildFlags_None, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+            ImGui::Text("%s", pack->mModelName.begin());
+            ImGui::TextDisabled("@%s", pack->mModelAuthor.begin());
+            ImGui::EndChild();
+        }
+
         // Model Color Codes
         if (model_color_code_list.size() > 0)
             OpenModelCCSelector(pack, model_color_code_list);
@@ -503,17 +517,30 @@ void OpenModelSettings() {
     }
 }
 
+static ImVec2 s_model_settings_open_pos = ImVec2(0, 0);
+
 void PopupModelSettings() {
-    if (AnyModelsEnabled() && active_saturn_model_index != -1) {
-        PackData* pack = DynOS_Pack_GetFromIndex(active_saturn_model_index);
-        std::string popup_label = pack->mDisplayName.begin();
-        popup_label += " Settings###model_settings";
-        show_window_model_settings = ImGui::BeginPopup(popup_label.c_str(), ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_MenuBar);
-        if (show_window_model_settings) {
-            OpenModelSettings();
-            ImGui::EndPopup();
-        }
+    if (!show_window_model_settings) return;
+    if (!AnyModelsEnabled() || active_saturn_model_index == -1) {
+        show_window_model_settings = false;
+        return;
     }
+    PackData* pack = DynOS_Pack_GetFromIndex(active_saturn_model_index);
+    std::string win_label = (pack->mModelName != "" ? pack->mModelName.begin() : pack->mDisplayName.begin());
+    win_label += "###model_settings";
+    ImGui::SetNextWindowPos(s_model_settings_open_pos, ImGuiCond_Appearing, ImVec2(0.0f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(0, 0), ImGuiCond_Appearing);
+    if (ImGui::Begin(win_label.c_str(), &show_window_model_settings,
+                     ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_MenuBar)) {
+        OpenModelSettings();
+    }
+    ImGui::End();
+}
+
+void OpenModelSettingsAtCursor() {
+    ImVec2 mouse = ImGui::GetIO().MousePos;
+    s_model_settings_open_pos = ImVec2(mouse.x + 80.0f, mouse.y);
+    show_window_model_settings = true;
 }
 
 std::vector<std::string> popup_color_code_list;
@@ -600,6 +627,10 @@ void OpenModelSelector() {
                 add_to_model_queue(i, pack->mEnabled, false);
                 if (IsSaturnModel(i)) UpdateEditorLabels();
                 if (active_saturn_model_index == -1) custom_eyes = false;
+            }
+            if (pack->mModelAuthor != "" && pack->mEnabled) {
+                ImGui::SameLine();
+                ImGui::TextDisabled("@%s", pack->mModelAuthor.begin());
             }
             ImGui::EndDisabled();
             ImGui::EndDisabled();

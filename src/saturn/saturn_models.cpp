@@ -17,6 +17,7 @@
 #include "saturn/saturn.h"
 #include "saturn/saturn_textures.h"
 #include "saturn/saturn_colors.h"
+#include "saturn/saturn_animations.h"
 
 #include "pc/pc_main.h"
 #include "pc/djui/djui_console.h"
@@ -268,10 +269,24 @@ void LoadModelData(int index, bool enabled, bool first_use, bool auto_reload) {
             if (expression.Textures.size() > 0) expression.CurrentIndex = 0;
         }
 
-        if (enabled) active_saturn_model_index = index;
+        if (enabled) {
+            active_saturn_model_index = index;
+            // Populate bone names from pack's primary geo layout
+            std::vector<std::string> boneNames;
+            if (pack->mGfxData.Count() > 0) {
+                GfxData* gfxData = pack->mGfxData[0].second;
+                if (gfxData) {
+                    for (s32 i = 0; i < gfxData->mBoneNames.Count(); i++)
+                        boneNames.push_back(std::string(gfxData->mBoneNames[i].begin()));
+                }
+            }
+            SetActiveBoneNames(boneNames);
+            LoadBoneFlagsFromPackDir(pack->mPath);
+        }
         else {
             active_saturn_model_index = -1;
             active_accessory_index = -1;
+            ResetBoneFlagsInMemory();
         }
     }
 }

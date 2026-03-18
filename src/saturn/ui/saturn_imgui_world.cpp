@@ -198,4 +198,16 @@ void OpenQuickOptions() {
     // Quick Options
     //ImGui::Checkbox("HUD", &enable_hud);
     ImGui::Checkbox("Shadows", &configPlutoShadows);
+
+    if (wiggle_bone_detected) {
+        ImGui::Separator();
+        ImGui::Checkbox("Wind###wind_enabled", &wind_enabled);
+        ImGui::BeginDisabled(!wind_enabled);
+        ImGui::PushItemWidth(175);
+        ImGui::SliderFloat("###wind_angle",    &wind_angle,    0.f, 360.f, "Angle %.0f deg",  ImGuiSliderFlags_NoRoundToFormat);
+        ImGui::SliderFloat("###wind_strength", &wind_strength, 0.f, 5.f,   "Strength %.2f",   ImGuiSliderFlags_NoRoundToFormat);
+        ImGui::SliderFloat("###wind_sway",     &wind_sway,     0.f, 3.f,   "Sway %.2f",       ImGuiSliderFlags_NoRoundToFormat);
+        ImGui::PopItemWidth();
+        ImGui::EndDisabled();
+    }
 }

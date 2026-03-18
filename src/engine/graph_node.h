@@ -42,6 +42,7 @@
 #define GRAPH_NODE_TYPE_OBJECT                0x018
 #define GRAPH_NODE_TYPE_ANIMATED_PART         0x019
 #define GRAPH_NODE_TYPE_MCOMP_EXTRA           0x022
+#define GRAPH_NODE_TYPE_EXTRA_WIGGLE          0x023
 #define GRAPH_NODE_TYPE_BILLBOARD             0x01A
 #define GRAPH_NODE_TYPE_DISPLAY_LIST          0x01B
 #define GRAPH_NODE_TYPE_SCALE                 0x01C
@@ -259,6 +260,23 @@ struct GraphNodeAnimatedPart
     /*0x18*/ Vec3s translation;
 };
 
+/** Like GraphNodeAnimatedPart but carries per-bone wiggle physics parameters so
+ *  each GEO_EXTRA_WIGGLE bone can have independent lag, max-distance, and
+ *  snap-smooth values baked into the geo layout
+ */
+struct GraphNodeExtraWiggle
+{
+    /*0x00*/ struct GraphNode node;
+    /*0x14*/ void *displayList;
+    /*0x18*/ Vec3s translation;
+    f32 wiggleSmooth;
+    f32 wiggleMaxDist;
+    f32 wiggleSnapSmooth;
+    f32 springK;
+    f32 springDamp;
+    u8  windDisabled; // set each frame by geo_process_extra_wiggle; children check this during chain-depth walk
+};
+
 /** A GraphNode that draws a display list rotated in a way to always face the
  *  camera. Note that if the entire object is a billboard (like a coin or 1-up)
  *  then it simply sets the billboard flag for the entire object, this node is
@@ -415,6 +433,10 @@ struct GraphNodeAnimatedPart *init_graph_node_animated_part(struct DynamicPool *
                                                             s32 drawingLayer, void *displayList, Vec3s translation);
 struct GraphNodeAnimatedPart *init_graph_node_mcomp_extra(struct DynamicPool *pool, struct GraphNodeAnimatedPart *graphNode,
                                                             s32 drawingLayer, void *displayList, Vec3s translation);
+struct GraphNodeExtraWiggle *init_graph_node_extra_wiggle(struct DynamicPool *pool, struct GraphNodeExtraWiggle *graphNode,
+                                                           s32 drawingLayer, void *displayList, Vec3s translation,
+                                                           f32 wiggleSmooth, f32 wiggleMaxDist, f32 wiggleSnapSmooth,
+                                                           f32 springK, f32 springDamp);
 struct GraphNodeBillboard *init_graph_node_billboard(struct DynamicPool *pool, struct GraphNodeBillboard *graphNode,
                                                      s32 drawingLayer, void *displayList, Vec3s translation);
 struct GraphNodeDisplayList *init_graph_node_display_list(struct DynamicPool *pool, struct GraphNodeDisplayList *graphNode,

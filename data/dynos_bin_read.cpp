@@ -167,27 +167,44 @@ void DynOS_Read_Source(GfxData *aGfxData, const SysPath &aFilename) {
             else if (_Buffer.Length() != 0) {
                 if (_Buffer == "Name") {
                     char* peek = c;
-                    while (*peek == ' ') { peek++; } // Skip spaces
-                
+                    while (*peek == ' ') { peek++; }
                     String modelName;
-                    while (*peek != ' ' && *peek != '\n' && *peek != '\0') {
-                        modelName.Add(*peek);
+                    while (*peek != '\r' && *peek != '\n' && *peek != '\0') {
+                        if (modelName.Length() < 64) modelName.Add(*peek);
                         peek++;
                     }
-                
+                    // trim trailing spaces
+                    while (modelName.Length() > 0 && modelName[modelName.Length() - 1] == ' ') {
+                        modelName.Remove(modelName.Length() - 1);
+                    }
+                    aGfxData->mModelName = modelName;
                     PrintConsole("Name: \"%s\"\n", modelName.begin());
                     c = peek;
                 } else if (_Buffer == "Author") {
                     char* peek = c;
-                    while (*peek == ' ') { peek++; } // Skip spaces
-                
+                    while (*peek == ' ') { peek++; }
                     String modelAuthor;
-                    while (*peek != ' ' && *peek != '\n' && *peek != '\0') {
-                        modelAuthor.Add(*peek);
+                    while (*peek != '\r' && *peek != '\n' && *peek != '\0') {
+                        if (modelAuthor.Length() < 64) modelAuthor.Add(*peek);
                         peek++;
                     }
-                
+                    // trim trailing spaces
+                    while (modelAuthor.Length() > 0 && modelAuthor[modelAuthor.Length() - 1] == ' ') {
+                        modelAuthor.Remove(modelAuthor.Length() - 1);
+                    }
+                    aGfxData->mModelAuthor = modelAuthor;
                     PrintConsole("Author: \"%s\"\n", modelAuthor.begin());
+                    c = peek;
+                } else if (_Buffer == "Version") {
+                    char* peek = c;
+                    while (*peek == ' ') { peek++; }
+                    String modelVersion;
+                    while (*peek != ' ' && *peek != '\n' && *peek != '\0') {
+                        if (modelVersion.Length() < 5) modelVersion.Add(*peek);
+                        peek++;
+                    }
+                    aGfxData->mModelVersion = modelVersion;
+                    PrintConsole("Version: \"%s\"\n", modelVersion.begin());
                     c = peek;
                 } else if (_Buffer == "static") {
                     // Ignore static keyword

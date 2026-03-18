@@ -47,6 +47,7 @@ GeoLayoutCommandProc GeoLayoutJumpTable[] = {
     geo_layout_cmd_node_background_ext,
     // saturn
     geo_layout_cmd_node_mcomp_extra,
+    geo_layout_cmd_node_extra_wiggle,
 };
 
 struct GraphNode gObjParentGraphNode;
@@ -729,6 +730,41 @@ void geo_layout_cmd_node_mcomp_extra(void) {
     register_scene_graph_node(&graphNode->node);
 
     gGeoLayoutCommand += 0x0C << CMD_SIZE_SHIFT;
+}
+
+/*
+  0x23: Create an extra wiggle bone with per-bone wiggle physics parameters.
+   cmd+0x01: u8 drawingLayer
+   cmd+0x02: s16 xTranslation
+   cmd+0x04: s16 yTranslation
+   cmd+0x06: s16 zTranslation
+   cmd+0x08: u32 wiggleSmooth     (float bits, use GEO_F32(x) or WIGGLE_*_BITS)
+   cmd+0x0C: u32 wiggleMaxDist    (float bits)
+   cmd+0x10: u32 wiggleSnapSmooth (float bits)
+   cmd+0x14: ptr displayList
+
+To-do: Make most of these fields optional in case we add extra ones down the line, don't want to break everything
+*/
+void geo_layout_cmd_node_extra_wiggle(void) {
+    Vec3s translation;
+    s32 drawingLayer    = cur_geo_cmd_u8(0x01);
+    translation[0]      = cur_geo_cmd_s16(0x02);
+    translation[1]      = cur_geo_cmd_s16(0x04);
+    translation[2]      = cur_geo_cmd_s16(0x06);
+    f32 wiggleSmooth     = cur_geo_cmd_s16(0x08) / 100.0f;
+    f32 wiggleMaxDist    = (f32)cur_geo_cmd_s16(0x0A);
+    f32 wiggleSnapSmooth = cur_geo_cmd_s16(0x0C) / 100.0f;
+    f32 springK          = cur_geo_cmd_s16(0x0E) / 100.0f;
+    f32 springDamp       = cur_geo_cmd_s16(0x10) / 100.0f;
+    void *displayList   = cur_geo_cmd_ptr(0x14);
+
+    struct GraphNodeExtraWiggle *graphNode =
+        init_graph_node_extra_wiggle(gGraphNodePool, NULL, drawingLayer, displayList,
+                                     translation, wiggleSmooth, wiggleMaxDist, wiggleSnapSmooth,
+                                     springK, springDamp);
+    register_scene_graph_node(&graphNode->node);
+
+    gGeoLayoutCommand += 0x18 << CMD_SIZE_SHIFT;
 }
 
 // 0x1A: No operation

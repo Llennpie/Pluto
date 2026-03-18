@@ -373,6 +373,48 @@
     CMD_HH(y, z), \
     CMD_PTR(displayList)
 
+/* GEO_EXTRA_WIGGLE
+ *
+ * These are like MCOMP_EXTRA but with extra parameters for per-bone passive physics
+ * They also support "wind", which sways them during idle or custom animations
+ * smooth/snapSmooth/springK/springDamp are stored as integers x100 (divide by 100 at load)
+ * maxDist is in game units and stored directly */
+
+#define WIGGLE_SMOOTH_DEFAULT      10   /* 0.10f */
+#define WIGGLE_MAX_DIST_DEFAULT    25   /* 25.0f */
+#define WIGGLE_SNAP_SMOOTH_DEFAULT 80   /* 0.80f */
+#define WIGGLE_SPRING_K_DEFAULT    30   /* 0.30f - spring stiffness; higher = snaps back faster */
+#define WIGGLE_SPRING_DAMP_DEFAULT 65   /* 0.65f - damping; lower = bouncier/more overshoot */
+
+/**
+ * 0x23: Like GEO_MCOMP_EXTRA but with per-bone wiggle physics parameters.
+ *   0x01: u8  drawingLayer
+ *   0x02: s16 xTranslation
+ *   0x04: s16 yTranslation
+ *   0x06: s16 zTranslation
+ *   0x08: s16 wiggleSmooth    - lag amount x100 (100 = 1.0f = instant, 0 = frozen)
+ *   0x0A: s16 wiggleMaxDist   - max translation drift in game units
+ *   0x0C: s16 wiggleSnapSmooth - catch-up rate during snap animations x100
+ *   0x0E: s16 springK         - spring stiffness x100 (higher = snaps back faster)
+ *   0x10: s16 springDamp      - damping x100 (lower = bouncier, more overshoot)
+ *   0x12: s16 (padding)
+ *   0x14: ptr displayList
+ *
+ * Use WIGGLE_*_DEFAULT for defaults:
+ *   GEO_EXTRA_WIGGLE(LAYER_OPAQUE, 0, 0, 0, displayList,
+ *                    WIGGLE_SMOOTH_DEFAULT, WIGGLE_MAX_DIST_DEFAULT, WIGGLE_SNAP_SMOOTH_DEFAULT,
+ *                    WIGGLE_SPRING_K_DEFAULT, WIGGLE_SPRING_DAMP_DEFAULT)
+ *
+ * Or ideally just use SFast64 which should have it built-in whenever this becomes available 
+ */
+#define GEO_EXTRA_WIGGLE(layer, x, y, z, displayList, smooth, maxDist, snapSmooth, springK, springDamp) \
+    CMD_BBH(0x23, layer, x), \
+    CMD_HH(y, z), \
+    CMD_HH(smooth, maxDist), \
+    CMD_HH(snapSmooth, springK), \
+    CMD_HH(springDamp, 0), \
+    CMD_PTR(displayList)
+
 /**
  * 0x1A: No operation
  */

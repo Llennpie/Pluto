@@ -7,16 +7,21 @@
 #ifdef __cplusplus
 
 #include <string>
+#include <vector>
 
 struct PlayerWindow {
     bool active, hovered;
     int x, y, size;
 };
 
+extern std::vector<PlayerWindow> player_windows;
+extern bool saturn_any_bone_dot_hovered;
+
 extern "C" {
 #endif
     extern bool show_menu;
     extern bool show_window_model_settings;
+    extern bool show_window_animations;
     
     extern bool capture_screenshot;
     extern int screenshot_size[2];

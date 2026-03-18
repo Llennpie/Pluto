@@ -16,6 +16,12 @@ extern "C" {
 
     extern bool freeze_camera;
     extern float freeze_camera_speed;
+    extern float wiggle_intensity;
+    extern bool wiggle_bone_detected;
+    extern bool wind_enabled;
+    extern float wind_angle;
+    extern float wind_strength;
+    extern float wind_sway;
     int saturn_camera_update();
     extern float camera_follow_speed;
 
