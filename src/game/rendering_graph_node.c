@@ -1044,6 +1044,19 @@ static void geo_process_animated_part(struct GraphNodeAnimatedPart *node) {
         get_pos_from_transform_mtx(translated, gMatStack[gMatStackIndex], *gCurGraphNodeCamera->matrixPtr);
         gCurGraphNodeMarioState->minimumBoneY = fmin(gCurGraphNodeMarioState->minimumBoneY, translated[1] - gCurGraphNodeMarioState->marioObj->header.gfx.pos[1]);
     }
+    bool saturn_scale_pushed = false;
+    if (gCurGraphNodeObject == &gMarioObject->header.gfx && SaturnShouldApplyBoneScale()) {
+        Vec3f boneScale, boneScalePrev;
+        ApplyBoneScale(boneScale, boneScalePrev);
+        bool non_identity = (boneScale[0] != 1.0f || boneScale[1] != 1.0f || boneScale[2] != 1.0f
+                          || boneScalePrev[0] != 1.0f || boneScalePrev[1] != 1.0f || boneScalePrev[2] != 1.0f);
+        if (non_identity && (gMatStackIndex + 1) < MATRIX_STACK_SIZE) {
+            mtxf_scale_vec3f(gMatStack[gMatStackIndex + 1],     gMatStack[gMatStackIndex],     boneScale);
+            mtxf_scale_vec3f(gMatStackPrev[gMatStackIndex + 1], gMatStackPrev[gMatStackIndex], boneScalePrev);
+            gMatStackIndex++;
+            saturn_scale_pushed = true;
+        }
+    }
     if (node->displayList != NULL && s_hidden_bone_depth == 0) {
         apply_translate_rotate();
         apply_scale();
@@ -1054,6 +1067,7 @@ static void geo_process_animated_part(struct GraphNodeAnimatedPart *node) {
     if (node->node.children != NULL) {
         geo_process_node_and_siblings(node->node.children);
     }
+    if (saturn_scale_pushed) gMatStackIndex--;
     gMatStackIndex--;
     if (hide_this) s_hidden_bone_depth--;
 }
@@ -1202,6 +1216,19 @@ static void geo_process_mcomp_extra(struct GraphNodeAnimatedPart *node) {
             get_pos_from_transform_mtx(translated, gMatStack[gMatStackIndex], *gCurGraphNodeCamera->matrixPtr);
             gCurGraphNodeMarioState->minimumBoneY = fmin(gCurGraphNodeMarioState->minimumBoneY, translated[1] - gCurGraphNodeMarioState->marioObj->header.gfx.pos[1]);
         }
+        bool saturn_scale_pushed = false;
+        if (gCurGraphNodeObject == &gMarioObject->header.gfx && SaturnShouldApplyBoneScale()) {
+            Vec3f boneScale, boneScalePrev;
+            ApplyBoneScale(boneScale, boneScalePrev);
+            bool non_identity = (boneScale[0] != 1.0f || boneScale[1] != 1.0f || boneScale[2] != 1.0f
+                              || boneScalePrev[0] != 1.0f || boneScalePrev[1] != 1.0f || boneScalePrev[2] != 1.0f);
+            if (non_identity && (gMatStackIndex + 1) < MATRIX_STACK_SIZE) {
+                mtxf_scale_vec3f(gMatStack[gMatStackIndex + 1],     gMatStack[gMatStackIndex],     boneScale);
+                mtxf_scale_vec3f(gMatStackPrev[gMatStackIndex + 1], gMatStackPrev[gMatStackIndex], boneScalePrev);
+                gMatStackIndex++;
+                saturn_scale_pushed = true;
+            }
+        }
         if (node->displayList != NULL && s_hidden_bone_depth == 0) {
             geo_append_display_list(node->displayList, node->node.flags >> 8);
             gMatStackIndex -= matStackOffset;
@@ -1210,6 +1237,7 @@ static void geo_process_mcomp_extra(struct GraphNodeAnimatedPart *node) {
         if (node->node.children != NULL) {
             geo_process_node_and_siblings(node->node.children);
         }
+        if (saturn_scale_pushed) gMatStackIndex--;
         gMatStackIndex--;
     }
 }
@@ -1300,6 +1328,19 @@ static void geo_process_extra_wiggle(struct GraphNodeExtraWiggle *node) {
             get_pos_from_transform_mtx(translated, gMatStack[gMatStackIndex], *gCurGraphNodeCamera->matrixPtr);
             gCurGraphNodeMarioState->minimumBoneY = fmin(gCurGraphNodeMarioState->minimumBoneY, translated[1] - gCurGraphNodeMarioState->marioObj->header.gfx.pos[1]);
         }
+        bool saturn_scale_pushed = false;
+        if (gCurGraphNodeObject == &gMarioObject->header.gfx && SaturnShouldApplyBoneScale()) {
+            Vec3f boneScale, boneScalePrev;
+            ApplyBoneScale(boneScale, boneScalePrev);
+            bool non_identity = (boneScale[0] != 1.0f || boneScale[1] != 1.0f || boneScale[2] != 1.0f
+                              || boneScalePrev[0] != 1.0f || boneScalePrev[1] != 1.0f || boneScalePrev[2] != 1.0f);
+            if (non_identity && (gMatStackIndex + 1) < MATRIX_STACK_SIZE) {
+                mtxf_scale_vec3f(gMatStack[gMatStackIndex + 1],     gMatStack[gMatStackIndex],     boneScale);
+                mtxf_scale_vec3f(gMatStackPrev[gMatStackIndex + 1], gMatStackPrev[gMatStackIndex], boneScalePrev);
+                gMatStackIndex++;
+                saturn_scale_pushed = true;
+            }
+        }
         if (node->displayList != NULL && s_hidden_bone_depth == 0) {
             geo_append_display_list(node->displayList, node->node.flags >> 8);
             gMatStackIndex -= matStackOffset;
@@ -1308,6 +1349,7 @@ static void geo_process_extra_wiggle(struct GraphNodeExtraWiggle *node) {
         if (node->node.children != NULL) {
             geo_process_node_and_siblings(node->node.children);
         }
+        if (saturn_scale_pushed) gMatStackIndex--;
         gMatStackIndex--;
     }
 }
