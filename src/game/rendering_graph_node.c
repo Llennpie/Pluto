@@ -1092,10 +1092,16 @@ int mcomp_bone_index;
 #define WIGGLE_MAX_BONES 64
 static Mat4 wiggle_smooth[WIGGLE_MAX_BONES];
 static Mat4 wiggle_smooth_prev[WIGGLE_MAX_BONES];
+static f32  wiggle_spring_off[WIGGLE_MAX_BONES][3];       // recoil spring offset (world units)
+static f32  wiggle_spring_vel[WIGGLE_MAX_BONES][3];       // recoil spring velocity
+static f32  wiggle_live_prev[WIGGLE_MAX_BONES][3];        // live parent translation, previous tick
+static f32  wiggle_live_delta_prev[WIGGLE_MAX_BONES][3];  // live parent velocity (delta), previous tick
 static bool wiggle_initialized[WIGGLE_MAX_BONES];
+static bool wiggle_skip_spring[WIGGLE_MAX_BONES];         // skip spring kick for one frame after snap
 static int  s_wiggle_idx = 0;  // reset each frame, uniquely identifies each mcomp bone
 static s16  s_wiggle_prev_face_angle = 0;
 static bool s_wiggle_face_snapped = false;
+static bool s_wiggle_prev_freeze = false; // freeze_camera state last frame
 
 // Mario flipping around (180 degrees) causes weird lerping issues so we snap the wiggle instead
 #define WIGGLE_FACE_SNAP_THRESHOLD 10922
@@ -1103,10 +1109,24 @@ static bool s_wiggle_face_snapped = false;
 static void wiggle_advance_frame(void) {
     s16 cur_angle = (gMarioObject != NULL) ? (s16)gMarioObject->header.gfx.angle[1] : 0;
     s16 delta = cur_angle - s_wiggle_prev_face_angle;
-    /* Wrap delta to [-32768, 32767] */
     s_wiggle_face_snapped = (delta > WIGGLE_FACE_SNAP_THRESHOLD || delta < -WIGGLE_FACE_SNAP_THRESHOLD);
     s_wiggle_prev_face_angle = cur_angle;
+    // Prevent the weird interpolation artifacts that happen when we freeze the camera
+    // This just happens because the matrixes struggle to keep up with the updated position
+    if (freeze_camera && !s_wiggle_prev_freeze)
+        wiggle_reset_all();
+    s_wiggle_prev_freeze = freeze_camera;
     s_wiggle_idx = 0;
+}
+
+void wiggle_reset_all(void) {
+    memset(wiggle_initialized,    0, sizeof(wiggle_initialized));
+    memset(wiggle_spring_off,     0, sizeof(wiggle_spring_off));
+    memset(wiggle_spring_vel,     0, sizeof(wiggle_spring_vel));
+    memset(wiggle_live_prev,      0, sizeof(wiggle_live_prev));
+    memset(wiggle_live_delta_prev,0, sizeof(wiggle_live_delta_prev));
+    memset(wiggle_skip_spring,    0, sizeof(wiggle_skip_spring));
+    s_wiggle_prev_freeze = false;
 }
 
 /* Element-wise lerp of two Mat4s into dst. */
@@ -1150,27 +1170,56 @@ static bool wiggle_should_snap(void) {
 
 // Wiggle physics implementation
 // All wiggle bones have per-bone parameters for smoothness and max distance, which are configured from SFast64 (or edited in the C files)
-static void wiggle_update_ex(int bone_idx, f32 smooth, f32 maxDist, f32 snapSmooth) {
+static void wiggle_update_ex(int bone_idx, f32 smooth, f32 maxDist, f32 snapSmooth, f32 springK, f32 springDamp) {
     if (bone_idx >= WIGGLE_MAX_BONES) return;
     if (!wiggle_initialized[bone_idx] || s_wiggle_face_snapped) {
         mtxf_copy(wiggle_smooth[bone_idx],      gMatStack[gMatStackIndex]);
         mtxf_copy(wiggle_smooth_prev[bone_idx], gMatStack[gMatStackIndex]);
+        for (int k = 0; k < 3; k++) {
+            wiggle_spring_off[bone_idx][k]       = 0.0f;
+            wiggle_spring_vel[bone_idx][k]       = 0.0f;
+            wiggle_live_prev[bone_idx][k]        = gMatStack[gMatStackIndex][3][k];
+            wiggle_live_delta_prev[bone_idx][k]  = 0.0f;
+        }
+        wiggle_skip_spring[bone_idx] = true;
         wiggle_initialized[bone_idx] = true;
         return;
     }
     if (wiggle_should_snap()) {
-        mtxf_lerp(wiggle_smooth[bone_idx], wiggle_smooth[bone_idx], gMatStack[gMatStackIndex], snapSmooth);
         mtxf_copy(wiggle_smooth_prev[bone_idx], wiggle_smooth[bone_idx]);
+        mtxf_lerp(wiggle_smooth[bone_idx], wiggle_smooth[bone_idx], gMatStack[gMatStackIndex], snapSmooth);
+        for (int k = 0; k < 3; k++) {
+            wiggle_spring_off[bone_idx][k]       = 0.0f;
+            wiggle_spring_vel[bone_idx][k]       = 0.0f;
+            wiggle_live_prev[bone_idx][k]        = gMatStack[gMatStackIndex][3][k];
+            wiggle_live_delta_prev[bone_idx][k]  = 0.0f;
+        }
+        wiggle_skip_spring[bone_idx] = true;
         return;
     }
-    static const f32 TRANS_SMOOTH = 0.7f;
-    mtxf_lerp(wiggle_smooth[bone_idx],      wiggle_smooth[bone_idx],      gMatStack[gMatStackIndex],      smooth);
-    mtxf_lerp(wiggle_smooth_prev[bone_idx], wiggle_smooth_prev[bone_idx], gMatStackPrev[gMatStackIndex], smooth);
-    wiggle_clamp_dist(wiggle_smooth[bone_idx],      gMatStack[gMatStackIndex],      maxDist);
-    wiggle_clamp_dist(wiggle_smooth_prev[bone_idx], gMatStackPrev[gMatStackIndex], maxDist);
+
+    mtxf_copy(wiggle_smooth_prev[bone_idx], wiggle_smooth[bone_idx]);
+    mtxf_lerp(wiggle_smooth[bone_idx], wiggle_smooth[bone_idx], gMatStack[gMatStackIndex], smooth);
+    wiggle_clamp_dist(wiggle_smooth[bone_idx], gMatStack[gMatStackIndex], maxDist);
+
+    static const f32 INERTIA = 0.5f;
+    f32 spring_max = maxDist * 0.45f;
+    bool skip = wiggle_skip_spring[bone_idx];
+    wiggle_skip_spring[bone_idx] = false;
     for (int k = 0; k < 3; k++) {
-        wiggle_smooth[bone_idx][3][k]      += TRANS_SMOOTH * (gMatStack[gMatStackIndex][3][k]      - wiggle_smooth[bone_idx][3][k]);
-        wiggle_smooth_prev[bone_idx][3][k] += TRANS_SMOOTH * (gMatStackPrev[gMatStackIndex][3][k] - wiggle_smooth_prev[bone_idx][3][k]);
+        f32 parent_delta = gMatStack[gMatStackIndex][3][k] - wiggle_live_prev[bone_idx][k];
+        if (!skip) {
+            f32 parent_accel = parent_delta - wiggle_live_delta_prev[bone_idx][k];
+            wiggle_spring_vel[bone_idx][k] -= parent_accel * INERTIA;
+        }
+        // Spring restoring force + exponential damping (always runs so offset decays to 0)
+        wiggle_spring_vel[bone_idx][k] = (1.0f - springDamp) * wiggle_spring_vel[bone_idx][k]
+                                        - 0.5f * springK * wiggle_spring_off[bone_idx][k];
+        wiggle_spring_off[bone_idx][k] += wiggle_spring_vel[bone_idx][k];
+        if (wiggle_spring_off[bone_idx][k] >  spring_max) { wiggle_spring_off[bone_idx][k] =  spring_max; wiggle_spring_vel[bone_idx][k] = 0.0f; }
+        if (wiggle_spring_off[bone_idx][k] < -spring_max) { wiggle_spring_off[bone_idx][k] = -spring_max; wiggle_spring_vel[bone_idx][k] = 0.0f; }
+        wiggle_live_delta_prev[bone_idx][k] = parent_delta;
+        wiggle_live_prev[bone_idx][k]       = gMatStack[gMatStackIndex][3][k];
     }
 }
 
@@ -1280,7 +1329,7 @@ static void geo_process_extra_wiggle(struct GraphNodeExtraWiggle *node) {
     bool wind_disabled   = gCurGraphNodeObject == &gMarioObject->header.gfx && SaturnCurrentBoneWindDisabled();
     bool use_wiggle = !wiggle_disabled && parent_is_animated && gCurGraphNodeObject == &gMarioObject->header.gfx && freeze_camera;
     if (use_wiggle) {
-        wiggle_update_ex(my_wiggle_idx, node->wiggleSmooth, node->wiggleMaxDist, node->wiggleSnapSmooth);
+        wiggle_update_ex(my_wiggle_idx, node->wiggleSmooth, node->wiggleMaxDist, node->wiggleSnapSmooth, node->springK, node->springDamp);
         s_wiggle_idx++;
     }
 
@@ -1311,35 +1360,22 @@ static void geo_process_extra_wiggle(struct GraphNodeExtraWiggle *node) {
         }
 
         mtxf_rotate_xyz_and_translate(matrix, translation, gVec3sZero);
-        if (gCurGraphNodeObject == &gMarioObject->header.gfx && SaturnShouldApplyBoneScale()) {
-            Vec3f boneScale, boneScalePrev;
-            ApplyBoneScale(boneScale, boneScalePrev);
-            bool non_identity = (boneScale[0] != 1.0f || boneScale[1] != 1.0f || boneScale[2] != 1.0f
-                              || boneScalePrev[0] != 1.0f || boneScalePrev[1] != 1.0f || boneScalePrev[2] != 1.0f);
-            if (non_identity) {
-                Mat4 matrixPrev;
-                mtxf_rotate_xyz_and_translate(matrixPrev, translationPrev, gVec3sZero);
-                mtxf_mul(gMatStack[gMatStackIndex + 1],     matrix,     use_wiggle ? wiggle_smooth[my_wiggle_idx]      : gMatStack[gMatStackIndex]);
-                mtxf_mul(gMatStackPrev[gMatStackIndex + 1], matrixPrev, use_wiggle ? wiggle_smooth_prev[my_wiggle_idx] : gMatStackPrev[gMatStackIndex]);
-                for (int _sc = 0; _sc < 3; _sc++) {
-                    gMatStack[gMatStackIndex + 1][_sc][0] *= boneScale[_sc];
-                    gMatStack[gMatStackIndex + 1][_sc][1] *= boneScale[_sc];
-                    gMatStack[gMatStackIndex + 1][_sc][2] *= boneScale[_sc];
-                    gMatStackPrev[gMatStackIndex + 1][_sc][0] *= boneScalePrev[_sc];
-                    gMatStackPrev[gMatStackIndex + 1][_sc][1] *= boneScalePrev[_sc];
-                    gMatStackPrev[gMatStackIndex + 1][_sc][2] *= boneScalePrev[_sc];
-                }
-            } else {
-                Mat4 matrixPrev;
-                mtxf_rotate_xyz_and_translate(matrixPrev, translationPrev, gVec3sZero);
-                mtxf_mul(gMatStack[gMatStackIndex + 1],     matrix,     use_wiggle ? wiggle_smooth[my_wiggle_idx]      : gMatStack[gMatStackIndex]);
-                mtxf_mul(gMatStackPrev[gMatStackIndex + 1], matrixPrev, use_wiggle ? wiggle_smooth_prev[my_wiggle_idx] : gMatStackPrev[gMatStackIndex]);
+        if (use_wiggle) {
+            // Spring
+            Mat4 wp_cur, wp_prev;
+            mtxf_copy(wp_cur,  wiggle_smooth[my_wiggle_idx]);
+            mtxf_copy(wp_prev, wiggle_smooth_prev[my_wiggle_idx]);
+            for (int _k = 0; _k < 3; _k++) {
+                wp_cur[3][_k]  += wiggle_spring_off[my_wiggle_idx][_k];
+                wp_prev[3][_k] += wiggle_spring_off[my_wiggle_idx][_k];
             }
+            mtxf_mul(gMatStack[gMatStackIndex + 1], matrix, wp_cur);
+            mtxf_rotate_xyz_and_translate(matrix, translationPrev, gVec3sZero);
+            mtxf_mul(gMatStackPrev[gMatStackIndex + 1], matrix, wp_prev);
         } else {
-            Mat4 matrixPrev;
-            mtxf_rotate_xyz_and_translate(matrixPrev, translationPrev, gVec3sZero);
-            mtxf_mul(gMatStack[gMatStackIndex + 1],     matrix,     use_wiggle ? wiggle_smooth[my_wiggle_idx]      : gMatStack[gMatStackIndex]);
-            mtxf_mul(gMatStackPrev[gMatStackIndex + 1], matrixPrev, use_wiggle ? wiggle_smooth_prev[my_wiggle_idx] : gMatStackPrev[gMatStackIndex]);
+            mtxf_mul(gMatStack[gMatStackIndex + 1], matrix, gMatStack[gMatStackIndex]);
+            mtxf_rotate_xyz_and_translate(matrix, translationPrev, gVec3sZero);
+            mtxf_mul(gMatStackPrev[gMatStackIndex + 1], matrix, gMatStackPrev[gMatStackIndex]);
         }
 
         // Wind sway physics!
