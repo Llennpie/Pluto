@@ -61,6 +61,15 @@ void BoneEditorWindow() {
         ImGui::DragFloat3("Rotation###pose_rotation", current_pluto_anim.Bones[0].Rotation, 1.0f, 0.0f, 0.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
         ImGui::DragFloat3("Offset###pose_offset", g_root_offset, 1.0f, 0.0f, 0.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
         ImGui::PopItemWidth();
+        ImGui::Separator();
+        int total_bones = (int)current_pluto_anim.Bones.size();
+        int extra_bones = 0, wiggle_bones = 0;
+        for (const auto& b : current_pluto_anim.Bones) {
+            if (b.IsWiggle) wiggle_bones++;
+            else if (b.IsCustom) extra_bones++;
+        }
+        ImGui::Text("Model bones: %d  (extra: %d, wiggle: %d)", total_bones, extra_bones, wiggle_bones);
+        ImGui::Text("Anim bone count: %d", current_pluto_anim.BoneCount);
         ImGui::End();
     }
     else if (bone_editor_was_open && !enable_custom_anim) {
@@ -83,7 +92,7 @@ void BoneEditorWindow() {
     }
 
     bool player_hovered = !player_windows.empty() && player_windows[0].active && player_windows[0].hovered;
-    if (show_window_animations && (override_anim || freeze_camera) && active_saturn_model_index != -1 && player_hovered && !current_pluto_anim.Bones.empty()) {
+    if (show_window_animations && freeze_camera && active_saturn_model_index != -1 && !current_pluto_anim.Bones.empty()) {
         djui_hud_set_resolution(RESOLUTION_N64);
         float scale_y = gfx_current_dimensions.height / 360.f;
         float factor  = 1.5f * scale_y;
@@ -233,18 +242,15 @@ void BoneEditorWindow() {
                 if (active_saturn_model_index != -1)
                     SaveBoneFlagsToPackDir(DynOS_Pack_GetFromIndex(active_saturn_model_index)->mPath);
             }
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Hide the mesh attached to this bone\nand all its children.");
             if (pb.IsWiggle) {
                 if (ImGui::Checkbox("Disable Wiggle", &pb.WiggleDisabled)) {
                     if (active_saturn_model_index != -1)
                         SaveBoneFlagsToPackDir(DynOS_Pack_GetFromIndex(active_saturn_model_index)->mPath);
                 }
-                if (ImGui::IsItemHovered()) ImGui::SetTooltip("Disable spring physics for this wiggle bone.");
                 if (ImGui::Checkbox("Disable Wind", &pb.WindDisabled)) {
                     if (active_saturn_model_index != -1)
                         SaveBoneFlagsToPackDir(DynOS_Pack_GetFromIndex(active_saturn_model_index)->mPath);
                 }
-                if (ImGui::IsItemHovered()) ImGui::SetTooltip("Exempt this bone from wind physics.\nIf root of chain: no wind applied.\nIf mid-chain: doesn't increment chain\ndepth for child bones.");
             }
 
             ImGui::PopItemWidth();
@@ -389,6 +395,9 @@ void OpenAnimationsMenu() {
 
     // Pose Editor
     ImGui::BeginDisabled(!pause_anim && override_anim || !override_anim);
+    // stupid ass crash i have to deal with just for a cute colour
+    bool was_editing_panim = is_editing_panim;
+    if (was_editing_panim) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0x38/255.f, 0xA7/255.f, 0x7A/255.f, 1.0f));
     if (ImGui::Button("Edit Pose")) {
         if (!enable_custom_anim && !is_editing_panim) {
             SaveAndScheduleRestoreBoneFlags();
@@ -404,5 +413,6 @@ void OpenAnimationsMenu() {
         
         if (!is_editing_panim && !enable_custom_anim) override_anim = false;
     }
+    if (was_editing_panim) ImGui::PopStyleColor();
     ImGui::EndDisabled();
 }
