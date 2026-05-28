@@ -369,6 +369,7 @@ void add_to_model_queue(int index, bool enabled, bool first_use) {
 }
 
 void* dynos_thread_func(void* arg) {
+    (void)arg;
     while (1) {
         if (queued_index != -1) {
             double start_time = clock_elapsed_f64();
