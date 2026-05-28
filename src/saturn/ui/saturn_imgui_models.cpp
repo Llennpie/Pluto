@@ -151,11 +151,9 @@ void OpenComboSelector(Expression* expression, int index) {
                 if (is_selected) expression->CurrentIndex = select_index;
                 else expression->CurrentIndex = deselect_index;
             }
-
-            ImGui::SameLine(); TimelineButton(std::string(label_name) + "Key", &expression->CurrentIndex, true);
-
-            // Expression preview
             OpenExpressionPreview(&expression->Textures[expression->CurrentIndex]);
+
+            ImGui::SameLine(); TimelineButton(expression->Name, &expression->CurrentIndex, true);
     } else {
         // Use dropdown
         std::string defaultLabel = expression->Textures[expression->CurrentIndex].ShortFileName();
