@@ -305,8 +305,8 @@ void imgui_update() {
                 }
                 ImGui::Separator();
                 if (ImGui::MenuItem("Color Code Editor", NULL, show_window_cc_editor)) show_window_cc_editor = !show_window_cc_editor;
-                if (ImGui::MenuItem("Animation", NULL, show_window_animations, freeze_camera)) show_window_animations = !show_window_animations;
-                if (ImGui::MenuItem("Textbox", NULL, show_window_dialog)) show_window_dialog = !show_window_dialog;
+                if (ImGui::MenuItem("Animation Mixtape", NULL, show_window_animations, freeze_camera)) show_window_animations = !show_window_animations;
+                //if (ImGui::MenuItem("Textbox", NULL, show_window_dialog)) show_window_dialog = !show_window_dialog;
                 if (ImGui::MenuItem("Timeline", NULL, show_window_timeline)) show_window_timeline = !show_window_timeline;
                 ImGui::EndMenu();
             }
@@ -319,7 +319,29 @@ void imgui_update() {
                 ImGui::Checkbox("Freeze Camera", &freeze_camera);
                 ImGui::BeginDisabled(!freeze_camera);
 
-                if (ImGui::BeginMenu("Position###menu_camera_position")) {
+                // Camera Keyframing
+                ImGui::SameLine(166);
+                TimelineButton("Camera###timeline_camera", (Timeline) {
+                    (void*)camera_kf_state, sizeof(camera_kf_state), false, false,
+                    [](void* out, void* a, void* b, float x) {
+                        float* o = (float*)out; float* fa = (float*)a; float* fb = (float*)b;
+                        for (int i = 0; i < 6; i++) o[i] = fa[i] + (fb[i] - fa[i]) * x;
+                    },
+                    [](void* a, void* b) { return memcmp(a, b, 6 * sizeof(float)) == 0; },
+                    [](void* value) {
+                        float* v = (float*)value;
+                        ImGui::BeginTooltip();
+                        ImGui::Text("Pos (%.1f, %.1f, %.1f)", v[0], v[1], v[2]);
+                        ImGui::EndTooltip();
+                    }
+                });
+
+                if (ImGui::BeginMenu("Settings###camera_settings")) {
+                    ImGui::SliderFloat("###freeze_camera_speed", &freeze_camera_speed, 0.f, 6.f, "Move Speed %.1f");
+                    if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+                        freeze_camera_speed = 1.f;
+
+                    ImGui::SeparatorText("Position");
                     if (ImGui::InputFloat3("Position###camera_pos", camera_kf_state) && gCamera) {
                         // Maintain focus offset
                         float dx = gCamera->focus[0] - gCamera->pos[0];
@@ -335,20 +357,10 @@ void imgui_update() {
                         camera_kf_state[4] = gCamera->focus[1];
                         camera_kf_state[5] = gCamera->focus[2];
                     }
-                    TimelineButton("Camera###timeline_camera", (Timeline){
-                        (void*)camera_kf_state, sizeof(camera_kf_state), false, false,
-                        [](void* out, void* a, void* b, float x) {
-                            float* o = (float*)out; float* fa = (float*)a; float* fb = (float*)b;
-                            for (int i = 0; i < 6; i++) o[i] = fa[i] + (fb[i] - fa[i]) * x;
-                        },
-                        [](void* a, void* b) { return memcmp(a, b, 6 * sizeof(float)) == 0; },
-                        [](void* value) {
-                            float* v = (float*)value;
-                            ImGui::BeginTooltip();
-                            ImGui::Text("Pos (%.1f, %.1f, %.1f)", v[0], v[1], v[2]);
-                            ImGui::EndTooltip();
-                        }
-                    });
+                    ImGui::SliderFloat("###camera_tilt", &saturn_camera_tilt, -45.f, 45.f, "Tilt %.1f");
+                    if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+                        saturn_camera_tilt = 0.f;
+                    ImGui::SameLine(); TimelineButton("Tilt", &saturn_camera_tilt);
 
                     if (ImGui::MenuItem("Save Current")) {
                         static int counter = 1;
@@ -358,7 +370,6 @@ void imgui_update() {
                         });
                         counter++;
                     }
-                    if (ImGui::MenuItem("Remove All")) saved_camera_positions.clear();
                     if (!saved_camera_positions.empty()) ImGui::Separator();
                     saved_camera_positions.erase(std::remove_if(
                         saved_camera_positions.begin(), saved_camera_positions.end(),
@@ -398,12 +409,12 @@ void imgui_update() {
                             return false;
                         }
                     ), saved_camera_positions.end());
+                    if (!saved_camera_positions.empty()) {
+                        if (ImGui::MenuItem("Remove All")) saved_camera_positions.clear();
+                    } 
+
                     ImGui::EndMenu();
                 }
-
-                ImGui::SliderFloat("###freeze_camera_speed", &freeze_camera_speed, 0.f, 6.f, "Speed %.1f");
-                if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
-                    freeze_camera_speed = 1.f;
                 ImGui::EndDisabled();
                 
                 ImGui::Separator();
@@ -413,11 +424,12 @@ void imgui_update() {
                     camera_follow_speed = 1.f;
                 ImGui::Separator();
 
-                if (ImGui::MenuItem("Rule of Thirds", NULL, show_rule_of_thirds)) show_rule_of_thirds = !show_rule_of_thirds;
-                ImGui::SliderInt("###camera_fov", (int*)&configPlutoCameraFov, 0, 100, "FOV %d");
+                ImGui::SliderFloat("###camera_fov", &saturn_camera_fov, 0.f, 100.f, "FOV %.1f");
                 if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
-                    configPlutoCameraFov = 45;
-                ImGui::SameLine(); TimelineButton("FOV", (int*)&configPlutoCameraFov);
+                    saturn_camera_fov = 45.f;
+                ImGui::SameLine(); TimelineButton("FOV", &saturn_camera_fov);
+
+                ImGui::Checkbox("Rule of Thirds", &show_rule_of_thirds);
 
                 ImGui::PopItemWidth();
                 ImGui::EndMenu();
@@ -664,7 +676,7 @@ void imgui_hud() {
         vec3f_copy(pos, gMarioStates[i].marioObj->header.gfx.pos);
         if (djui_hud_world_pos_to_screen_pos(pos, out)) {
             float dist = vec3f_dist(gLakituState.pos, gMarioStates[i].pos);
-            float size = marioScaleX * (45.f / configPlutoCameraFov) * 7.5f * 7000.f / dist;
+            float size = marioScaleX * (45.f / saturn_camera_fov) * 7.5f * 7000.f / dist;
 
             player_windows[i].active = dist < 2500.f;
             if (!player_windows[i].active) continue;

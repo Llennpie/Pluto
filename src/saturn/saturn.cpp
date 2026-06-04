@@ -23,6 +23,8 @@ extern "C" {
 
 bool freeze_camera;
 float freeze_camera_speed = 1.f;
+float saturn_camera_fov = 45.f;
+float saturn_camera_tilt = 0.f;
 float camera_follow_speed = 1.f;
 float wiggle_intensity = 1.0f;
 bool wind_enabled = false;

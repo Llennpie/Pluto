@@ -138,7 +138,6 @@ extern bool         configGlobalPlayerModels;
 extern char         configLastVersion[];
 extern bool         configAutoReloadModels;
 extern bool         configPlutoShadows;
-extern unsigned int configPlutoCameraFov;
 
 void enable_queued_mods();
 void configfile_load(void);

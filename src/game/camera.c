@@ -3782,7 +3782,7 @@ void update_graph_node_camera(struct GraphNodeCamera *gc) {
     UNUSED u8 unused[8];
     UNUSED struct Camera *c = gc->config.camera;
 
-    gc->rollScreen = gLakituState.roll;
+    gc->rollScreen = gLakituState.roll + (s16)(saturn_camera_tilt * 182.04f);
     vec3f_copy(gc->pos, gLakituState.pos);
     vec3f_copy(gc->focus, gLakituState.focus);
     zoom_out_if_paused_and_outside(gc);
@@ -11935,11 +11935,11 @@ void fov_default(struct MarioState *m) {
         camera_approach_f32_symmetric_bool(&gFOVState.fov, 30.f, (30.f - gFOVState.fov) / 30.f);
         sStatusFlags |= CAM_FLAG_SLEEPING;
     } else {
-        camera_approach_f32_symmetric_bool(&gFOVState.fov, configPlutoCameraFov, 10.0f);
+        camera_approach_f32_symmetric_bool(&gFOVState.fov, saturn_camera_fov, 10.0f);
         gFOVState.unusedIsSleeping = 0;
     }
     if (m->area && m->area->camera && m->area->camera->cutscene == CUTSCENE_0F_UNUSED) {
-        gFOVState.fov = configPlutoCameraFov;
+        gFOVState.fov = saturn_camera_fov;
     }
 }
 
