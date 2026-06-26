@@ -98,6 +98,8 @@ ALIGNED8 const u8 rule_of_thirds[] = {
 };
 GLuint rot_texture;
 
+bool wireframe_mode = false;
+
 struct CameraSaveState {
     int id;
     std::string name;
@@ -308,6 +310,8 @@ void imgui_update() {
                 if (ImGui::MenuItem("Animation Mixtape", NULL, show_window_animations, freeze_camera)) show_window_animations = !show_window_animations;
                 //if (ImGui::MenuItem("Textbox", NULL, show_window_dialog)) show_window_dialog = !show_window_dialog;
                 if (ImGui::MenuItem("Timeline", NULL, show_window_timeline)) show_window_timeline = !show_window_timeline;
+                ImGui::Separator();
+                ImGui::Checkbox("Show Wireframes", &wireframe_mode);
                 ImGui::EndMenu();
             }
 

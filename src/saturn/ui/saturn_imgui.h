@@ -30,6 +30,7 @@ extern "C" {
     extern bool screenshot_custom_res;
 
     extern char status_text[256];
+    extern bool wireframe_mode;
 
     void imgui_init();
     void imgui_init_backend(SDL_Window*, SDL_GLContext);
