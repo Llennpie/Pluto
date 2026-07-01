@@ -53,10 +53,11 @@ struct ShaderProgram {
     bool used_textures[2];
     uint8_t num_floats;
     GLint attrib_locations[7];
-    GLint uniform_locations[5];
+    GLint uniform_locations[10];
     uint8_t attrib_sizes[7];
     uint8_t num_attribs;
     bool used_noise;
+    bool used_near_clip;
 };
 
 struct GLTexture {
@@ -78,6 +79,15 @@ static struct ShaderProgram *opengl_prg = NULL;
 static struct GLTexture *opengl_tex[2];
 static int opengl_curtex = 0;
 
+static GLuint depth_snapshot_tex = 0;
+static GLuint depth_snapshot_fbo = 0;
+static uint32_t depth_snapshot_w = 0;
+static uint32_t depth_snapshot_h = 0;
+
+GLuint framebuffer_id = 0;
+GLuint depthbuffer_id = 0;
+GLuint rendertexture_id = 0;
+
 static uint32_t frame_count;
 
 static bool gfx_opengl_z_is_from_0_to_1(void) {
@@ -98,6 +108,14 @@ static void gfx_opengl_vertex_array_set_attribs(struct ShaderProgram *prg) {
 static inline void gfx_opengl_set_shader_uniforms(struct ShaderProgram *prg) {
     if (prg->used_noise)
         glUniform1f(prg->uniform_locations[4], (float)frame_count);
+    if (prg->used_near_clip && depth_snapshot_tex) {
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, depth_snapshot_tex);
+        glActiveTexture(GL_TEXTURE0);
+        glUniform2f(prg->uniform_locations[5], (float)gfx_current_dimensions.width, (float)gfx_current_dimensions.height);
+        glUniform1f(prg->uniform_locations[6], gFrustumNear);
+        glUniform1f(prg->uniform_locations[7], gFrustumFar);
+    }
 }
 
 static inline void gfx_opengl_set_texture_uniforms(struct ShaderProgram *prg, const int tile) {
@@ -254,6 +272,7 @@ static struct ShaderProgram *gfx_opengl_create_and_load_new_shader(struct ColorC
     bool opt_texture_edge = cc->cm.texture_edge;
     bool opt_2cycle = cc->cm.use_2cycle;
     bool opt_light_map = cc->cm.light_map;
+    bool opt_near_clip = cc->cm.near_clip;
 
 #ifdef USE_GLES
     bool opt_dither = false;
@@ -262,7 +281,7 @@ static struct ShaderProgram *gfx_opengl_create_and_load_new_shader(struct ColorC
 #endif
 
     char vs_buf[1024];
-    char fs_buf[2048];
+    char fs_buf[4096];
     size_t vs_len = 0;
     size_t fs_len = 0;
     size_t num_floats = 4;
@@ -378,6 +397,13 @@ static struct ShaderProgram *gfx_opengl_create_and_load_new_shader(struct ColorC
         append_line(fs_buf, &fs_len, "}");
     }
 
+    if (opt_near_clip) {
+        append_line(fs_buf, &fs_len, "uniform sampler2D uDepthSnapshot;");
+        append_line(fs_buf, &fs_len, "uniform vec2 uScreenSize;");
+        append_line(fs_buf, &fs_len, "uniform float uNearClip;");
+        append_line(fs_buf, &fs_len, "uniform float uFarClip;");
+    }
+
     append_line(fs_buf, &fs_len, "void main() {");
 
     if ((opt_alpha && opt_dither) || ccf.do_noise) {
@@ -437,6 +463,15 @@ static struct ShaderProgram *gfx_opengl_create_and_load_new_shader(struct ColorC
         append_line(fs_buf, &fs_len, "gl_FragColor = texel;");
     } else {
         append_line(fs_buf, &fs_len, "gl_FragColor = vec4(texel, 1.0);");
+    }
+    if (opt_near_clip) {
+        append_line(fs_buf, &fs_len, "vec2 _sc_uv = gl_FragCoord.xy / uScreenSize;");
+        append_line(fs_buf, &fs_len, "float _buf_d = texture2D(uDepthSnapshot, _sc_uv).r;");
+        append_line(fs_buf, &fs_len, "float _range = uFarClip - uNearClip;");
+        append_line(fs_buf, &fs_len, "float _lin_frag = (2.0*uNearClip*uFarClip) / (uFarClip + uNearClip - (2.0*gl_FragCoord.z - 1.0) * _range);");
+        append_line(fs_buf, &fs_len, "float _lin_buf  = (2.0*uNearClip*uFarClip) / (uFarClip + uNearClip - (2.0*_buf_d - 1.0) * _range);");
+        // 5 world units
+        append_line(fs_buf, &fs_len, "if (_lin_frag > _lin_buf + 5.0) discard;");
     }
     append_line(fs_buf, &fs_len, "}");
 
@@ -552,6 +587,17 @@ static struct ShaderProgram *gfx_opengl_create_and_load_new_shader(struct ColorC
         prg->used_noise = false;
     }
 
+    if (opt_near_clip) {
+        GLint dep_loc = glGetUniformLocation(shader_program, "uDepthSnapshot");
+        glUniform1i(dep_loc, 2); // texture unit 2
+        prg->uniform_locations[5] = glGetUniformLocation(shader_program, "uScreenSize");
+        prg->uniform_locations[6] = glGetUniformLocation(shader_program, "uNearClip");
+        prg->uniform_locations[7] = glGetUniformLocation(shader_program, "uFarClip");
+        prg->used_near_clip = true;
+    } else {
+        prg->used_near_clip = false;
+    }
+
     return prg;
 }
 
@@ -640,6 +686,51 @@ static void gfx_opengl_set_zmode_decal(bool zmode_decal) {
     }
 }
 
+static void gfx_opengl_ensure_depth_snapshot(void) {
+    uint32_t w = gfx_current_dimensions.width;
+    uint32_t h = gfx_current_dimensions.height;
+    if (depth_snapshot_tex && depth_snapshot_w == w && depth_snapshot_h == h) return;
+
+    if (!depth_snapshot_fbo) glGenFramebuffers(1, &depth_snapshot_fbo);
+    if (depth_snapshot_tex)  glDeleteTextures(1, &depth_snapshot_tex);
+
+    glGenTextures(1, &depth_snapshot_tex);
+    glBindTexture(GL_TEXTURE_2D, depth_snapshot_tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, w, h, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, depth_snapshot_fbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_snapshot_tex, 0);
+    // Depth-only FBO needs no color attachment; suppress draw/read buffer errors
+    GLenum none = GL_NONE;
+    glDrawBuffer(none);
+    glReadBuffer(none);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    depth_snapshot_w = w;
+    depth_snapshot_h = h;
+}
+
+static void gfx_opengl_snapshot_depth(void) {
+    gfx_opengl_ensure_depth_snapshot();
+    uint32_t w = depth_snapshot_w;
+    uint32_t h = depth_snapshot_h;
+    GLint prev_read, prev_draw;
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &prev_read);
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &prev_draw);
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer_id); // 0 = default FB, or capture FBO
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, depth_snapshot_fbo);
+    glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, prev_read);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, prev_draw);
+}
+
 static void gfx_opengl_set_viewport(int x, int y, int width, int height) {
     glViewport(x, y, width, height);
 }
@@ -715,10 +806,6 @@ static void gfx_opengl_init(void) {
 
 static void gfx_opengl_on_resize(void) {
 }
-
-GLuint framebuffer_id = 0;
-GLuint depthbuffer_id = 0;
-GLuint rendertexture_id = 0;
 
 static void create_framebuffer(bool multisample) {
     glGenFramebuffers(1, &framebuffer_id);
@@ -814,6 +901,7 @@ struct GfxRenderingAPI gfx_opengl_api = {
     gfx_opengl_set_scissor,
     gfx_opengl_set_use_alpha,
     gfx_opengl_draw_triangles,
+    gfx_opengl_snapshot_depth,
     gfx_opengl_init,
     gfx_opengl_on_resize,
     gfx_opengl_start_frame,

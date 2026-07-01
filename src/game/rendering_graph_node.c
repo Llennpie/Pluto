@@ -1,5 +1,6 @@
 #include <PR/ultratypes.h>
 #include <PR/gbi.h>
+#include <PR/gbi_extension.h>
 
 #include "area.h"
 #include "engine/math_util.h"
@@ -395,8 +396,15 @@ static void geo_process_master_list_sub(struct GraphNodeMasterList *node) {
         gSPSetGeometryMode(gDisplayListHead++, G_ZBUFFER);
     }
 
+    bool depth_snapshot_injected = false;
     for (s32 i = 0; i < GFX_NUM_MASTER_LISTS; i++) {
         if ((currList = node->listHeads[i]) != NULL) {
+            if (i >= 4 && !depth_snapshot_injected) {
+                gDisplayListHead->words.w0 = _SHIFTL(G_DEPTH_SNAPSHOT_EXT, 24, 8);
+                gDisplayListHead->words.w1 = 0;
+                gDisplayListHead++;
+                depth_snapshot_injected = true;
+            }
             gDPSetRenderMode(gDisplayListHead++, modeList->modes[i], mode2List->modes[i]);
             while (currList != NULL) {
                 detect_and_skip_mtx_interpolation(&currList->transform, &currList->transformPrev);

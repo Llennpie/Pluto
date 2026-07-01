@@ -449,6 +449,10 @@ static void gfx_direct3d12_set_use_alpha(bool use_alpha) {
     // Already part of the pipeline state from shader info
 }
 
+static void gfx_direct3d12_snapshot_depth(void) {
+    // Not implemented on D3D12
+}
+
 static void gfx_direct3d12_draw_triangles(float buf_vbo[], size_t buf_vbo_len, size_t buf_vbo_num_tris) {
     struct ShaderProgramD3D12 *prg = d3d.shader_program;
     if (d3d.must_reload_pipeline) {
@@ -961,6 +965,7 @@ struct GfxRenderingAPI gfx_direct3d12_api = {
     gfx_direct3d12_set_scissor,
     gfx_direct3d12_set_use_alpha,
     gfx_direct3d12_draw_triangles,
+    gfx_direct3d12_snapshot_depth,
     gfx_direct3d12_init,
     gfx_direct3d12_on_resize,
     gfx_direct3d12_start_frame,
