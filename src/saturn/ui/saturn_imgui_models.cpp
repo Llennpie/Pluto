@@ -472,7 +472,8 @@ void OpenModelSettings() {
             if (ImGui::BeginMenu("Model")) {
                 if (ImGui::MenuItem("Refresh")) {
                     current_expressions.clear();
-                    add_to_model_queue(active_saturn_model_index, pack->mEnabled, false);
+                    //add_to_model_queue(active_saturn_model_index, pack->mEnabled, false);
+                    forceReload = true;
                 }
                 ImGui::BeginDisabled(accessory_packs.size() <= 0);
                 // To be added
