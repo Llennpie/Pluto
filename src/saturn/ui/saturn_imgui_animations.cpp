@@ -388,12 +388,14 @@ void OpenAnimationsMenu() {
                 if (ImGui::Checkbox("Paused", &pause_anim))
                     if (!pause_anim) hang_anim = false;
 
-                ImGui::SameLine(); ImGui::Checkbox("Hang", &hang_anim);
-                ImGui::BeginDisabled(hang_anim);
-                    ImGui::SameLine(); ImGui::Checkbox("Loop", &loop_anim);
+            ImGui::SameLine(); ImGui::Checkbox("Hang", &hang_anim);
+            ImGui::BeginDisabled(hang_anim);
+                ImGui::SameLine(); ImGui::Checkbox("Loop", &loop_anim);
             ImGui::EndDisabled();
+            ImGui::SetNextItemWidth(150);
+            if (ImGui::SliderFloat("###animation_speed", &anim_speed, 0.0f, 4.0f, "speed %.2fx"))
+                anim_speed = ImClamp(anim_speed, 0.0f, 4.0f);
             
-            ImGui::EndDisabled();
         ImGui::EndDisabled();
     ImGui::EndDisabled();
 

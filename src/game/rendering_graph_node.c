@@ -861,7 +861,6 @@ static int s_hidden_bone_depth = 0;
  * parent node. It processes its children if it has them.
  */
 static void geo_process_display_list(struct GraphNodeDisplayList *node) {
-    // fuck this
     if (s_hidden_bone_depth > 0) {
         // Hiding bone display lists, but still processing children
         if (node->node.children != NULL)
@@ -1024,14 +1023,69 @@ static void geo_process_animated_part(struct GraphNodeAnimatedPart *node) {
     vec3s_copy(rotationPrev, rotation);
     vec3f_copy(translationPrev, translation);
 
-    anim_process(translationPrev, rotationPrev, &animType, gPrevAnimFrame, &animAttribute);
-    anim_process(translation, rotation, &gCurAnimType, gCurrAnimFrame, &gCurrAnimAttribute);
+    if (gCurGraphNodeObject == &gMarioObject->header.gfx && g_saturn_anim_blend_t >= 0.0f
+    && g_saturn_floor_frame != g_saturn_ceil_frame) {
+
+        u8 origAnimType = gCurAnimType;
+        u16 *attrStart = gCurrAnimAttribute;
+
+        Vec3s rotFloor, rotCeil;
+        Vec3f transFloor/*gender*/, transCeil;
+        u8 typeFloor = origAnimType, typeCeil = origAnimType;
+        u16 *attrFloor = attrStart, *attrCeil = attrStart;
+
+        vec3s_copy(rotFloor, gVec3sZero); vec3f_set(transFloor, node->translation[0], node->translation[1], node->translation[2]);
+        vec3s_copy(rotCeil, gVec3sZero); vec3f_set(transCeil, node->translation[0], node->translation[1], node->translation[2]);
+        anim_process(transFloor, rotFloor, &typeFloor, g_saturn_floor_frame, &attrFloor);
+        anim_process(transCeil, rotCeil, &typeCeil, g_saturn_ceil_frame, &attrCeil);
+
+        gCurrAnimAttribute = attrCeil;
+        gCurAnimType = typeCeil;
+
+        f32 t = g_saturn_anim_blend_t;
+        s32 dr0 = (s32)rotCeil[0]-(s32)rotFloor[0]; if (dr0> 32767) dr0-=65536; else if (dr0<-32768) dr0+=65536; 
+        s32 dr1 = (s32)rotCeil[1]-(s32)rotFloor[1]; if (dr1> 32767) dr1-=65536; else if (dr1<-32768) dr1+=65536;
+        s32 dr2 = (s32)rotCeil[2]-(s32)rotFloor[2]; if (dr2> 32767) dr2-=65536; else if (dr2<-32768) dr2+=65536;
+        rotation[0] = (s16)((s32)rotFloor[0] + (s32)(dr0 * t));
+        rotation[1] = (s16)((s32)rotFloor[1] + (s32)(dr1 * t));
+        rotation[2] = (s16)((s32)rotFloor[2] + (s32)(dr2 * t));
+        translation[0] = transFloor[0] + (transCeil[0] - transFloor[0]) * t;
+        translation[1] = transFloor[1] + (transCeil[1] - transFloor[1]) * t;
+        translation[2] = transFloor[2] + (transCeil[2] - transFloor[2]) * t;
+
+        if (g_saturn_prev_blend_t >= 0.0f && g_saturn_prev_floor_frame != g_saturn_prev_ceil_frame) {
+            Vec3s rotPF, rotPC;
+            Vec3f transPF, transPC; 
+            u8 tpf = origAnimType, tpc = origAnimType; 
+            u16 *apf = attrStart,  *apc = attrStart;
+            vec3s_copy(rotPF, gVec3sZero); vec3f_set(transPF, node->translation[0], node->translation[1], node->translation[2]);
+            vec3s_copy(rotPC, gVec3sZero); vec3f_set(transPC, node->translation[0], node->translation[1], node->translation[2]);
+            anim_process(transPF, rotPF, &tpf, g_saturn_prev_floor_frame, &apf);
+            anim_process(transPC, rotPC, &tpc, g_saturn_prev_ceil_frame, &apc);
+            f32 pt = g_saturn_prev_blend_t;
+            s32 pd0=(s32)rotPC[0]-(s32)rotPF[0]; if (pd0> 32767) pd0-=65536; else if (pd0<-32768) pd0+=65536;
+            s32 pd1=(s32)rotPC[1]-(s32)rotPF[1]; if (pd1> 32767) pd1-=65536; else if (pd1<-32768) pd1+=65536;
+            s32 pd2=(s32)rotPC[2]-(s32)rotPF[2]; if (pd2> 32767) pd2-=65536; else if (pd2<-32768) pd2+=65536;
+            rotationPrev[0] = (s16)((s32)rotPF[0] + (s32)(pd0 * pt));
+            rotationPrev[1] = (s16)((s32)rotPF[1] + (s32)(pd1 * pt));
+            rotationPrev[2] = (s16)((s32)rotPF[2] + (s32)(pd2 * pt));
+            translationPrev[0] = transPF[0] + (transPC[0] - transPF[0]) * pt;
+            translationPrev[1] = transPF[1] + (transPC[1] - transPF[1]) * pt;
+            translationPrev[2] = transPF[2] + (transPC[2] - transPF[2]) * pt; 
+        } else {
+            vec3s_copy(rotationPrev, rotation);
+            vec3f_copy(translationPrev, translation); 
+        }
+    } else {
+        anim_process(translationPrev, rotationPrev, &animType, gPrevAnimFrame, &animAttribute);
+        anim_process(translation, rotation, &gCurAnimType, gCurrAnimFrame, &gCurrAnimAttribute);
+    }
 
     if (gCurGraphNodeObject == &gMarioObject->header.gfx) {
         Vec3s boneOffset, boneOffsetPrev;
         ApplyBoneTranslation(boneOffset, boneOffsetPrev);
         translation[0] += boneOffset[0];
-        translation[1] += boneOffset[1];
+        translation[1] += boneOffset[1]; 
         translation[2] += boneOffset[2];
         translationPrev[0] += boneOffsetPrev[0];
         translationPrev[1] += boneOffsetPrev[1];
