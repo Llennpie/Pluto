@@ -94,22 +94,22 @@ void OpenAutoChromaMenu() {
     ImGui::EndChild();
 }
 
-ImGuiCol frame_color;
-
-void JoystickSlider(float& _x, float& _y, float scale = 100.f, float b_scale = 15.f, int bg_color = IM_COL32(0, 0, 0, 155), int button_color = IM_COL32(215, 215, 215, 255), const int& mouse_button = 0u) {
+/* Silly little "joystick" or circle slider used for custom lighting and wind */
+void JoystickSlider(float& _x, float& _y, float scale = 100.f, float b_scale = 15.f, const int& mouse_button = 0u) {
     const auto& p = ImGui::GetCursorScreenPos();
-    static bool button_clicked = false;
+    ImGuiID id = ImGui::GetCurrentWindow()->GetID("##joyclick");
+    bool& button_clicked = *ImGui::GetStateStorage()->GetBoolRef(id, false);
     const auto& mouse = ImGui::GetIO().MousePos;
-    ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(p.x + scale, p.y + scale), scale, ImGui::GetColorU32(frame_color), 50);
 
     ImVec2 circle_center = ImVec2(p.x + scale, p.y + scale);
     float distance = sqrt(pow(mouse.x - circle_center.x, 2) + pow(mouse.y - circle_center.y, 2));
+    ImGuiCol frame_color = (distance <= scale) ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg;
+    ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(p.x + scale, p.y + scale), scale, ImGui::GetColorU32(frame_color), 50);
+
+    // Move the button to the clicked position within the circle
     if (distance <= scale) {
-        frame_color = ImGuiCol_FrameBgHovered;
         if (ImGui::GetIO().MouseClicked[mouse_button]) {
             button_clicked = true;
-
-            // Move the button to the clicked position within the circle
             if (distance <= scale - b_scale) {
                 _x = (mouse.x - p.x - scale) / (scale - b_scale);
                 _y = (mouse.y - p.y - scale) / (scale - b_scale);
@@ -119,13 +119,11 @@ void JoystickSlider(float& _x, float& _y, float scale = 100.f, float b_scale = 1
                 _y = sin(angle);
             }
         }
-    } else {
-        frame_color = ImGuiCol_FrameBg;
-    }
+    } else frame_color = ImGuiCol_FrameBg;
 
     auto button_x = _x * (scale - b_scale) + p.x + scale;
     auto button_y = _y * (scale - b_scale) + p.y + scale;
-    static float toward = 0.f;
+    float toward = 0.f;
     ImGui::ButtonBehavior(ImRect({ button_x - b_scale, button_y - b_scale}, { button_x + b_scale, button_y + b_scale }), ImGui::GetCurrentWindow()->ID, nullptr, nullptr, 0);
     
     float distance_to_center = sqrtf(pow(mouse.x - (p.x + scale), 2) + pow(mouse.y - (p.y + scale), 2));

@@ -181,7 +181,7 @@ void UpdateTimelines() {
 
     prev_position = timeline_position;
     static float playback_accum = 0.f;
-    if (timeline_is_playing && !ImGui::IsAnyItemActive()) {
+    if (timeline_is_playing) {
         // playback at 30 fps, accounts for varying fps
         playback_accum += ImGui::GetIO().DeltaTime;
         bool pause_key = false;

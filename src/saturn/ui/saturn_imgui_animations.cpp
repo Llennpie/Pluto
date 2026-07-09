@@ -404,6 +404,8 @@ void OpenAnimationsMenu() {
             ImGui::SetNextItemWidth(150);
             if (ImGui::SliderFloat("###animation_speed", &anim_speed, 0.0f, 4.0f, "speed %.2fx"))
                 anim_speed = ImClamp(anim_speed, 0.0f, 4.0f);
+            if (ImGui::IsItemHovered() && ImGui::GetIO().MouseClicked[1])
+                anim_speed = 1.0f;
             
         ImGui::EndDisabled();
     ImGui::EndDisabled();
