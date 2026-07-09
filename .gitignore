@@ -93,4 +93,4 @@ tools/ido5.3_compiler/usr/lib/libc.so.1
 
 imgui.ini
 
-actors/mario/saturn_eye_custom.rgba16.png
+!actors/mario/saturn_eye_custom.rgba16.png
