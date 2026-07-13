@@ -38,6 +38,10 @@ static bool DynOS_Actor_WriteBinary(const SysPath &aOutputFilename, GfxData *aGf
         return false;
     }
 
+    // Write DynOS bin version
+    _File->Write<u8>(DATA_TYPE_BIN_VERSION);
+    _File->Write<u32>((u32) DYNOS_BIN_VERSION);
+
     for (u64 i = 0; i != aGfxData->mLoadIndex; ++i) {
         for (auto &_Node : aGfxData->mLights) {
             if (_Node->mLoadIndex == i) {
@@ -159,6 +163,9 @@ GfxData *DynOS_Actor_LoadFromBinary(const SysPath &aPackFolder, const char *aAct
                     PrintConsole("  Loaded %u bone name(s)\n", count);
                     break;
                 }
+                case DATA_TYPE_BIN_VERSION:
+                    _File->Skip(sizeof(u32)); // version already validated during generation
+                    break;
                 default:                        _Done = true;                           break;
             }
         }
@@ -202,23 +209,44 @@ static String GetActorFolder(const Array<Pair<u64, String>> &aActorsFolders, u64
 }
 
 static void DynOS_Actor_Generate(const SysPath &aPackFolder, Array<Pair<u64, String>> _ActorsFolders, GfxData *_GfxData) {
-    // do not regen this folder if we find any existing bins
+    // do not regen this folder if we find any existing bins (unless they are outdated)
+    bool _FoundExisting = false;
     for (s32 geoIndex = _GfxData->mGeoLayouts.Count() - 1; geoIndex >= 0; geoIndex--) {
         auto &_GeoNode = _GfxData->mGeoLayouts[geoIndex];
         String _GeoRootName = _GeoNode->mName;
 
-        // If there is an existing binary file for this layout, skip and go to the next actor
         SysPath _BinFilename = fstring("%s/%s.bin", aPackFolder.c_str(), _GeoRootName.begin());
-        if (fs_sys_file_exists(_BinFilename.c_str())) {
-#ifdef DEVELOPMENT
-            // Compress file to gain some space
-            if (!DynOS_Bin_IsCompressed(_BinFilename)) {
-                DynOS_Bin_Compress(_BinFilename);
+        if (!fs_sys_file_exists(_BinFilename.c_str())) continue;
+
+        // Check stored dynos bin ver
+        bool _Outdated = false;
+        BinFile *_VerFile = DynOS_Bin_Decompress(_BinFilename);
+        if (_VerFile) {
+            if (_VerFile->Read<u8>() == DATA_TYPE_BIN_VERSION) {
+                u32 _StoredVersion = _VerFile->Read<u32>();
+                _Outdated = (_StoredVersion < DYNOS_BIN_VERSION);
+            } else {
+                _Outdated = true; // no version tag, Saturn or release 1, regenerate
             }
-#endif
-            return;
+            BinFile::Close(_VerFile);
         }
+
+        if (_Outdated) {
+            // Only delete if the actor source folder is present (so we can regenerate)
+            String _ActorFolder = GetActorFolder(_ActorsFolders, _GeoNode->mModelIdentifier);
+            if (!_ActorFolder.Empty()) {
+                SysPath _SrcFolder = fstring("%s/%s", aPackFolder.c_str(), _ActorFolder.begin());
+                if (fs_sys_dir_exists(_SrcFolder.c_str())) {
+                    Print("  %s.bin: DynOS bin version outdated, regenerating...", _GeoRootName.begin());
+                    remove(_BinFilename.c_str());
+                    continue;
+                }
+            }
+        }
+        _FoundExisting = true;
     }
+
+    if (_FoundExisting) return;
 
     // generate in reverse order to detect children
     for (s32 geoIndex = _GfxData->mGeoLayouts.Count() - 1; geoIndex >= 0; geoIndex--) {
