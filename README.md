@@ -23,6 +23,7 @@ __**Linux:**__
 * Install dependencies
   * Debian/Ubuntu/Mint: `sudo apt install git make gcc libsdl2-dev libglew-dev libcjson-dev xclip`
   * Arch/CachyOS: `sudo pacman -S git make gcc sdl2-compat glew cjson xclip`
+  * Gentoo: `emerge --ask dev-vcs/git dev-build/make media-libs/libsdl2 media-libs-glew dev-libs/cJSON x11-misc/xclip`
 * Run `git clone https://github.com/Llennpie/Pluto && cd Pluto`
 * Open your file manager in the same folder
 * Move in an **unmodified, US SM64 ROM** into the folder and rename it to **baserom.us.z64**
