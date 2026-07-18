@@ -1187,10 +1187,14 @@ ifeq ($(TARGET_N64),1)
 	$(BUILD_DIR)/lib/rsp.o:               $(BUILD_DIR)/rsp/rspboot.bin $(BUILD_DIR)/rsp/fast3d.bin $(BUILD_DIR)/rsp/audio.bin
 endif
 
+$(BUILD_DIR)/sound/sequences/00_sound_player.m64.inc.c: $(BUILD_DIR)/sound/sequences/00_sound_player.m64
+
 #$(BUILD_DIR)/src/game/characters.o:   $(SOUND_SAMPLE_TABLES)
 #$(SOUND_BIN_DIR)/sound_data.o:        $(SOUND_BIN_DIR)/sound_data.ctl.inc.c $(SOUND_BIN_DIR)/sound_data.tbl.inc.c $(SOUND_BIN_DIR)/sequences.bin.inc.c $(SOUND_BIN_DIR)/bank_sets.inc.c
 $(BUILD_DIR)/levels/scripts.o:        $(BUILD_DIR)/include/level_headers.h
 $(BUILD_DIR)/src/saturn/asset_extractor/sound.o: $(BUILD_DIR)/sound/custom_sounds.c
+$(BUILD_DIR)/src/saturn/asset_extractor/sound_data.o: $(BUILD_DIR)/sound/sequences/00_sound_player.m64.inc.c
+$(BUILD_DIR)/sound/custom_sounds.o: $(patsubst %,%.inc.c,$(CUSTOM_SOUNDS))
 $(BUILD_DIR)/sound/custom_sounds.o: $(patsubst %,%.inc.c,$(CUSTOM_SOUNDS))
 
 ifeq ($(VERSION),sh)
@@ -1353,9 +1357,9 @@ $(BUILD_DIR)/%.aifc: $(BUILD_DIR)/%.table %.aiff
 #$(SOUND_BIN_DIR)/sequences_header: $(SOUND_BIN_DIR)/sequences.bin
 #	@true
 
-#$(SOUND_BIN_DIR)/%.m64: $(SOUND_BIN_DIR)/%.o
-#	$(call print,Converting to M64:,$<,$@)
-#	$(V)$(OBJCOPY) -j .rodata $< -O binary $@
+$(SOUND_BIN_DIR)/%.m64: $(SOUND_BIN_DIR)/%.o
+	$(call print,Converting to M64:,$<,$@)
+	$(V)$(OBJCOPY) -j .rodata $< -O binary $@
 
 #==============================================================================#
 # Generated Source Code Files                                                  #
@@ -1367,7 +1371,7 @@ $(BUILD_DIR)/%.aifc: $(BUILD_DIR)/%.table %.aiff
 #	$(V)hexdump -v -e '1/1 "0x%X,"' $< > $@
 #	$(V)echo >> $@
 
-$(BUILD_DIR)/%.aifc.inc.c: $(BUILD_DIR)/%.aifc
+$(BUILD_DIR)/%.inc.c: $(BUILD_DIR)/%
 	$(call print,Piping:,$<,$@)
 	$(V)hexdump -v -e '1/1 "0x%X,"' $< > $@
 	$(V)echo >> $@

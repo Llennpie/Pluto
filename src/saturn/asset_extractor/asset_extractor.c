@@ -160,6 +160,10 @@ void assetextract_run() {
         }
     }
 
+    Asset* asset_sound_player = find(assets, &(char*){"sound/sequences/00_sound_player.m64"});
+    asset_sound_player->data = (uint8_t*)sound_player_sequence_data;
+    asset_sound_player->size = sound_player_sequence_data_size;
+
     printf("reassembling sound\n");
     Asset* asset_ctl = find(assets, &(char*){"sound/sound_data.ctl"});
     Asset* asset_tbl = find(assets, &(char*){"sound/sound_data.tbl"});
@@ -173,6 +177,16 @@ void assetextract_run() {
         &asset_bnk->data, &asset_bnk->size
     );
     printf("done\n");
+
+    FILE* f;
+
+    f = fopen("sound_data.ctl", "w");
+    fwrite(asset_ctl->data, asset_ctl->size, 1, f);
+    fclose(f);
+
+    f = fopen("sound_data.tbl", "w");
+    fwrite(asset_tbl->data, asset_tbl->size, 1, f);
+    fclose(f);
 }
 
 float assetextract_progress(const char** curr_file) {

@@ -244,6 +244,7 @@ typedef struct {
 map(size_t, size_t) IndexMap;
 map(const char*, Aifc) NameToSampleMap;
 map(const char*, Aifc*) NameToSamplePtrMap;
+map(const char*, int) NameToIndexMap;
 
 static list(SeqEntry) parse_seqfile(const uint8_t* data, size_t size) {
     uint16_t num_entries;
@@ -381,6 +382,7 @@ static void serialize_sound(Serializer* ser, Sound_Sample* sound, set(NameToSamp
 
 static void serialize_ctl(Serializer* ser, Sound_Bank* bank, set(NameToSampleMap) samples) {
     ser_pack(ser, "IIII", bank->num_instruments, bank->num_percussion, bank->is_shared ? 1 : 0, 0);
+    size_t base = ser->size;
     size_t perc_pos_buf = ser_reserve(ser, WORD_BYTES);
     size_t inst_pos_buf = ser_reserve(ser, WORD_BYTES * bank->num_instruments);
     ser_align(ser, 16);
@@ -404,7 +406,7 @@ static void serialize_ctl(Serializer* ser, Sound_Bank* bank, set(NameToSampleMap
         char sample_name[256], *sample_name_ptr = sample_name;
         snprintf(sample_name, 255, "%s/%s", bank->sample_bank, name);
         Aifc* aifc = &find(samples, &sample_name_ptr)->value;
-        aifc->ctl_offset = ser->size;
+        aifc->ctl_offset = ser->size - base;
 
         push(sample_name_to_addr) = (NameToSamplePtrMap){
             .key = name,
@@ -419,14 +421,14 @@ static void serialize_ctl(Serializer* ser, Sound_Bank* bank, set(NameToSampleMap
         ser_align(ser, 16);
 
         // book
-        ser_pack_reserved(ser, book_addr_buf, "P", ser->size);
+        ser_pack_reserved(ser, book_addr_buf, "P", ser->size - base);
         ser_pack(ser, "ii", aifc->book.order, aifc->book.npredictors);
         for (size_t i = 0; i < 8 * aifc->book.order * aifc->book.npredictors; i++)
             ser_pack(ser, "h", aifc->book.table[i]);
         ser_align(ser, 16);
 
         // loop
-        ser_pack_reserved(ser, loop_addr_buf, "P", ser->size);
+        ser_pack_reserved(ser, loop_addr_buf, "P", ser->size - base);
         if (aifc->loop.count == 0)
             ser_pack(ser, "IIiI", 0, aifc->data_size / 9 * 16 + (aifc->data_size % 2) + (aifc->data_size % 9), 0, 0);
         else {
@@ -440,7 +442,7 @@ static void serialize_ctl(Serializer* ser, Sound_Bank* bank, set(NameToSampleMap
     size_t envelopes[bank->num_envelopes];
     for (size_t i = 0; i < bank->num_envelopes; i++) {
         Sound_Envelope* env = &bank->envelopes[i];
-        envelopes[i] = ser->size;
+        envelopes[i] = ser->size - base;
         for (size_t i = 0; i < env->num_commands; i++)
             ser_pack(ser, ">I", env->commands[i]);
         ser_align(ser, 16);
@@ -452,7 +454,7 @@ static void serialize_ctl(Serializer* ser, Sound_Bank* bank, set(NameToSampleMap
             inst_pos_buf = ser_pack_reserved(ser, inst_pos_buf, "P", 0);
             continue;
         }
-        inst_pos_buf = ser_pack_reserved(ser, inst_pos_buf, "P", ser->size);
+        inst_pos_buf = ser_pack_reserved(ser, inst_pos_buf, "P", ser->size - base);
 
         ser_pack(ser, "BBBBXP", 0, inst->normal_range_lo, inst->normal_range_hi, inst->release_rate, envelopes[inst->envelope]);
         serialize_sound(ser, &inst->sound_lo, sample_name_to_addr);
@@ -463,14 +465,14 @@ static void serialize_ctl(Serializer* ser, Sound_Bank* bank, set(NameToSampleMap
         size_t percussion[bank->num_percussion];
         for (size_t i = 0; i < bank->num_percussion; i++) {
             Sound_Instrument* inst = &bank->percussion[i];
-            percussion[i] = ser->size;
+            percussion[i] = ser->size - base;
             ser_pack(ser, "BBBBX", inst->release_rate, inst->pan, 0, 0);
             serialize_sound(ser, &inst->sound, sample_name_to_addr);
             ser_pack(ser, "P", envelopes[inst->envelope]);
         }
         ser_align(ser, 16);
 
-        perc_pos_buf = ser_pack_reserved(ser, perc_pos_buf, "P", ser->size);
+        perc_pos_buf = ser_pack_reserved(ser, perc_pos_buf, "P", ser->size - base);
         for (size_t i = 0; i < bank->num_percussion; i++)
             ser_pack(ser, "P", percussion[i]);
     }
@@ -489,16 +491,26 @@ static void serialize_tbl(Serializer* ser, Sound_Bank* bank, set(NameToSampleMap
 }
 
 static void serialize_seqfile(
-    Serializer* ser, FileType type, set(Sound_Bank*) banks, set(NameToSampleMap) extracted_samples,
-    void(*serialize)(Serializer*, Sound_Bank*, set(NameToSampleMap))
+    Serializer* ser, FileType type, set(NameToSampleMap) extracted_samples,
+    void(*serialize)(Serializer*, Sound_Bank*, set(NameToSampleMap)), list(int) indexes
 ) {
-    ser_pack(ser, "HHX", type, size(banks));
-    size_t table = ser_reserve(ser, calcsize("PIX") * size(banks));
+    size_t offsets[size(indexes)] = {}, sizes[size(indexes)] = {};
+
+    ser_pack(ser, "HHX", type, size(indexes));
+    size_t table = ser_reserve(ser, calcsize("PIX") * size(indexes));
     ser_align(ser, 16);
-    foreach (bank, banks) {
-        size_t start = ser->size;
-        serialize(ser, bank, extracted_samples);
-        table = ser_pack_reserved(ser, table, "PIX", start, ser->size - start);
+    foreach (index, indexes) {
+        size_t offset, size;
+        if (offsets[index] == 0) {
+            offset = offsets[index] = ser->size;
+            serialize(ser, sound_bank_list[index], extracted_samples);
+            size = sizes[index] = ser->size - offsets[index];
+        }
+        else {
+            offset = offsets[index];
+            size = sizes[index];
+        }
+        table = ser_pack_reserved(ser, table, "PIX", offset, size);
     }
     ser_align(ser, 64);
 }
@@ -511,6 +523,7 @@ static void write_sequences(
         size_t id;
         const char* name;
     } sequence_table[] = {
+        { 0x00, "sound/sequences/00_sound_player.m64" },
         { 0x01, "sound/sequences/us/01_cutscene_collect_star.m64" },
         { 0x02, "sound/sequences/us/02_menu_title_screen.m64" },
         { 0x03, "sound/sequences/us/03_level_grass.m64" },
@@ -560,6 +573,7 @@ static void write_sequences(
         size_t start = seq_ser.size, size;
         uint8_t* data = assetextract_get_asset(seq->name, &size);
         ser_add(&seq_ser, data, size);
+        ser_align(&seq_ser, 16);
         seq_table = ser_pack_reserved(&seq_ser, seq_table, "PIX", start, seq_ser.size - start);
 
         bnk_table = ser_pack_reserved(&bnk_ser, bnk_table, "H", bnk_ser.size);
@@ -582,21 +596,23 @@ static void sound_assemble(
 ) {
     Serializer ser_ctl = {}, ser_tbl = {};
 
-    smart set(Sound_Bank*) banks = set_init(Sound_Bank*, compare_u64);
-    for (int i = 0; i < num_sound_sequences; i++) {
-        for (size_t j = 0; j < sound_sequences[i].num_banks; j++) {
-            Sound_Bank* bank = sound_sequences[i].banks[j];
-            if (find(banks, &bank)) {
-                bank->is_shared = true;
-                continue;
-            }
-            bank->is_shared = false;
-            push(banks) = bank;
+    smart list(int) bank_indexes = list_init(int);
+    smart list(int) bank_ordered = list_init(int);
+    smart set(NameToIndexMap) indexes = set_init(NameToIndexMap, compare_str);
+    for (int i = 0; i < num_sound_banks; i++) {
+        push(bank_ordered) = i;
+
+        NameToIndexMap* found;
+        if ((found = find(indexes, &sound_bank_list[i]->sample_bank)))
+            push(bank_indexes) = found->value;
+        else {
+            push(bank_indexes) = i;
+            push(indexes) = (NameToIndexMap){ .key = sound_bank_list[i]->sample_bank, .value = i };
         }
     }
 
-    serialize_seqfile(&ser_tbl, TYPE_TBL, banks, extracted_samples, serialize_tbl);
-    serialize_seqfile(&ser_ctl, TYPE_CTL, banks, extracted_samples, serialize_ctl);
+    serialize_seqfile(&ser_tbl, TYPE_TBL, extracted_samples, serialize_tbl, bank_indexes);
+    serialize_seqfile(&ser_ctl, TYPE_CTL, extracted_samples, serialize_ctl, bank_ordered);
     
     *out_ctl_buf = ser_ctl.buf; *out_ctl_len = ser_ctl.size;
     *out_tbl_buf = ser_tbl.buf; *out_tbl_len = ser_tbl.size;
@@ -673,6 +689,100 @@ static void append_custom_samples(set(NameToSampleMap)* extracted_samples) {
     }
 }
 
+static void copy_extended(set(NameToSampleMap)* samples) {
+    struct {
+        const char *src, *dst;
+    } copies[] = {
+        { "bowser_organ/00_organ_1", "extended/00_organ_1" },
+        { "bowser_organ/01_organ_1_lq", "extended/01_organ_1_lq" },
+        { "bowser_organ/02_boys_choir", "extended/02_boys_choir" },
+        { "course_start/00_la", "extended/00_la" },
+        { "instruments/00", "extended/00" },
+        { "instruments/01_banjo_1", "extended/01_banjo_1" },
+        { "instruments/02", "extended/02" },
+        { "instruments/03_human_whistle", "extended/03_human_whistle" },
+        { "instruments/04_bright_piano", "extended/04_bright_piano" },
+        { "instruments/05_acoustic_bass", "extended/05_acoustic_bass" },
+        { "instruments/06_kick_drum_1", "extended/06_kick_drum_1" },
+        { "instruments/07_rimshot", "extended/07_rimshot" },
+        { "instruments/08", "extended/08" },
+        { "instruments/09", "extended/09" },
+        { "instruments/0A_tambourine", "extended/0A_tambourine" },
+        { "instruments/0B", "extended/0B" },
+        { "instruments/0C_conga_stick", "extended/0C_conga_stick" },
+        { "instruments/0D_clave", "extended/0D_clave" },
+        { "instruments/0E_hihat_closed", "extended/0E_hihat_closed" },
+        { "instruments/0F_hihat_open", "extended/0F_hihat_open" },
+        { "instruments/10_cymbal_bell", "extended/10_cymbal_bell" },
+        { "instruments/11_splash_cymbal", "extended/11_splash_cymbal" },
+        { "instruments/12_snare_drum_1", "extended/12_snare_drum_1" },
+        { "instruments/13_snare_drum_2", "extended/13_snare_drum_2" },
+        { "instruments/14_strings_5", "extended/14_strings_5" },
+        { "instruments/15_strings_4", "extended/15_strings_4" },
+        { "instruments/16_french_horns", "extended/16_french_horns" },
+        { "instruments/17_trumpet", "extended/17_trumpet" },
+        { "instruments/18_timpani", "extended/18_timpani" },
+        { "instruments/19_brass", "extended/19_brass" },
+        { "instruments/1A_slap_bass", "extended/1A_slap_bass" },
+        { "instruments/1B_organ_2", "extended/1B_organ_2" },
+        { "instruments/1C", "extended/1C" },
+        { "instruments/1D", "extended/1D" },
+        { "instruments/1E_closed_triangle", "extended/1E_closed_triangle" },
+        { "instruments/1F_open_triangle", "extended/1F_open_triangle" },
+        { "instruments/20_cabasa", "extended/20_cabasa" },
+        { "instruments/21_sine_bass", "extended/21_sine_bass" },
+        { "instruments/22_boys_choir", "extended/22_boys_choir" },
+        { "instruments/23_strings_1", "extended/23_strings_1" },
+        { "instruments/24_strings_2", "extended/24_strings_2" },
+        { "instruments/25_strings_3", "extended/25_strings_3" },
+        { "instruments/26_crystal_rhodes", "extended/26_crystal_rhodes" },
+        { "instruments/27_harpsichord", "extended/27_harpsichord" },
+        { "instruments/28_sitar_1", "extended/28_sitar_1" },
+        { "instruments/29_orchestra_hit", "extended/29_orchestra_hit" },
+        { "instruments/2A", "extended/2A" },
+        { "instruments/2B", "extended/2B" },
+        { "instruments/2C", "extended/2C" },
+        { "instruments/2D_trombone", "extended/2D_trombone" },
+        { "instruments/2E_accordion", "extended/2E_accordion" },
+        { "instruments/2F_sleigh_bells", "extended/2F_sleigh_bells" },
+        { "instruments/30_rarefaction-lahna", "extended/30_rarefaction-lahna" },
+        { "instruments/31_rarefaction-convolution", "extended/31_rarefaction-convolution" },
+        { "instruments/32_metal_rimshot", "extended/32_metal_rimshot" },
+        { "instruments/33_kick_drum_2", "extended/33_kick_drum_2" },
+        { "instruments/34_alto_flute", "extended/34_alto_flute" },
+        { "instruments/35_gospel_organ", "extended/35_gospel_organ" },
+        { "instruments/36_sawtooth_synth", "extended/36_sawtooth_synth" },
+        { "instruments/37_square_synth", "extended/37_square_synth" },
+        { "instruments/38_electric_kick_drum", "extended/38_electric_kick_drum" },
+        { "instruments/39_sitar_2", "extended/39_sitar_2" },
+        { "instruments/3A_music_box", "extended/3A_music_box" },
+        { "instruments/3B_banjo_2", "extended/3B_banjo_2" },
+        { "instruments/3C_acoustic_guitar", "extended/3C_acoustic_guitar" },
+        { "instruments/3D", "extended/3D" },
+        { "instruments/3E_monk_choir", "extended/3E_monk_choir" },
+        { "instruments/3F", "extended/3F" },
+        { "instruments/40_bell", "extended/40_bell" },
+        { "instruments/41_pan_flute", "extended/41_pan_flute" },
+        { "instruments/42_vibraphone", "extended/42_vibraphone" },
+        { "instruments/43_harmonica", "extended/43_harmonica" },
+        { "instruments/44_grand_piano", "extended/44_grand_piano" },
+        { "instruments/45_french_horns_lq", "extended/45_french_horns_lq" },
+        { "instruments/46_pizzicato_strings_1", "extended/46_pizzicato_strings_1" },
+        { "instruments/47_pizzicato_strings_2", "extended/47_pizzicato_strings_2" },
+        { "instruments/48_steel_drum", "extended/48_steel_drum" },
+        { "piranha_music_box/00_music_box", "extended/00_music_box" },
+    };
+
+    foreach (*copy, copies) {
+        Aifc aifc = find(*samples, &copy->src)->value;
+        if (aifc.book.table) aifc.book.table = memcpy(
+            malloc(16 * aifc.book.npredictors * aifc.book.order), aifc.book.table,
+            16 * aifc.book.npredictors * aifc.book.order
+        );
+        push(*samples) = (NameToSampleMap){ .key = copy->dst, .value = aifc };
+    }
+}
+
 void sound_reassemble(
     set(Sound_SampleAsset) samples,
     const uint8_t* ctl_buf, size_t ctl_len,
@@ -683,6 +793,7 @@ void sound_reassemble(
     uint8_t** out_bnk_buf, size_t* out_bnk_len
 ) {
     smart set(NameToSampleMap) extracted_samples = sound_disassemble(samples, ctl_buf, ctl_len, tbl_buf, tbl_len);
+    copy_extended(&extracted_samples);
     append_custom_samples(&extracted_samples);
     sound_assemble(extracted_samples, out_ctl_buf, out_ctl_len, out_tbl_buf, out_tbl_len);
     write_sequences(out_seq_buf, out_seq_len, out_bnk_buf, out_bnk_len);

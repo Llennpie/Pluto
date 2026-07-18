@@ -1314,6 +1314,7 @@ ASSETS {
     DEMO("assets/demos/wf.bin", 1, 5737276, 672)
     DEMO("assets/demos/pss.bin", 6, 5737948, 748)
 
+    DUMMY("sound/sequences/00_sound_player.m64")
     RAW("sound/sequences/us/01_cutscene_collect_star.m64", 8076816, 619)
     RAW("sound/sequences/us/02_menu_title_screen.m64", 8077440, 8254)
     RAW("sound/sequences/us/03_level_grass.m64", 8085696, 5122)

@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#include <types.h>
+
 #include "saturn/libs/dynamics.h"
 
 typedef struct {
@@ -52,7 +54,12 @@ typedef struct {
 } Sound_Sequence;
 
 extern Sound_Sequence sound_sequences[];
+extern Sound_Bank* sound_bank_list[];
 extern int num_sound_sequences;
+extern int num_sound_banks;
+
+extern const u8 sound_player_sequence_data[];
+extern int sound_player_sequence_data_size;
 
 void sound_reassemble(
     set(Sound_SampleAsset) samples,

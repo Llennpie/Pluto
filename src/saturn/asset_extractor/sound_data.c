@@ -1,6 +1,11 @@
 #define SOUND_DATA
 #include "sound.h"
 
+const u8 sound_player_sequence_data[] = {
+#include "sound/sequences/00_sound_player.m64.inc.c"
+};
+int sound_player_sequence_data_size = sizeof(sound_player_sequence_data);
+
 Bank bank_00 = BANK(0x00,
     SAMPLE_BANK("sfx_1"),
     ENVELOPES(ENVELOPE(
@@ -2892,7 +2897,7 @@ Bank bank_29_custom_wario_peach = BANK(0x29,
     ),
 );
 
-Bank bank_30_extended = BANK(0x30,
+Bank bank_30_extended = BANK(0x2A,
     SAMPLE_BANK("extended"),
     ENVELOPES(ENVELOPE(
         ENV_CUSTOM(2, 32700),
@@ -4189,7 +4194,7 @@ Bank bank_30_extended = BANK(0x30,
     ),
 );
 
-Bank bank_31_custom_toad = BANK(0x31,
+Bank bank_31_custom_toad = BANK(0x2B,
     SAMPLE_BANK("sfx_custom_toad"),
     ENVELOPES(ENVELOPE(
         ENV_CUSTOM(2, 32700),
@@ -4228,7 +4233,7 @@ Bank bank_31_custom_toad = BANK(0x31,
     ),
 );
 
-Bank bank_32_custom_toad_peach = BANK(0x32,
+Bank bank_32_custom_toad_peach = BANK(0x2C,
     SAMPLE_BANK("sfx_custom_toad_peach"),
     ENVELOPES(ENVELOPE(
         ENV_CUSTOM(2, 32700),
@@ -4254,6 +4259,21 @@ Bank bank_32_custom_toad_peach = BANK(0x32,
         { .release_rate = 208, .envelope = 0, .sound = SOUND("0D"), },
     ),
 );
+
+Sound_Bank* sound_bank_list[] = {
+    &bank_00, &bank_01_terrain, &bank_02_water, &bank_03,
+    &bank_04, &bank_05, &bank_06, &bank_07, &bank_08_mario,
+    &bank_09, &bank_0A_mario_peach, &bank_0B, &bank_0C,
+    &bank_0D, &bank_0E, &bank_0F, &bank_10, &bank_11,
+    &bank_12, &bank_13, &bank_14_piranha_music_box, &bank_15,
+    &bank_16_course_start, &bank_17, &bank_18, &bank_19,
+    &bank_1A, &bank_1B, &bank_1C_endless_stairs, &bank_1D_bowser_organ,
+    &bank_1E, &bank_1F, &bank_20, &bank_21, &bank_22, &bank_23,
+    &bank_24, &bank_25, &bank_26_custom_luigi, &bank_27_custom_luigi_peach,
+    &bank_28_custom_wario, &bank_29_custom_wario_peach,
+    &bank_30_extended, &bank_31_custom_toad,
+    &bank_32_custom_toad_peach,
+};
 
 Sequence sound_sequences[] = {
     // 00_sound_player
@@ -4302,3 +4322,4 @@ Sequence sound_sequences[] = {
 };
 
 int num_sound_sequences = sizeof(sound_sequences) / sizeof(Sequence);
+int num_sound_banks = sizeof(sound_bank_list) / sizeof(Sound_Bank*);
