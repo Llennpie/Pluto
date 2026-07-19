@@ -37,7 +37,7 @@ typedef struct {
 } Serializer;
 
 typedef struct {
-    size_t off, len;
+    uint32_t off, len;
 } SeqEntry;
 
 static void* memcpy_rev(void* out, const void* in, size_t size) {
@@ -371,6 +371,16 @@ static set(NameToSampleMap) sound_disassemble(
     return name_to_sample;
 }
 
+static uint32_t to_bcd(uint32_t in) {
+    uint32_t shift = 0, out = 0;
+    while (in) {
+        out |= (in % 10) << shift;
+        shift += 4;
+        in /= 10;
+    }
+    return out;
+}
+
 static void serialize_sound(Serializer* ser, Sound_Sample* sound, set(NameToSamplePtrMap) samples) {
     if (sound->name == NULL) {
         ser_pack(ser, "PfX", 0, 0.0f);
@@ -381,22 +391,24 @@ static void serialize_sound(Serializer* ser, Sound_Sample* sound, set(NameToSamp
 }
 
 static void serialize_ctl(Serializer* ser, Sound_Bank* bank, set(NameToSampleMap) samples) {
-    ser_pack(ser, "IIII", bank->num_instruments, bank->num_percussion, bank->is_shared ? 1 : 0, 0);
+    ser_pack(ser, "IIII", bank->num_instrument_list, bank->num_percussion, bank->is_shared ? 1 : 0, to_bcd(bank->date));
     size_t base = ser->size;
     size_t perc_pos_buf = ser_reserve(ser, WORD_BYTES);
-    size_t inst_pos_buf = ser_reserve(ser, WORD_BYTES * bank->num_instruments);
+    size_t inst_pos_buf = ser_reserve(ser, WORD_BYTES * bank->num_instrument_list);
     ser_align(ser, 16);
 
     smart list(const char*) used_samples = list_init(const char*);
     for (size_t i = 0; i < bank->num_instruments; i++) {
         Sound_Instrument* inst = &bank->instruments[i];
-        if (inst->sound.name) push(used_samples) = inst->sound.name;
-        if (inst->sound_lo.name) push(used_samples) = inst->sound_lo.name;
-        if (inst->sound_hi.name) push(used_samples) = inst->sound_hi.name;
-    }
-    for (size_t i = 0; i < bank->num_percussion; i++) {
-        Sound_Instrument* inst = &bank->percussion[i];
-        if (inst->sound.name) push(used_samples) = inst->sound.name;
+        if (inst->is_perc) for (size_t p = 0; p < bank->num_percussion; p++) {
+            Sound_Instrument* perc = &bank->percussion[p];
+            if (perc->sound.name) push(used_samples) = perc->sound.name;
+        }
+        else {
+            if (inst->sound_lo.name) push(used_samples) = inst->sound_lo.name;
+            if (inst->sound.name) push(used_samples) = inst->sound.name;
+            if (inst->sound_hi.name) push(used_samples) = inst->sound_hi.name;
+        }
     }
 
     smart set(NameToSamplePtrMap) sample_name_to_addr = set_init(NameToSamplePtrMap, compare_str);
@@ -448,13 +460,17 @@ static void serialize_ctl(Serializer* ser, Sound_Bank* bank, set(NameToSampleMap
         ser_align(ser, 16);
     }
 
-    for (size_t i = 0; i < bank->num_instruments; i++) {
-        Sound_Instrument* inst = &bank->instruments[i];
-        if (inst->is_null) {
+    for (size_t i = 0; i < bank->num_instrument_list; i++) {
+        if (bank->instrument_list[i] == -1) {
             inst_pos_buf = ser_pack_reserved(ser, inst_pos_buf, "P", 0);
             continue;
         }
+
+        Sound_Instrument* inst = &bank->instruments[bank->instrument_list[i]];
         inst_pos_buf = ser_pack_reserved(ser, inst_pos_buf, "P", ser->size - base);
+
+        if (inst->normal_range_hi == 0)
+            inst->normal_range_hi = 127;
 
         ser_pack(ser, "BBBBXP", 0, inst->normal_range_lo, inst->normal_range_hi, inst->release_rate, envelopes[inst->envelope]);
         serialize_sound(ser, &inst->sound_lo, sample_name_to_addr);
@@ -608,6 +624,7 @@ static void sound_assemble(
         NameToIndexMap* found;
         if ((found = find(indexes, &sound_bank_list[i]->sample_bank))) {
             sound_bank_list[i]->is_shared = true;
+            sound_bank_list[found->value]->is_shared = true;
             push(bank_indexes) = found->value;
         }
         else {

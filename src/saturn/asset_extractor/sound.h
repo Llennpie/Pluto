@@ -29,12 +29,13 @@ typedef struct {
     uint32_t envelope;
     Sound_Sample sound_lo, sound, sound_hi;
     uint8_t normal_range_hi, normal_range_lo, pan;
-    bool is_null;
+    bool is_perc;
 } Sound_Instrument;
 
 typedef struct {
     size_t index;
     const char* sample_bank;
+    uint32_t date;
 
     Sound_Envelope* envelopes;
     size_t num_envelopes;
@@ -44,6 +45,9 @@ typedef struct {
 
     Sound_Instrument* percussion;
     size_t num_percussion;
+
+    int32_t* instrument_list;
+    size_t num_instrument_list;
 
     bool is_shared;
 } Sound_Bank;
@@ -81,12 +85,15 @@ void sound_reassemble(
 #define SEQUENCE(...) { .banks = ARRAY(Sound_Bank*, __VA_ARGS__) }
 #define BANK(id, ...) { .index = id, __VA_ARGS__ }
 #define SAMPLE_BANK(name) .sample_bank = name
+#define DATE(y, m, d) .date = (((y) % 10000) * 10000 + ((m) % 100) * 100 + ((d) % 100))
 #define SOUND(...) { __VA_ARGS__ }
 #define ENVELOPES(...) .envelopes = ARRAY(Sound_Envelope, __VA_ARGS__)
 #define ENVELOPE(...) { .commands = ARRAY(uint32_t, __VA_ARGS__) }
 #define INSTRUMENTS(...) .instruments = ARRAY(Sound_Instrument, __VA_ARGS__)
+#define INSTRUMENT_LIST(...) .instrument_list = ARRAY(int32_t, __VA_ARGS__)
 #define PERCUSSION(...) .percussion = ARRAY(Sound_Instrument, __VA_ARGS__)
-#define NULL_INSTRUMENT() { .is_null = true }
+#define PERC_INSTRUMENT() { .is_perc = true }
+#define NULL_INSTRUMENT -1
 
 #define ENV_CUSTOM(a, b) ((((a) & 0xFFFF) << 16) | ((b) & 0xFFFF))
 #define ENV_STOP() ENV_CUSTOM(0, 0)

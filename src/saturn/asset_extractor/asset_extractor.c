@@ -143,7 +143,7 @@ void assetextract_run() {
 
     uint8_t *ctl_buf, *tbl_buf;
     size_t   ctl_len,  tbl_len;
-    smart set(Sound_SampleAsset) samples = set_init(Sound_SampleAsset, compare_u64);
+    smart set(Sound_SampleAsset) samples = set_init(Sound_SampleAsset, compare_u32);
     foreach (*asset, assets) {
         curr_asset_name = asset->name;
         printf("extracting %s\n", curr_asset_name);
@@ -152,7 +152,7 @@ void assetextract_run() {
             case AssetType_CTL: ctl_buf = rom + asset->offset, ctl_len = asset->size; break;
             case AssetType_TBL: tbl_buf = rom + asset->offset, tbl_len = asset->size; break;
             case AssetType_Sound: push(samples) = (Sound_SampleAsset){ .name = asset->name, .loc = asset->offset }; break;
-            case AssetType_Tiled: printf("%s:", asset->name); extract_skybox(sSkyboxTextures[asset->index], run_mio0(asset->offset, 0), asset->size);
+            case AssetType_Tiled: printf("%s:", asset->name); extract_skybox(sSkyboxTextures[asset->index], run_mio0(asset->offset, 0), asset->size); break;
             case AssetType_MIO0: asset->data = memcpy(malloc(asset->size), run_mio0(asset->offset, asset->mio0_offset), asset->size); break;
             case AssetType_Raw: asset->data = rom + asset->offset; break;
             case AssetType_Demo: asset->data = memcpy(
