@@ -114,12 +114,27 @@ static uint8_t* run_mio0(uint64_t offset, uint64_t asset_offset) {
     return buf + asset_offset;
 }
 
-static void extract_skybox(SkyboxTexture* skybox, uint8_t* buffer, uint64_t size) {
-    uint32_t* table = (uint32_t*)(buffer + (size - 8 * 10 * 4));
-    uint32_t base = __builtin_bswap32(table[0]);
+static uint32_t bitfs_table[] = {
+    0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 8, 9, 10,11,12,13,14,15,
+    8, 9, 16,17,18,19,20,21,22,23,16,17,24,25,26,27,28,29,
+    30,31,24,25,32,33,34,35,36,37,38,39,32,33,40,41,42,43,
+    44,45,46,47,40,41,48,48,48,48,48,48,48,48,48,48,48,48,
+    48,48,48,48,48,48,48,48
+};
+
+static void extract_skybox(SkyboxTexture* skybox, uint8_t* buffer, uint64_t size, bool use_bitfs_table) {
+    uint32_t offset_table[80];
+    if (use_bitfs_table) for (int i = 0; i < 80; i++)
+        offset_table[i] = bitfs_table[i] * 0x800;
+    else {
+        uint32_t* table = (uint32_t*)(buffer + (size - 8 * 10 * 4));
+        uint32_t base = __builtin_bswap32(table[0]);
+        for (int i = 0; i < 80; i++) {
+            offset_table[i] = __builtin_bswap32(table[i]) - base;
+        }
+    }
     for (int i = 0; i < 80; i++) {
-        uint32_t index = __builtin_bswap32(table[i]) - base;
-        (*skybox)[i] = buffer + index;
+        (*skybox)[i] = buffer + offset_table[i];
     }
 }
 
@@ -162,7 +177,7 @@ static void assetextract_run() {
             case AssetType_CTL: ctl_buf = rom + asset->offset, ctl_len = asset->size; break;
             case AssetType_TBL: tbl_buf = rom + asset->offset, tbl_len = asset->size; break;
             case AssetType_Sound: push(samples) = (Sound_SampleAsset){ .name = asset->name, .loc = asset->offset }; break;
-            case AssetType_Tiled: extract_skybox(sSkyboxTextures[asset->index], run_mio0(asset->offset, 0), asset->size); break;
+            case AssetType_Tiled: extract_skybox(sSkyboxTextures[asset->index], run_mio0(asset->offset, 0), asset->size, strcmp(asset->name, "textures/skyboxes/bitfs") == 0); break;
             case AssetType_MIO0: asset->data = memcpy(malloc(asset->size), run_mio0(asset->offset, asset->mio0_offset), asset->size); break;
             case AssetType_Raw: asset->data = rom + asset->offset; break;
             case AssetType_Demo: asset->data = memcpy(
