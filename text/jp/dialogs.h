@@ -16,8 +16,6 @@
 います。"
 #endif
 
-DEFINE_DIALOG(DIALOG_CUSTOM, 1, 6, 30, 200, _("Welcome to Pluto"))
-
 DEFINE_DIALOG(DIALOG_000, 1, 5, 30, 200, _("\
 おおっと、ここはキケンな\n\
 せんじょうの　どまんなか。\n\
@@ -1922,3 +1920,5 @@ DEFINE_DIALOG(DIALOG_169, 1, 5, 30, 200, _("\
 むだんで　はいるものには、\n\
 わざわいが　おとずれる！\n\
 　　--せんちょうより"))
+
+DEFINE_DIALOG(DIALOG_CUSTOM, 1, 6, 30, 200, _("Welcome to Pluto"))

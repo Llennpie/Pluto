@@ -16,8 +16,6 @@
 #define GIVE_UP "give"
 #endif
 
-DEFINE_DIALOG(DIALOG_CUSTOM, 1, 6, 30, 200, _("Welcome to Pluto"))
-
 DEFINE_DIALOG(DIALOG_000, 1, 6, 30, 200, _("\
 Wow! You're smack in the\n\
 middle of the battlefield.\n\
@@ -2102,3 +2100,5 @@ Arrgghh!\n\
 Anyone entering this cave\n\
 without permission will\n\
 meet certain disaster."))
+
+DEFINE_DIALOG(DIALOG_CUSTOM, 1, 6, 30, 200, _("Welcome to Pluto"))

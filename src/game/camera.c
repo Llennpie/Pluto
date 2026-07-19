@@ -11949,27 +11949,19 @@ static UNUSED void unused_approach_fov_30(UNUSED struct MarioState *m) {
 }
 
 void approach_fov_30(UNUSED struct MarioState *m) {
-    camera_approach_f32_symmetric_bool(&gFOVState.fov, 30.f, 1.f);
+    camera_approach_f32_symmetric_bool(&gFOVState.fov, saturn_camera_fov, 1.f);
 }
 
 void approach_fov_60(UNUSED struct MarioState *m) {
-    camera_approach_f32_symmetric_bool(&gFOVState.fov, 60.f, 1.f);
+    camera_approach_f32_symmetric_bool(&gFOVState.fov, saturn_camera_fov, 1.f);
 }
 
 void approach_fov_45(struct MarioState *m) {
-    f32 targetFoV = gFOVState.fov;
-
-    if (m->area && m->area->camera && m->area->camera->mode == CAMERA_MODE_FIXED && m->area->camera->cutscene == 0) {
-        targetFoV = 45.f;
-    } else {
-        targetFoV = 45.f;
-    }
-
-    gFOVState.fov = approach_f32(gFOVState.fov, targetFoV, 2.f, 2.f);
+    gFOVState.fov = approach_f32(gFOVState.fov, saturn_camera_fov, 2.f, 2.f);
 }
 
 void approach_fov_80(UNUSED struct MarioState *m) {
-    camera_approach_f32_symmetric_bool(&gFOVState.fov, 80.f, 3.5f);
+    camera_approach_f32_symmetric_bool(&gFOVState.fov, saturn_camera_fov, 3.5f);
 }
 
 /**
@@ -11977,15 +11969,7 @@ void approach_fov_80(UNUSED struct MarioState *m) {
  * If there's a cutscene, sets fov to 45. Otherwise sets fov to 60.
  */
 void set_fov_bbh(struct MarioState *m) {
-    f32 targetFoV = gFOVState.fov;
-
-    if (m->area && m->area->camera && m->area->camera->mode == CAMERA_MODE_FIXED && m->area->camera->cutscene == 0) {
-        targetFoV = 60.f;
-    } else {
-        targetFoV = 45.f;
-    }
-
-    gFOVState.fov = approach_f32(gFOVState.fov, targetFoV, 2.f, 2.f);
+    gFOVState.fov = approach_f32(gFOVState.fov, saturn_camera_fov, 2.f, 2.f);
 }
 
 /**
@@ -11996,44 +11980,8 @@ Gfx *geo_camera_fov(s32 callContext, struct GraphNode *g, UNUSED void *context) 
     struct MarioState *marioState = &gMarioStates[0];
     u8 fovFunc = gFOVState.fovFunc;
 
-    if (callContext == GEO_CONTEXT_RENDER) {
-        switch (fovFunc) {
-            case CAM_FOV_SET_45:
-                set_fov_45(marioState);
-                break;
-            case CAM_FOV_SET_29:
-                set_fov_29(marioState);
-                break;
-            case CAM_FOV_ZOOM_30:
-                zoom_fov_30(marioState);
-                break;
-            case CAM_FOV_DEFAULT:
-                fov_default(marioState);
-                break;
-            case CAM_FOV_BBH:
-                set_fov_bbh(marioState);
-                break;
-            case CAM_FOV_APP_45:
-                approach_fov_45(marioState);
-                break;
-            case CAM_FOV_SET_30:
-                set_fov_30(marioState);
-                break;
-            case CAM_FOV_APP_20:
-                approach_fov_20(marioState);
-                break;
-            case CAM_FOV_APP_80:
-                approach_fov_80(marioState);
-                break;
-            case CAM_FOV_APP_30:
-                approach_fov_30(marioState);
-                break;
-            case CAM_FOV_APP_60:
-                approach_fov_60(marioState);
-                break;
-            //! No default case
-        }
-    }
+    if (callContext == GEO_CONTEXT_RENDER)
+        fov_default(marioState);
 
     perspective->fov = gFOVState.fov;
     shake_camera_fov(perspective);

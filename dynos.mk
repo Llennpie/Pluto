@@ -11,7 +11,7 @@ DYNOS_INIT := \
     mkdir -p "$(DYNOS_OUTPUT_DIR)"; \
     mkdir -p "$(DYNOS_PACKS_DIR)"; \
     cp -f -r "$(DYNOS_INPUT_DIR)" "$(DYNOS_APPDATA_DIR)" 2>/dev/null || true ; \
-    cp -f "sound/plutomenu.mp3" "$(DYNOS_APPDATA_DIR)/plutomenu.mp3" 2>/dev/null || true ; \
+    cp -f "sound/Panimotion.mp3" "$(DYNOS_APPDATA_DIR)/Panimotion.mp3" 2>/dev/null || true ; \
     \
     cp -f "actors/mario/mario_eyes_center.rgba16.png" "$(DYNOS_PACKS_DIR)/Pluto Mario/mario/eyes_open.rgba32.png" 2>/dev/null || true ; \
     cp -f "actors/mario/mario_eyes_half_closed.rgba16.png" "$(DYNOS_PACKS_DIR)/Pluto Mario/mario/eyes_half.rgba32.png" 2>/dev/null || true ; \

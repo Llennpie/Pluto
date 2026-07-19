@@ -4,7 +4,15 @@
 // G_SETGEOMETRYMODE //
 ///////////////////////
 
-#define G_LIGHT_MAP_EXT 0x00000800
+#define G_LIGHT_MAP_EXT     0x00000800
+#define G_ZBUFFER_NEAR_EXT  0x00001000  /* custom near-clip depth test */
+
+/////////////////////
+// Custom commands //
+/////////////////////
+
+#define G_DEPTH_SNAPSHOT_EXT 0xd0
+#define gsDPDepthSnapshotExt() {{ _SHIFTL(G_DEPTH_SNAPSHOT_EXT, 24, 8), 0 }}
 
 //////////
 // DJUI //

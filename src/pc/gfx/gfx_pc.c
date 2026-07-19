@@ -13,6 +13,7 @@
 #define _LANGUAGE_C
 #endif
 #include <PR/gbi.h>
+#include <PR/gbi_extension.h>
 
 #include "config.h"
 
@@ -145,6 +146,7 @@ static struct RDP {
         uint8_t siz;
         uint8_t tile_number;
         uint8_t is_expression;
+        uint32_t line_size_bytes;
     } texture_to_load;
     struct {
         const uint8_t *addr;
@@ -195,6 +197,8 @@ static f32 sDepthZMult = 1;
 static f32 sDepthZSub = 0;
 
 Vec3f gLightingDir;
+float gFrustumNear = 100.0f;
+float gFrustumFar  = 20000.0f;
 Color gLightingColor = { 255, 255, 255 };
 Color gVertexColor = { 255, 255, 255 };
 Color gFogColor = { 255, 255, 255 };
@@ -419,8 +423,11 @@ static bool gfx_texture_cache_lookup(int tile, struct TextureHashmapNode **n, co
 static void import_texture_rgba32(int tile) {
     tile = tile % RDP_TILES;
     if (!rdp.loaded_texture[tile].addr) { return; }
-    uint32_t width = rdp.texture_tile.line_size_bytes / 2;
-    uint32_t height = (rdp.loaded_texture[tile].size_bytes / 2) / rdp.texture_tile.line_size_bytes;
+    uint32_t lsb = rdp.texture_to_load.is_expression
+        ? rdp.texture_to_load.line_size_bytes
+        : rdp.texture_tile.line_size_bytes;
+    uint32_t width  = lsb / 4;
+    uint32_t height = rdp.loaded_texture[tile].size_bytes / lsb;
     gfx_rapi->upload_texture(rdp.loaded_texture[tile].addr, width, height);
 }
 
@@ -765,6 +772,13 @@ static void gfx_sp_matrix(uint8_t parameters, const int32_t *addr) {
     if (parameters & G_MTX_PROJECTION) {
         if (parameters & G_MTX_LOAD) {
             memcpy(rsp.P_matrix, matrix, sizeof(matrix));
+            
+            float a = rsp.P_matrix[2][2];
+            float b = rsp.P_matrix[3][2];
+            if (a < -1.0f) {
+                gFrustumFar  = b / (a + 1.0f);
+                gFrustumNear = b / (a - 1.0f);
+            }
         } else {
             gfx_matrix_mul(rsp.P_matrix, matrix, rsp.P_matrix);
         }
@@ -1209,6 +1223,7 @@ static void OPTIMIZE_O3 gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t 
     cm->use_2cycle   = (rdp.other_mode_h & (3U << G_MDSFT_CYCLETYPE)) == G_CYC_2CYCLE;
     cm->use_fog      = (rdp.other_mode_l >> 30)                       == G_BL_CLR_FOG;
     cm->light_map    = (rsp.geometry_mode & G_LIGHT_MAP_EXT)          == G_LIGHT_MAP_EXT;
+    cm->near_clip    = (rsp.geometry_mode & G_ZBUFFER_NEAR_EXT)       == G_ZBUFFER_NEAR_EXT;
 
     if (cm->texture_edge) {
         cm->use_alpha = true;
@@ -1505,7 +1520,7 @@ void saturn_update_texture_expression(const uint8_t* addr, uint8_t tile, uint32_
     uint32_t sizeBytes = (uint32_t)(width * height) << wordSizeShift;
     rdp.loaded_texture[tile].size_bytes = sizeBytes;
 
-    rdp.texture_tile.line_size_bytes = (uint32_t)width * 2;
+    rdp.texture_to_load.line_size_bytes = (uint32_t)width * ((size == G_IM_SIZ_32b) ? 4 : 2);
 }
 
 static void gfx_dp_set_texture_image(UNUSED uint32_t format, uint32_t size, UNUSED uint32_t width, const void* addr) {
@@ -1521,7 +1536,7 @@ static void gfx_dp_set_tile(uint8_t fmt, uint32_t siz, uint32_t line, uint32_t t
         rdp.texture_tile.siz = siz;
         rdp.texture_tile.cms = cms;
         rdp.texture_tile.cmt = cmt;
-        if (rdp.texture_to_load.is_expression == 0) rdp.texture_tile.line_size_bytes = line * 8;
+        rdp.texture_tile.line_size_bytes = line * 8;
         if (!sOnlyTextureChangeOnAddrChange) {
             // I don't know if we ever need to set these...
             rdp.textures_changed[0] = true;
@@ -1905,6 +1920,10 @@ static void OPTIMIZE_O3 gfx_run_dl(Gfx* cmd) {
                 break;
             case (uint8_t)G_ENDDL:
                 return;
+            case (uint8_t)G_DEPTH_SNAPSHOT_EXT:
+                gfx_flush();
+                gfx_rapi->snapshot_depth();
+                break;
 #ifdef F3DEX_GBI_2
             case G_GEOMETRYMODE:
                 gfx_sp_geometry_mode(~C0(0, 24), cmd->words.w1);
@@ -2214,6 +2233,8 @@ static void OPTIMIZE_O3 djui_gfx_dp_execute_override(void) {
     if (!sDjuiOverride) { return; }
     sDjuiOverride = false;
 
+    rdp.texture_to_load.is_expression = 0;
+
     // gsDPSetTextureImage
     uint8_t sizeLoadBlock = (sDjuiOverrideB == 32) ? 3 : 2;
     rdp.texture_to_load.addr = sDjuiOverrideTexture;
@@ -2229,7 +2250,8 @@ static void OPTIMIZE_O3 djui_gfx_dp_execute_override(void) {
     gfx_update_loaded_texture(rdp.texture_to_load.tile_number, sizeBytes, rdp.texture_to_load.addr);
 
     // gsDPSetTile
-    uint32_t line = (((sDjuiOverrideW * 2) + 7) >> 3);
+    uint32_t bpp = (sDjuiOverrideB == 32) ? 4 : 2;
+    uint32_t line = (((sDjuiOverrideW * bpp) + 7) >> 3);
     rdp.texture_tile.line_size_bytes = line * 8;
 
     // gsDPSetTileSize

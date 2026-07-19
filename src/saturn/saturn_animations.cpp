@@ -711,11 +711,11 @@ void ResetBoneCountList() {
 // Unholy anmount of helper functions we feed to the graph node
 
 bool SaturnShouldApplyBoneTranslation(void) {
-    return is_editing_panim || (override_anim && !current_pluto_anim.Translations.empty());
+    return is_editing_panim || (override_anim && enable_custom_anim && !current_pluto_anim.Translations.empty());
 }
 
 bool SaturnShouldApplyBoneScale(void) {
-    return is_editing_panim || (override_anim && !current_pluto_anim.Scales.empty());
+    return is_editing_panim || (override_anim && enable_custom_anim && !current_pluto_anim.Scales.empty());
 }
 
 bool SaturnIsEditingPAnim(void) {
@@ -768,6 +768,36 @@ void ApplyBoneTranslation(Vec3s out, Vec3s out_prev) {
     int frame_count = (int)current_pluto_anim.Translations.size() / (total_count * 3);
     if (frame_count <= 0) return;
 
+    auto clamp_frame = [&](int f) { return f < 0 ? 0 : (f >= frame_count ? frame_count - 1 : f); };
+    auto read_trans = [&](int bone, int f, Vec3s dst) {
+        int b = (bone * frame_count + clamp_frame(f)) * 3;
+        dst[0] = current_pluto_anim.Translations[b];
+        dst[1] = current_pluto_anim.Translations[b + 1];
+        dst[2] = current_pluto_anim.Translations[b + 2];
+    };
+
+    if (g_saturn_anim_blend_t >= 0.0f) {
+        Vec3s t0, t1;
+        read_trans(bone_idx, g_saturn_floor_frame, t0);
+        read_trans(bone_idx, g_saturn_ceil_frame,  t1);
+        float frac = g_saturn_anim_blend_t;
+        out[0] = (s16)(t0[0] + (t1[0] - t0[0]) * frac);
+        out[1] = (s16)(t0[1] + (t1[1] - t0[1]) * frac);
+        out[2] = (s16)(t0[2] + (t1[2] - t0[2]) * frac);
+        if (g_saturn_prev_blend_t >= 0.0f) {
+            Vec3s p0, p1;
+            read_trans(bone_idx, g_saturn_prev_floor_frame, p0);
+            read_trans(bone_idx, g_saturn_prev_ceil_frame,  p1);
+            float pfrac = g_saturn_prev_blend_t;
+            out_prev[0] = (s16)(p0[0] + (p1[0] - p0[0]) * pfrac);
+            out_prev[1] = (s16)(p0[1] + (p1[1] - p0[1]) * pfrac);
+            out_prev[2] = (s16)(p0[2] + (p1[2] - p0[2]) * pfrac);
+        } else {
+            vec3s_copy(out_prev, out);
+        }
+        return;
+    }
+
     int frame = gMarioStates[0].marioObj->header.gfx.animInfo.animFrame;
     frame = frame < 0 ? 0 : (frame >= frame_count ? frame_count - 1 : frame);
     int base = (bone_idx * frame_count + frame) * 3;
@@ -818,6 +848,36 @@ void ApplyBoneScale(Vec3f out, Vec3f out_prev) {
 
     int frame_count = (int)current_pluto_anim.Scales.size() / (total_count * 3);
     if (frame_count <= 0) return;
+
+    auto clamp_frame = [&](int f) { return f < 0 ? 0 : (f >= frame_count ? frame_count - 1 : f); };
+    auto read_scale = [&](int bone, int f, Vec3f dst) {
+        int b = (bone * frame_count + clamp_frame(f)) * 3;
+        dst[0] = current_pluto_anim.Scales[b]     / 1024.0f;
+        dst[1] = current_pluto_anim.Scales[b + 1] / 1024.0f;
+        dst[2] = current_pluto_anim.Scales[b + 2] / 1024.0f;
+    };
+
+    if (g_saturn_anim_blend_t >= 0.0f) {
+        Vec3f s0, s1;
+        read_scale(bone_idx, g_saturn_floor_frame, s0);
+        read_scale(bone_idx, g_saturn_ceil_frame,  s1);
+        float frac = g_saturn_anim_blend_t;
+        out[0] = s0[0] + (s1[0] - s0[0]) * frac;
+        out[1] = s0[1] + (s1[1] - s0[1]) * frac;
+        out[2] = s0[2] + (s1[2] - s0[2]) * frac;
+        if (g_saturn_prev_blend_t >= 0.0f) {
+            Vec3f p0, p1;
+            read_scale(bone_idx, g_saturn_prev_floor_frame, p0);
+            read_scale(bone_idx, g_saturn_prev_ceil_frame,  p1);
+            float pfrac = g_saturn_prev_blend_t;
+            out_prev[0] = p0[0] + (p1[0] - p0[0]) * pfrac;
+            out_prev[1] = p0[1] + (p1[1] - p0[1]) * pfrac;
+            out_prev[2] = p0[2] + (p1[2] - p0[2]) * pfrac;
+        } else {
+            out_prev[0] = out[0]; out_prev[1] = out[1]; out_prev[2] = out[2];
+        }
+        return;
+    }
 
     int frame = gMarioStates[0].marioObj->header.gfx.animInfo.animFrame;
     frame = frame < 0 ? 0 : (frame >= frame_count ? frame_count - 1 : frame);

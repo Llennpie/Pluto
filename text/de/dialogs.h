@@ -1,7 +1,5 @@
 // Parameters: dialog enum ID, (unused), lines per box, left offset, width
 
-DEFINE_DIALOG(DIALOG_CUSTOM, 1, 6, 30, 200, _("Welcome to Pluto"))
-
 DEFINE_DIALOG(DIALOG_000, 1, 6, 30, 200, _("\
 Du bist inmitten der\n\
 Kampfarena gelandet.\n\
@@ -2058,3 +2056,5 @@ Wer sich hier ohne meine\n\
 Erlaubnis Zutritt\n\
 verschafft, handelt sich\n\
 eine Menge Ärger ein!!!"))
+
+DEFINE_DIALOG(DIALOG_CUSTOM, 1, 6, 30, 200, _("Welcome to Pluto"))

@@ -69,13 +69,13 @@ s64 DynOS_Gfx_ParseGfxConstants(const String& _Arg, bool* found) {
 
     // Image formats
     gfx_constant(G_IM_FMT_RGBA);
-    if (_Arg == "G_IM_FMT_YUV") return G_IM_FMT_RGBA;
-    if (_Arg == "G_IM_FMT_CI") return G_IM_FMT_RGBA;
-    if (_Arg == "G_IM_FMT_IA") return G_IM_FMT_RGBA;
-    if (_Arg == "G_IM_FMT_I") return G_IM_FMT_RGBA;
-    if (_Arg == "G_IM_SIZ_4b") return G_IM_SIZ_32b;
-    if (_Arg == "G_IM_SIZ_8b") return G_IM_SIZ_32b;
-    if (_Arg == "G_IM_SIZ_16b") return G_IM_SIZ_32b;
+    gfx_constant(G_IM_FMT_YUV);
+    gfx_constant(G_IM_FMT_CI);
+    gfx_constant(G_IM_FMT_IA);
+    gfx_constant(G_IM_FMT_I);
+    gfx_constant(G_IM_SIZ_4b);
+    gfx_constant(G_IM_SIZ_8b);
+    gfx_constant(G_IM_SIZ_16b);
     gfx_constant(G_IM_SIZ_32b);
     gfx_constant(G_IM_SIZ_DD);
 
@@ -92,9 +92,9 @@ s64 DynOS_Gfx_ParseGfxConstants(const String& _Arg, bool* found) {
     gfx_constant(G_IM_SIZ_32b_BYTES);
     gfx_constant(G_IM_SIZ_32b_TILE_BYTES);
     gfx_constant(G_IM_SIZ_32b_LINE_BYTES);
-    if (_Arg == "G_IM_SIZ_4b_LOAD_BLOCK") return G_IM_SIZ_32b_LOAD_BLOCK;
-    if (_Arg == "G_IM_SIZ_8b_LOAD_BLOCK") return G_IM_SIZ_32b_LOAD_BLOCK;
-    if (_Arg == "G_IM_SIZ_16b_LOAD_BLOCK") return G_IM_SIZ_32b_LOAD_BLOCK;
+    gfx_constant(G_IM_SIZ_4b_LOAD_BLOCK);
+    gfx_constant(G_IM_SIZ_8b_LOAD_BLOCK);
+    gfx_constant(G_IM_SIZ_16b_LOAD_BLOCK);
     gfx_constant(G_IM_SIZ_32b_LOAD_BLOCK);
     gfx_constant(G_IM_SIZ_4b_SHIFT);
     gfx_constant(G_IM_SIZ_8b_SHIFT);
@@ -349,6 +349,7 @@ s64 DynOS_Gfx_ParseGfxConstants(const String& _Arg, bool* found) {
 
     // Extended
     gfx_constant(G_LIGHT_MAP_EXT);
+    gfx_constant(G_ZBUFFER_NEAR_EXT);
 
     // Common values
     gfx_constant(CALC_DXT(4,G_IM_SIZ_4b_BYTES));
@@ -776,7 +777,18 @@ static void ParseGfxSymbol(GfxData* aGfxData, DataNode<Gfx>* aNode, Gfx*& aHead,
     gfx_symbol_8(gsSP2Triangles);
     gfx_symbol_1(gsSPNumLights, false);
     gfx_symbol_1(gsDPSetDepthSource, false);
-    gfx_symbol_1(gsDPSetTextureLUT, false);
+    // Convert all pack textures to RGBA32
+    if (_Symbol == "gsDPSetTextureLUT") {
+        ParseGfxSymbolArg(aGfxData, aNode, &aTokenIndex, ""); // consume arg
+        gDPSetTextureLUT(aHead++, G_TT_NONE);
+        return;
+    }
+    if (_Symbol == "gsDPLoadTLUTCmd") {
+        ParseGfxSymbolArg(aGfxData, aNode, &aTokenIndex, ""); // tile
+        ParseGfxSymbolArg(aGfxData, aNode, &aTokenIndex, ""); // high_index
+        gDPNoOp(aHead++);
+        return;
+    }
     gfx_symbol_2(gsDPLoadTLUTCmd, false);
     gfx_symbol_5(gsDPLoadBlock);
     gfx_symbol_2(gsDPSetRenderMode, false);
@@ -920,6 +932,11 @@ static void ParseGfxSymbol(GfxData* aGfxData, DataNode<Gfx>* aNode, Gfx*& aHead,
         s64 _Arg2 = ParseGfxSymbolArg(aGfxData, aNode, &aTokenIndex, "");
         s64 _Arg3 = ParseGfxSymbolArg(aGfxData, aNode, &aTokenIndex, "");
         UpdateTextureInfo(aGfxData, &_Arg3, (s32) _Arg0, (s32) _Arg1, -1, -1);
+        // Convert all pack textures to RGBA32
+        if (aGfxData->mGfxContext.mCurrentTexture && aGfxData->mGfxContext.mCurrentTexture->mData) {
+            _Arg0 = G_IM_FMT_RGBA;
+            _Arg1 = G_IM_SIZ_32b;
+        }
         aGfxData->mPointerList.Add(aHead);
         gDPSetTextureImage(aHead++, _Arg0, _Arg1, _Arg2, _Arg3);
         return;
@@ -938,6 +955,11 @@ static void ParseGfxSymbol(GfxData* aGfxData, DataNode<Gfx>* aNode, Gfx*& aHead,
         s64 _ArgA = ParseGfxSymbolArg(aGfxData, aNode, &aTokenIndex, "");
         s64 _ArgB = ParseGfxSymbolArg(aGfxData, aNode, &aTokenIndex, "");
         UpdateTextureInfo(aGfxData, NULL, (s32) _Arg0, (s32) _Arg1, -1, -1);
+        // Convert all pack textures to RGBA32
+        if (aGfxData->mGfxContext.mCurrentTexture && aGfxData->mGfxContext.mCurrentTexture->mData) {
+            _Arg0 = G_IM_FMT_RGBA;
+            _Arg1 = G_IM_SIZ_32b;
+        }
         gDPSetTile(aHead++, _Arg0, _Arg1, _Arg2, _Arg3, _Arg4, _Arg5, _Arg6, _Arg7, _Arg8, _Arg9, _ArgA, _ArgB);
         return;
     }
@@ -982,12 +1004,22 @@ static void ParseGfxSymbol(GfxData* aGfxData, DataNode<Gfx>* aNode, Gfx*& aHead,
         UpdateTextureInfo(aGfxData, &_Arg0, (s32) _Arg1, (s32) _Arg2, (s32) _Arg3, (s32) _Arg4);
 
         aGfxData->mPointerList.Add(aHead);
-        gDPSetTextureImage(aHead++, _Arg1, arg2_0, 1, _Arg0);
-        gDPSetTile(aHead++, _Arg1, arg2_0, 0, 0, G_TX_LOADTILE, 0, _Arg7, _Arg9, _ArgB, _Arg6, _Arg8, _ArgA);
-        gDPLoadSync(aHead++);
-        gDPLoadBlock(aHead++, G_TX_LOADTILE, 0, 0, (((_Arg3) * (_Arg4) + arg2_1) >> arg2_2) - 1, CALC_DXT(_Arg3, arg2_3));
-        gDPPipeSync(aHead++);
-        gDPSetTile(aHead++, _Arg1, _Arg2, ((((_Arg3) * arg2_4) + 7) >> 3), 0, G_TX_RENDERTILE, _Arg5, _Arg7, _Arg9, _ArgB, _Arg6, _Arg8, _ArgA);
+        // Convert all pack textures to RGBA32
+        if (aGfxData->mGfxContext.mCurrentTexture && aGfxData->mGfxContext.mCurrentTexture->mData) {
+            gDPSetTextureImage(aHead++, G_IM_FMT_RGBA, G_IM_SIZ_32b_LOAD_BLOCK, 1, _Arg0);
+            gDPSetTile(aHead++, G_IM_FMT_RGBA, G_IM_SIZ_32b_LOAD_BLOCK, 0, 0, G_TX_LOADTILE, 0, _Arg7, _Arg9, _ArgB, _Arg6, _Arg8, _ArgA);
+            gDPLoadSync(aHead++);
+            gDPLoadBlock(aHead++, G_TX_LOADTILE, 0, 0, (((_Arg3) * (_Arg4) + G_IM_SIZ_32b_INCR) >> G_IM_SIZ_32b_SHIFT) - 1, CALC_DXT(_Arg3, G_IM_SIZ_32b_BYTES));
+            gDPPipeSync(aHead++);
+            gDPSetTile(aHead++, G_IM_FMT_RGBA, G_IM_SIZ_32b, (((_Arg3) * G_IM_SIZ_32b_LINE_BYTES + 7) >> 3), 0, G_TX_RENDERTILE, _Arg5, _Arg7, _Arg9, _ArgB, _Arg6, _Arg8, _ArgA);
+        } else {
+            gDPSetTextureImage(aHead++, _Arg1, arg2_0, 1, _Arg0);
+            gDPSetTile(aHead++, _Arg1, arg2_0, 0, 0, G_TX_LOADTILE, 0, _Arg7, _Arg9, _ArgB, _Arg6, _Arg8, _ArgA);
+            gDPLoadSync(aHead++);
+            gDPLoadBlock(aHead++, G_TX_LOADTILE, 0, 0, (((_Arg3) * (_Arg4) + arg2_1) >> arg2_2) - 1, CALC_DXT(_Arg3, arg2_3));
+            gDPPipeSync(aHead++);
+            gDPSetTile(aHead++, _Arg1, _Arg2, ((((_Arg3) * arg2_4) + 7) >> 3), 0, G_TX_RENDERTILE, _Arg5, _Arg7, _Arg9, _ArgB, _Arg6, _Arg8, _ArgA);
+        }
         gDPSetTileSize(aHead++, G_TX_RENDERTILE, 0, 0, (((u64)_Arg3) - 1) << G_TEXTURE_IMAGE_FRAC, (((u64)_Arg4) - 1) << G_TEXTURE_IMAGE_FRAC);
         return;
     }

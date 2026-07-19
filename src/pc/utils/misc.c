@@ -494,7 +494,7 @@ inline static void delta_interpolate_mtx_accurate(Mtx* out, Mtx* a, Mtx* b, f32 
 void delta_interpolate_mtx(Mtx* out, Mtx* a, Mtx* b, f32 delta) {
     // HACK: Limit accurate interpolation to 64-bit builds
     if (sizeof(void*) > 4) {
-        if (configInterpolationMode) {
+        if (configInterpolationMode == 1) {
             delta_interpolate_mtx_accurate(out, a, b, delta);
             return;
         }

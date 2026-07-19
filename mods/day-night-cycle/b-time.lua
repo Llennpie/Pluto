@@ -2,7 +2,7 @@ function delete_at_dark() end
 if SM64COOPDX_VERSION == nil then return end
 
 gGlobalSyncTable.time = 0
-gGlobalSyncTable.timeScale = 1
+gGlobalSyncTable.timeScale = 0
 
 local sNightSequences = {}
 

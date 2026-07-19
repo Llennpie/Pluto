@@ -1,5 +1,6 @@
 #include <PR/ultratypes.h>
 #include <PR/gbi.h>
+#include <PR/gbi_extension.h>
 
 #include "area.h"
 #include "engine/math_util.h"
@@ -289,7 +290,11 @@ void patch_mtx_interpolated(f32 delta) {
         if (!interp->gfx) { continue; }
         gShadowInterpCurrent = interp;
         Vec3f posInterp;
-        delta_interpolate_vec3f(posInterp, interp->shadowPosPrev, interp->shadowPos, delta);
+        if (configInterpolationMode == 2) {
+            vec3f_copy(posInterp, interp->shadowPos);
+        } else {
+            delta_interpolate_vec3f(posInterp, interp->shadowPosPrev, interp->shadowPos, delta);
+        }
         gCurGraphNodeObject = interp->obj;
         extern u8 gInterpolatingSurfaces;
         gInterpolatingSurfaces = true;
@@ -320,7 +325,11 @@ void patch_mtx_interpolated(f32 delta) {
             mtxf_mul(bufMtx.m, bufMtx.m, camTranfInv.m);
             mtxf_mul(bufMtxPrev.m, bufMtxPrev.m, prevCamTranfInv.m);
         }
-        delta_interpolate_mtx(&gMtxTbl[i].interp, &bufMtxPrev, &bufMtx, delta);
+        if (configInterpolationMode == 2) {
+            memcpy(gMtxTbl[i].interp.m, bufMtx.m, sizeof(f32) * 4 * 4);
+        } else {
+            delta_interpolate_mtx(&gMtxTbl[i].interp, &bufMtxPrev, &bufMtx, delta);
+        }
         if (gMtxTbl[i].usingCamSpace) {
             // transform back to camera space, respecting camera interpolation
             Mtx camInterp;
@@ -387,8 +396,15 @@ static void geo_process_master_list_sub(struct GraphNodeMasterList *node) {
         gSPSetGeometryMode(gDisplayListHead++, G_ZBUFFER);
     }
 
+    bool depth_snapshot_injected = false;
     for (s32 i = 0; i < GFX_NUM_MASTER_LISTS; i++) {
         if ((currList = node->listHeads[i]) != NULL) {
+            if (i >= 4 && !depth_snapshot_injected) {
+                gDisplayListHead->words.w0 = _SHIFTL(G_DEPTH_SNAPSHOT_EXT, 24, 8);
+                gDisplayListHead->words.w1 = 0;
+                gDisplayListHead++;
+                depth_snapshot_injected = true;
+            }
             gDPSetRenderMode(gDisplayListHead++, modeList->modes[i], mode2List->modes[i]);
             while (currList != NULL) {
                 detect_and_skip_mtx_interpolation(&currList->transform, &currList->transformPrev);
@@ -845,8 +861,8 @@ static int s_hidden_bone_depth = 0;
  * parent node. It processes its children if it has them.
  */
 static void geo_process_display_list(struct GraphNodeDisplayList *node) {
-    // fuck this
     if (s_hidden_bone_depth > 0) {
+        // Hiding bone display lists, but still processing children
         if (node->node.children != NULL)
             geo_process_node_and_siblings(node->node.children);
         return;
@@ -986,8 +1002,8 @@ static void anim_process(Vec3f translation, Vec3s rotation, u8 *animType, s16 an
  * but set in global variables. If an animated part is skipped, everything afterwards desyncs.
  */
 static void geo_process_animated_part(struct GraphNodeAnimatedPart *node) {
+    if (s_hidden_bone_depth > 0) s_hidden_bone_depth = 0;
     bool hide_this = gCurGraphNodeObject == &gMarioObject->header.gfx && SaturnCurrentBoneIsHidden();
-    if (hide_this) s_hidden_bone_depth++;
 
     Mat4 matrix;
     Vec3s rotation;
@@ -996,7 +1012,7 @@ static void geo_process_animated_part(struct GraphNodeAnimatedPart *node) {
     Vec3f translationPrev;
 
     // Sanity check our stack index, If we above or equal to our stack size. Return to prevent OOB.
-    if ((gMatStackIndex + 1) >= MATRIX_STACK_SIZE) { LOG_ERROR("Preventing attempt to exceed the maximum size %i for our matrix stack with size of %i.", MATRIX_STACK_SIZE - 1, gMatStackIndex); if (hide_this) s_hidden_bone_depth--; return; }
+    if ((gMatStackIndex + 1) >= MATRIX_STACK_SIZE) { LOG_ERROR("Preventing attempt to exceed the maximum size %i for our matrix stack with size of %i.", MATRIX_STACK_SIZE - 1, gMatStackIndex); return; }
 
     u16 *animAttribute = gCurrAnimAttribute;
     u8 animType = gCurAnimType;
@@ -1007,14 +1023,69 @@ static void geo_process_animated_part(struct GraphNodeAnimatedPart *node) {
     vec3s_copy(rotationPrev, rotation);
     vec3f_copy(translationPrev, translation);
 
-    anim_process(translationPrev, rotationPrev, &animType, gPrevAnimFrame, &animAttribute);
-    anim_process(translation, rotation, &gCurAnimType, gCurrAnimFrame, &gCurrAnimAttribute);
+    if (gCurGraphNodeObject == &gMarioObject->header.gfx && g_saturn_anim_blend_t >= 0.0f
+    && g_saturn_floor_frame != g_saturn_ceil_frame) {
+
+        u8 origAnimType = gCurAnimType;
+        u16 *attrStart = gCurrAnimAttribute;
+
+        Vec3s rotFloor, rotCeil;
+        Vec3f transFloor/*gender*/, transCeil;
+        u8 typeFloor = origAnimType, typeCeil = origAnimType;
+        u16 *attrFloor = attrStart, *attrCeil = attrStart;
+
+        vec3s_copy(rotFloor, gVec3sZero); vec3f_set(transFloor, node->translation[0], node->translation[1], node->translation[2]);
+        vec3s_copy(rotCeil, gVec3sZero); vec3f_set(transCeil, node->translation[0], node->translation[1], node->translation[2]);
+        anim_process(transFloor, rotFloor, &typeFloor, g_saturn_floor_frame, &attrFloor);
+        anim_process(transCeil, rotCeil, &typeCeil, g_saturn_ceil_frame, &attrCeil);
+
+        gCurrAnimAttribute = attrCeil;
+        gCurAnimType = typeCeil;
+
+        f32 t = g_saturn_anim_blend_t;
+        s32 dr0 = (s32)rotCeil[0]-(s32)rotFloor[0]; if (dr0> 32767) dr0-=65536; else if (dr0<-32768) dr0+=65536; 
+        s32 dr1 = (s32)rotCeil[1]-(s32)rotFloor[1]; if (dr1> 32767) dr1-=65536; else if (dr1<-32768) dr1+=65536;
+        s32 dr2 = (s32)rotCeil[2]-(s32)rotFloor[2]; if (dr2> 32767) dr2-=65536; else if (dr2<-32768) dr2+=65536;
+        rotation[0] = (s16)((s32)rotFloor[0] + (s32)(dr0 * t));
+        rotation[1] = (s16)((s32)rotFloor[1] + (s32)(dr1 * t));
+        rotation[2] = (s16)((s32)rotFloor[2] + (s32)(dr2 * t));
+        translation[0] = transFloor[0] + (transCeil[0] - transFloor[0]) * t;
+        translation[1] = transFloor[1] + (transCeil[1] - transFloor[1]) * t;
+        translation[2] = transFloor[2] + (transCeil[2] - transFloor[2]) * t;
+
+        if (g_saturn_prev_blend_t >= 0.0f && g_saturn_prev_floor_frame != g_saturn_prev_ceil_frame) {
+            Vec3s rotPF, rotPC;
+            Vec3f transPF, transPC; 
+            u8 tpf = origAnimType, tpc = origAnimType; 
+            u16 *apf = attrStart,  *apc = attrStart;
+            vec3s_copy(rotPF, gVec3sZero); vec3f_set(transPF, node->translation[0], node->translation[1], node->translation[2]);
+            vec3s_copy(rotPC, gVec3sZero); vec3f_set(transPC, node->translation[0], node->translation[1], node->translation[2]);
+            anim_process(transPF, rotPF, &tpf, g_saturn_prev_floor_frame, &apf);
+            anim_process(transPC, rotPC, &tpc, g_saturn_prev_ceil_frame, &apc);
+            f32 pt = g_saturn_prev_blend_t;
+            s32 pd0=(s32)rotPC[0]-(s32)rotPF[0]; if (pd0> 32767) pd0-=65536; else if (pd0<-32768) pd0+=65536;
+            s32 pd1=(s32)rotPC[1]-(s32)rotPF[1]; if (pd1> 32767) pd1-=65536; else if (pd1<-32768) pd1+=65536;
+            s32 pd2=(s32)rotPC[2]-(s32)rotPF[2]; if (pd2> 32767) pd2-=65536; else if (pd2<-32768) pd2+=65536;
+            rotationPrev[0] = (s16)((s32)rotPF[0] + (s32)(pd0 * pt));
+            rotationPrev[1] = (s16)((s32)rotPF[1] + (s32)(pd1 * pt));
+            rotationPrev[2] = (s16)((s32)rotPF[2] + (s32)(pd2 * pt));
+            translationPrev[0] = transPF[0] + (transPC[0] - transPF[0]) * pt;
+            translationPrev[1] = transPF[1] + (transPC[1] - transPF[1]) * pt;
+            translationPrev[2] = transPF[2] + (transPC[2] - transPF[2]) * pt; 
+        } else {
+            vec3s_copy(rotationPrev, rotation);
+            vec3f_copy(translationPrev, translation); 
+        }
+    } else {
+        anim_process(translationPrev, rotationPrev, &animType, gPrevAnimFrame, &animAttribute);
+        anim_process(translation, rotation, &gCurAnimType, gCurrAnimFrame, &gCurrAnimAttribute);
+    }
 
     if (gCurGraphNodeObject == &gMarioObject->header.gfx) {
         Vec3s boneOffset, boneOffsetPrev;
         ApplyBoneTranslation(boneOffset, boneOffsetPrev);
         translation[0] += boneOffset[0];
-        translation[1] += boneOffset[1];
+        translation[1] += boneOffset[1]; 
         translation[2] += boneOffset[2];
         translationPrev[0] += boneOffsetPrev[0];
         translationPrev[1] += boneOffsetPrev[1];
@@ -1071,18 +1142,23 @@ static void geo_process_animated_part(struct GraphNodeAnimatedPart *node) {
         get_pos_from_transform_mtx(translated, gMatStack[gMatStackIndex], *gCurGraphNodeCamera->matrixPtr);
         gCurGraphNodeMarioState->minimumBoneY = fmin(gCurGraphNodeMarioState->minimumBoneY, translated[1] - gCurGraphNodeMarioState->marioObj->header.gfx.pos[1]);
     }
-    if (node->displayList != NULL && s_hidden_bone_depth == 0) {
-        apply_translate_rotate();
-        apply_scale();
-        geo_append_display_list(create_object_dl(node->displayList), node->node.flags >> 8);
-        gMatStackIndex -= matStackOffset;
-        matStackOffset = 0;
+    if (node->displayList != NULL) {
+        if (!hide_this) {
+            apply_translate_rotate();
+            apply_scale();
+            geo_append_display_list(create_object_dl(node->displayList), node->node.flags >> 8);
+            gMatStackIndex -= matStackOffset;
+            matStackOffset = 0;
+        }
     }
+
+    bool start_hiding = (hide_this && node->displayList == NULL && s_hidden_bone_depth == 0);
+    if (start_hiding) s_hidden_bone_depth = 1;
     if (node->node.children != NULL) {
         geo_process_node_and_siblings(node->node.children);
     }
+    if (start_hiding) s_hidden_bone_depth = 0;
     gMatStackIndex--;
-    if (hide_this) s_hidden_bone_depth--;
 }
 
 // Returns true if an added custom bone is detected in the scene
@@ -1281,6 +1357,8 @@ static void geo_process_mcomp_extra(struct GraphNodeAnimatedPart *node) {
     if ((override_anim && enable_custom_anim && mcomp_bone_detected && ExtraBoneInBounds(mcomp_bone_index)) || SaturnIsEditingPAnim()) {
         geo_process_animated_part(node);
     } else {
+        bool hide_this_mcomp = gCurGraphNodeObject == &gMarioObject->header.gfx && SaturnCurrentBoneIsHidden();
+        if (s_hidden_bone_depth > 0) s_hidden_bone_depth = 0;  // clear inherited flag
         Mat4 matrix;
         Vec3f translation;
         Vec3f translationPrev;
@@ -1356,14 +1434,19 @@ static void geo_process_mcomp_extra(struct GraphNodeAnimatedPart *node) {
             get_pos_from_transform_mtx(translated, gMatStack[gMatStackIndex], *gCurGraphNodeCamera->matrixPtr);
             gCurGraphNodeMarioState->minimumBoneY = fmin(gCurGraphNodeMarioState->minimumBoneY, translated[1] - gCurGraphNodeMarioState->marioObj->header.gfx.pos[1]);
         }
-        if (node->displayList != NULL && s_hidden_bone_depth == 0) {
-            geo_append_display_list(node->displayList, node->node.flags >> 8);
-            gMatStackIndex -= matStackOffset;
-            matStackOffset = 0;
+        if (node->displayList != NULL) {
+            if (!hide_this_mcomp) {
+                geo_append_display_list(node->displayList, node->node.flags >> 8);
+                gMatStackIndex -= matStackOffset;
+                matStackOffset = 0;
+            }
         }
+        bool start_hiding_mcomp = (hide_this_mcomp && node->displayList == NULL && s_hidden_bone_depth == 0);
+        if (start_hiding_mcomp) s_hidden_bone_depth = 1;
         if (node->node.children != NULL) {
             geo_process_node_and_siblings(node->node.children);
         }
+        if (start_hiding_mcomp) s_hidden_bone_depth = 0;
         gMatStackIndex--;
     }
 }
@@ -1388,6 +1471,8 @@ static void geo_process_extra_wiggle(struct GraphNodeExtraWiggle *node) {
     if ((override_anim && enable_custom_anim && mcomp_bone_detected && ExtraBoneInBounds(mcomp_bone_index)) || SaturnIsEditingPAnim()) {
         geo_process_animated_part((struct GraphNodeAnimatedPart *) node);
     } else {
+        bool hide_this_wiggle = gCurGraphNodeObject == &gMarioObject->header.gfx && SaturnCurrentBoneIsHidden();
+        if (s_hidden_bone_depth > 0) s_hidden_bone_depth = 0;  // clear inherited flag
         Mat4 matrix;
         Vec3f translation;
         Vec3f translationPrev;
@@ -1444,9 +1529,8 @@ static void geo_process_extra_wiggle(struct GraphNodeExtraWiggle *node) {
         // These are overly simple. I could probably make them better if I was an elite mathematician
         // But they work basically by oscillating the bone's position in a circle based on the wind params
         if (use_wiggle && wind_enabled && !wind_disabled) {
-            float wind_rad = wind_angle * (3.14159265f / 180.0f);
-            float cos_dir = cosf(wind_rad) * wind_strength;
-            float sin_dir = sinf(wind_rad) * wind_strength;
+            float cos_dir = wind_angle[0] * 2.f;
+            float sin_dir = wind_angle[1] * 2.f;
             float osc_cur  = 1.0f + wind_sway * sinf((float)gGlobalTimer * 0.2f);
             float osc_prev = 1.0f + wind_sway * sinf((float)(gGlobalTimer - 1) * 0.2f);
             gMatStack[gMatStackIndex + 1][3][0]     += cos_dir * osc_cur;
@@ -1471,14 +1555,19 @@ static void geo_process_extra_wiggle(struct GraphNodeExtraWiggle *node) {
             get_pos_from_transform_mtx(translated, gMatStack[gMatStackIndex], *gCurGraphNodeCamera->matrixPtr);
             gCurGraphNodeMarioState->minimumBoneY = fmin(gCurGraphNodeMarioState->minimumBoneY, translated[1] - gCurGraphNodeMarioState->marioObj->header.gfx.pos[1]);
         }
-        if (node->displayList != NULL && s_hidden_bone_depth == 0) {
-            geo_append_display_list(node->displayList, node->node.flags >> 8);
-            gMatStackIndex -= matStackOffset;
-            matStackOffset = 0;
+        if (node->displayList != NULL) {
+            if (!hide_this_wiggle) {
+                geo_append_display_list(node->displayList, node->node.flags >> 8);
+                gMatStackIndex -= matStackOffset;
+                matStackOffset = 0;
+            }
         }
+        bool start_hiding_wiggle = (hide_this_wiggle && node->displayList == NULL && s_hidden_bone_depth == 0);
+        if (start_hiding_wiggle) s_hidden_bone_depth = 1;
         if (node->node.children != NULL) {
             geo_process_node_and_siblings(node->node.children);
         }
+        if (start_hiding_wiggle) s_hidden_bone_depth = 0;
         gMatStackIndex--;
     }
 }
@@ -1747,7 +1836,7 @@ bool node_is_any_player(struct Object *node) {
         }
     }
     if (node == find_hat_object()) return true;
-    if (node == find_chroma_box()) return chroma_show_floor && !chroma_transparent_background && !capture_screenshot;
+    if (node == find_chroma_box()) return chroma_show_floor && !chroma_show_geo && !chroma_transparent_background && !capture_screenshot;
     return false;
 }
 
@@ -1762,7 +1851,7 @@ static void geo_process_object(struct Object *node) {
 
     // Chroma Key: Objects
     if (auto_chroma && !chroma_show_objects && !node_is_any_player(node)) return;
-    if (node == find_chroma_box() && !chroma_show_floor) return;
+    if (node == find_chroma_box() && (!chroma_show_floor || chroma_show_geo)) return;
 
     struct Object* lastProcessingObject = gCurGraphNodeProcessingObject;
     struct MarioState* lastMarioState = gCurGraphNodeMarioState;

@@ -13,6 +13,9 @@ struct GfxDimensions {
 
 extern struct GfxDimensions gfx_current_dimensions;
 
+extern float gFrustumNear;
+extern float gFrustumFar;
+
 extern Vec3f gLightingDir;
 extern Color gLightingColor;
 extern Color gVertexColor;

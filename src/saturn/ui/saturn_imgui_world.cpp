@@ -9,6 +9,7 @@
 #include "saturn/saturn_models.h"
 #include "saturn/saturn_textures.h"
 #include "saturn/saturn_keyframe.h"
+#include "saturn/ui/saturn_imgui.h"
 #include "saturn/libs/imgui/imgui.h"
 #include "saturn/libs/imgui/imgui_internal.h"
 #include "saturn/libs/imgui/imgui_impl_sdl.h"
@@ -60,7 +61,7 @@ void saturn_set_chroma_color(ImVec4 color) {
 void OpenAutoChromaMenu() {
     ImGui::Checkbox("Chroma Key", &auto_chroma);
     ImGui::SameLine(); TimelineButton("Chroma Key", &auto_chroma);
-    ImGui::BeginChild("auto_chroma", ImVec2(175, 0), ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY);
+    ImGui::BeginChild("auto_chroma", ImVec2(175 * ui_scale, 0), ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY);
     ImGui::BeginDisabled(!auto_chroma);
     // Skybox Color
     ImGui::BeginDisabled(chroma_transparent_background);
@@ -94,22 +95,24 @@ void OpenAutoChromaMenu() {
     ImGui::EndChild();
 }
 
-ImGuiCol frame_color;
-
-void JoystickSlider(float& _x, float& _y, float scale = 100.f, float b_scale = 15.f, int bg_color = IM_COL32(0, 0, 0, 155), int button_color = IM_COL32(215, 215, 215, 255), const int& mouse_button = 0u) {
+/* Silly little "joystick" or circle slider used for custom lighting and wind */
+void JoystickSlider(float& _x, float& _y, float scale = 100.f, float b_scale = 15.f, const int& mouse_button = 0u) {
     const auto& p = ImGui::GetCursorScreenPos();
-    static bool button_clicked = false;
+    ImGuiID id = ImGui::GetCurrentWindow()->GetID("##joyclick");
+    bool& button_clicked = *ImGui::GetStateStorage()->GetBoolRef(id, false);
     const auto& mouse = ImGui::GetIO().MousePos;
-    ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(p.x + scale, p.y + scale), scale, ImGui::GetColorU32(frame_color), 50);
+    scale *= ui_scale;
+    b_scale *= ui_scale;
 
     ImVec2 circle_center = ImVec2(p.x + scale, p.y + scale);
     float distance = sqrt(pow(mouse.x - circle_center.x, 2) + pow(mouse.y - circle_center.y, 2));
+    ImGuiCol frame_color = (distance <= scale) ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg;
+    ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(p.x + scale, p.y + scale), scale, ImGui::GetColorU32(frame_color), 50);
+
+    // Move the button to the clicked position within the circle
     if (distance <= scale) {
-        frame_color = ImGuiCol_FrameBgHovered;
         if (ImGui::GetIO().MouseClicked[mouse_button]) {
             button_clicked = true;
-
-            // Move the button to the clicked position within the circle
             if (distance <= scale - b_scale) {
                 _x = (mouse.x - p.x - scale) / (scale - b_scale);
                 _y = (mouse.y - p.y - scale) / (scale - b_scale);
@@ -119,13 +122,11 @@ void JoystickSlider(float& _x, float& _y, float scale = 100.f, float b_scale = 1
                 _y = sin(angle);
             }
         }
-    } else {
-        frame_color = ImGuiCol_FrameBg;
-    }
+    } else frame_color = ImGuiCol_FrameBg;
 
     auto button_x = _x * (scale - b_scale) + p.x + scale;
     auto button_y = _y * (scale - b_scale) + p.y + scale;
-    static float toward = 0.f;
+    float toward = 0.f;
     ImGui::ButtonBehavior(ImRect({ button_x - b_scale, button_y - b_scale}, { button_x + b_scale, button_y + b_scale }), ImGui::GetCurrentWindow()->ID, nullptr, nullptr, 0);
     
     float distance_to_center = sqrtf(pow(mouse.x - (p.x + scale), 2) + pow(mouse.y - (p.y + scale), 2));
@@ -144,22 +145,27 @@ void JoystickSlider(float& _x, float& _y, float scale = 100.f, float b_scale = 1
         button_y = p.y + scale - sin(toward - 0.5f * M_PI) * (scale - b_scale);
     };
     
-    _x = (button_x - p.x - scale) / (scale - b_scale);
-    _y = (button_y - p.y - scale) / (scale - b_scale);
+    // Only update values when using the gizmo
+    if (distance <= scale && button_clicked) {
+        _x = (button_x - p.x - scale) / (scale - b_scale);
+        _y = (button_y - p.y - scale) / (scale - b_scale);
+    }
 
     ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(button_x, button_y), b_scale, ImGui::GetColorU32(ImGuiCol_ButtonActive), 25);
     ImGui::Dummy(ImVec2(scale*2, scale*2));
 };
 
 void OpenQuickOptions() {
+    ImGui::Checkbox("Shadows", &configPlutoShadows);
+
     ImGui::Checkbox("Custom Lighting", &shade_lighting_enabled);
     if (shade_lighting_enabled) {
-        ImGui::BeginChild("##lighting", ImVec2(175, 140), ImGuiChildFlags_Border);
+        ImGui::BeginChild("##lighting", ImVec2(175 * ui_scale, 140 * ui_scale), ImGuiChildFlags_Border);
         JoystickSlider(shade_lighting_dir[0], shade_lighting_dir[1], 35.f, 7.f);
         ImGui::SameLine();
-        ImGui::VSliderFloat("##lighting_z", ImVec2(20, 35*2), &shade_lighting_dir[2], -1.f, 1.f, "");
+        ImGui::VSliderFloat("##lighting_z", ImVec2(20 * ui_scale, 35*2 * ui_scale), &shade_lighting_dir[2], -1.f, 1.f, "");
         ImGui::SameLine();
-        ImGui::BeginChild("##lighting_dir", ImVec2(69, 35*2+5), ImGuiChildFlags_None, ImGuiWindowFlags_None);
+        ImGui::BeginChild("##lighting_dir", ImVec2(69 * ui_scale, (35*2+5) * ui_scale), ImGuiChildFlags_None, ImGuiWindowFlags_None);
         if (ImGui::MenuItem("Reset")) {
             shade_lighting_dir[0] = 0.f;
             shade_lighting_dir[1] = 0.f;
@@ -192,25 +198,32 @@ void OpenQuickOptions() {
             Color4Widget("Fog Color", &uiFogColor, shade_lighting_fog);
             ImGui::EndPopup();
         }
-        ImGui::SetNextItemWidth(135);
-        ImGui::DragFloat3("##lighting_pos", shade_lighting_dir, 0.01f, -1.f, 1.f, "%.2f");
+        ImGui::SetNextItemWidth(135 * ui_scale);
+        ImGui::DragFloat3("##lighting_pos", shade_lighting_dir, 0.01f, -1.f, 1.f, "%.2f", ImGuiSliderFlags_None);
         ImGui::SameLine(); TimelineButton("Light Dir", (Vec3f*)&shade_lighting_dir);
         ImGui::EndChild();
     }
 
-    // Quick Options
-    //ImGui::Checkbox("HUD", &enable_hud);
-    ImGui::Checkbox("Shadows", &configPlutoShadows);
-
     if (wiggle_bone_detected) {
-        ImGui::Separator();
         ImGui::Checkbox("Wind###wind_enabled", &wind_enabled);
-        ImGui::BeginDisabled(!wind_enabled);
-        ImGui::PushItemWidth(175);
-        ImGui::SliderFloat("###wind_angle",    &wind_angle,    0.f, 360.f, "Angle %.0f deg",  ImGuiSliderFlags_NoRoundToFormat);
-        ImGui::SliderFloat("###wind_strength", &wind_strength, 0.f, 5.f,   "Strength %.2f",   ImGuiSliderFlags_NoRoundToFormat);
-        ImGui::SliderFloat("###wind_sway",     &wind_sway,     0.f, 3.f,   "Sway %.2f",       ImGuiSliderFlags_NoRoundToFormat);
-        ImGui::PopItemWidth();
-        ImGui::EndDisabled();
+        if (wind_enabled) {
+            ImGui::BeginChild("##wind", ImVec2(175 * ui_scale, 138 * ui_scale), ImGuiChildFlags_Border);
+            JoystickSlider(wind_angle[0], wind_angle[1], 35.f, 7.f);
+            ImGui::SameLine();
+            ImGui::BeginChild("##wind_dir_ctrl", ImVec2(69 * ui_scale, (35*2+3) * ui_scale), ImGuiChildFlags_None, ImGuiWindowFlags_None);
+            if (ImGui::MenuItem("Reset")) {
+                wind_angle[0] = 0.f;
+                wind_angle[1] = 0.f;
+                wind_angle[2] = 0.f;
+            }
+            ImGui::EndChild();
+            ImGui::SetNextItemWidth(135 * ui_scale);
+            ImGui::DragFloat3("##wind_dir", wind_angle, 0.01f, -1.f, 1.f, "%.2f", ImGuiSliderFlags_None);
+            ImGui::SameLine(); TimelineButton("Wind Dir", (Vec3f*)&wind_angle);
+            ImGui::SetNextItemWidth(135 * ui_scale);
+            ImGui::SliderFloat("###wind_sway", &wind_sway, 0.f, 3.f, "Sway %.2f", ImGuiSliderFlags_None);
+            ImGui::SameLine(); TimelineButton("Wind Sway", &wind_sway);
+            ImGui::EndChild();
+        }
     }
 }

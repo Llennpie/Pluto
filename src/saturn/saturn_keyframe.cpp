@@ -41,6 +41,22 @@ bool TimelineButton(std::string name, bool* ptr) {
     );
 }
 
+bool TimelineButton(std::string name, char* ptr, size_t maxLen) {
+    return TimelineButton(name, (Timeline){
+        (void*)ptr, maxLen, true, false,
+        // Snap: hold value A until the keyframe is passed, then switch to B
+        [maxLen](void* out, void* a, void* b, float x) {
+            memcpy(out, x < 1.0f ? a : b, maxLen);
+        },
+        [maxLen](void* a, void* b) { return strncmp((char*)a, (char*)b, maxLen) == 0; },
+        [](void* value) {
+            ImGui::BeginTooltip();
+            ImGui::TextUnformatted((char*)value);
+            ImGui::EndTooltip();
+        }
+    });
+}
+
 bool TimelineButton(std::string name, Vec3f* ptr) {
     return TimelineButton(name, (Timeline){
         (void*)ptr, sizeof(Vec3f), false, true,
@@ -165,7 +181,7 @@ void UpdateTimelines() {
 
     prev_position = timeline_position;
     static float playback_accum = 0.f;
-    if (timeline_is_playing && !ImGui::IsAnyItemActive()) {
+    if (timeline_is_playing) {
         // playback at 30 fps, accounts for varying fps
         playback_accum += ImGui::GetIO().DeltaTime;
         bool pause_key = false;

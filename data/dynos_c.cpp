@@ -117,6 +117,22 @@ void dynos_pack_reset_and_regenerate(void) {
     DynOS_Pack_ResetAndRegenerate();
 }
 
+void dynos_pack_reload_single(s32 index) {
+    PackData* pack = DynOS_Pack_GetFromIndex(index);
+    if (!pack) return;
+
+    DynOS_Actor_GeneratePack(pack->mPath);
+    DynOS_Tex_GeneratePack(pack->mPath, pack->mPath, false);
+
+    DynOS_Pack_SetEnabled(pack, false);
+    pack->mGfxData.Clear();
+    pack->mTextures.Clear();
+    pack->mLoaded = false;
+    pack->mEnabledSet = false;
+
+    DynOS_Pack_SetEnabled(pack, true);
+}
+
 // -- geos -- //
 
 void dynos_actor_override(void** aSharedChild) {

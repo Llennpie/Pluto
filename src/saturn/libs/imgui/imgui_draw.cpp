@@ -210,6 +210,8 @@ void ImGui::StyleColorsPluto(ImGuiStyle* dst)
     style->FrameRounding = 2;
     style->PopupRounding = 5;
     style->GrabRounding = 2;
+
+    //style->ScaleAllSizes(2.f);
 }
 
 void ImGui::StyleColorsDark(ImGuiStyle* dst)

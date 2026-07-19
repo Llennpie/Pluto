@@ -50,7 +50,13 @@ enum {
     DATA_TYPE_LIGHT_0,
     DATA_TYPE_METADATA,
     DATA_TYPE_BONE_NAMES,
+    DATA_TYPE_BIN_VERSION,
 };
+
+// DynOS Bin versioning
+// Whenever the bin format changes (adding geo commands like wiggle bones), this version number increases,
+// and subsequent DynOS packs will have their bins deleted and reloaded
+#define DYNOS_BIN_VERSION 1
 
 enum {
     DOPT_NONE = 0,

@@ -118,6 +118,7 @@ bool TimelineButton(std::string name, float* ptr, bool lock_interpolation = fals
 bool TimelineButton(std::string name, int* ptr, bool lock_interpolation = false);
 bool TimelineButton(std::string name, bool* ptr);
 bool TimelineButton(std::string name, Vec3f* ptr);
+bool TimelineButton(std::string name, char* ptr, size_t maxLen);
 
 void PlayTimeline();
 void RenderTimelineWidget();

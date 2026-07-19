@@ -361,9 +361,9 @@ bool queued_first_use = false;
 bool queued_reload_models = false;
 
 void add_to_model_queue(int index, bool enabled, bool first_use) {
-    if (gMarioStates[0].marioObj != NULL) {
+    if (gMarioStates[0].marioObj != NULL)
         spawn_object(gMarioStates[0].marioObj, 0x95, bhvGoldenCoinSparkles);
-    }
+        
     queued_index = index;
     queued_enabled = enabled;
     queued_first_use = first_use;
@@ -409,21 +409,30 @@ void* dynos_thread_func(void* arg) {
         usleep(10 * 1000);
         
         // Auto-reload models
+        // Probably an optimized way of doing this...
         if (CheckModelNeedsReload() || forceReload) {
             if (active_saturn_model_index != -1) sprintf(status_text, "Reloading model %d ...", active_saturn_model_index);
             else sprintf(status_text, "Reloading models ...");
-            // Reload DynOS Packs
-            dynos_pack_reset_and_regenerate();
-                int old_powerup_state = switch_state_powerup;
-                int old_vanish_transparency = vanish_transparency;
-                switch_state_powerup = 2;
-                vanish_transparency = 128;
-            dynos_gfx_init();
-            dynos_packs_init();
-            // Attempt to reload the active model
-            if (active_saturn_model_index != -1) LoadModelData(active_saturn_model_index, true, false, true);
-                switch_state_powerup = old_powerup_state;
-                vanish_transparency = old_vanish_transparency;
+
+            int old_powerup_state = switch_state_powerup;
+            int old_vanish_transparency = vanish_transparency;
+            switch_state_powerup = 2;
+            vanish_transparency = 128;
+
+            if (active_saturn_model_index != -1) {
+                dynos_pack_reload_single(active_saturn_model_index); // Regenerate a single DynOS pack
+                LoadModelData(active_saturn_model_index, true, false, true); // Regenerate Pluto-specific data
+            } else {
+                // Full reload (takes a while depending on your model count)
+                dynos_pack_reset_and_regenerate();
+                dynos_gfx_init();
+                dynos_packs_init();
+            }
+            switch_state_powerup = old_powerup_state;
+            vanish_transparency = old_vanish_transparency;
+            if (gMarioStates[0].marioObj != NULL)
+                spawn_object(gMarioStates[0].marioObj, 0x95, bhvGoldenCoinSparkles);
+
             canBeReloaded = ModelGeoBinExists(active_saturn_model_index);
             status_text[0] = '\0';
             forceReload = false;

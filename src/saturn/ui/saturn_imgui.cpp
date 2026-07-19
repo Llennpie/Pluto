@@ -31,6 +31,7 @@ bool is_wayland() {
 #include <algorithm>
 
 #include <stb/stb_image_write.h>
+#include <stb/stb_image.h>
 
 #include "saturn/saturn_keyframe.h"
 #include "saturn/ui/saturn_imgui_colors.h"
@@ -80,6 +81,7 @@ bool show_window_animations = true;
 bool saturn_any_bone_dot_hovered = false;
 bool show_window_dialog = false;
 bool show_window_timeline = false;
+bool dialog_open = false;
 
 char status_text[256] = { 0 };
 
@@ -90,13 +92,17 @@ bool screenshot_custom_res;
 int screenshot_multiplier = 1;
 int screenshot_size[2] = { 320, 240 };
 
-char uiDialogText[1024 * 16] = "";
+float ui_scale = 1.0f;
+
+char uiDialogText[1024 * 16] = "Welcome to Pluto!";
 
 bool show_rule_of_thirds = false;
 ALIGNED8 const u8 rule_of_thirds[] = {
 #include "textures/segment2/custom_ruleofthirds.rgba32.inc.c"
 };
 GLuint rot_texture;
+
+bool wireframe_mode = false;
 
 struct CameraSaveState {
     int id;
@@ -106,14 +112,98 @@ struct CameraSaveState {
 };
 std::vector<CameraSaveState> saved_camera_positions;
 
+// ImGui Theading
+#include <pthread.h>
+
+static pthread_t s_build_thread;
+
+static pthread_mutex_t s_kick_mtx  = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t s_kick_cond = PTHREAD_COND_INITIALIZER;
+static bool s_kick_flag = false;
+static bool s_build_quit = false;
+
+static pthread_mutex_t s_stable_mtx = PTHREAD_MUTEX_INITIALIZER;
+static ImVector<ImDrawList*> s_stable_owned;
+static ImDrawData s_stable_data;
+static bool s_stable_valid = false;
+
+static void stable_copy_draw_data() {
+    ImDrawData* src = ImGui::GetDrawData();
+    if (!src || !src->Valid) return;
+
+    while (s_stable_owned.Size > src->CmdListsCount) {
+        IM_DELETE(s_stable_owned.back());
+        s_stable_owned.pop_back();
+    }
+
+    while (s_stable_owned.Size < src->CmdListsCount)
+        s_stable_owned.push_back(IM_NEW(ImDrawList)(src->CmdLists[0]->_Data));
+
+    for (int i = 0; i < src->CmdListsCount; i++) {
+        ImDrawList* s = src->CmdLists[i];
+        ImDrawList* d = s_stable_owned[i];
+        d->_Data = s->_Data;
+        d->Flags = s->Flags;
+        d->CmdBuffer = s->CmdBuffer;
+        d->VtxBuffer = s->VtxBuffer;
+        d->IdxBuffer = s->IdxBuffer;
+    }
+
+    s_stable_data = *src;
+    s_stable_data.CmdLists.resize(src->CmdListsCount);
+    for (int i = 0; i < src->CmdListsCount; i++)
+        s_stable_data.CmdLists[i] = s_stable_owned[i];
+
+    s_stable_valid = true;
+}
+
+// Expression Previews (queue because of threading)
+struct PendingPreview { TexturePath* tex; u8* pixels; int w, h; };
+static std::vector<PendingPreview> s_preview_queue;
+static pthread_mutex_t s_preview_mtx = PTHREAD_MUTEX_INITIALIZER;
+
+void saturn_request_preview(TexturePath* texture) {
+    if (texture->RawData != 0) return;
+
+    FILE* f = fopen(texture->FilePath.c_str(), "rb");
+    if (!f) return;
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    rewind(f);
+    std::vector<unsigned char> buf((size_t)sz);
+    fread(buf.data(), 1, (size_t)sz, f);
+    fclose(f);
+
+    int w, h;
+    u8* pixels = stbi_load_from_memory(buf.data(), (int)sz, &w, &h, NULL, 4);
+    if (!pixels) return;
+
+    texture->RawData = pixels;
+    texture->Width   = w;
+    texture->Height  = h;
+
+    pthread_mutex_lock(&s_preview_mtx);
+    s_preview_queue.push_back({texture, pixels, w, h});
+    pthread_mutex_unlock(&s_preview_mtx);
+}
+
+static void* imgui_build_thread_func(void* arg);
+
 void imgui_init() {
     // Create directories for Pluto content
     // These are located at %appdata%/Llennpie/Pluto on Windows, and ~/.local/share/Llennpie/Pluto on Linux
-    std::filesystem::create_directories(std::string(sys_user_path()).append("/dynos/colorcodes"));
-    std::filesystem::create_directories(std::string(sys_user_path()).append("/dynos/anims"));
-    std::filesystem::create_directories(std::string(sys_user_path()).append("/dynos/eyes"));
-    std::filesystem::create_directories(std::string(sys_user_path()).append("/dynos/packs"));
-    pluto_animations_list = GetPAnimList(std::string(sys_user_path()).append("/dynos/anims"));
+    std::string user_path = sys_user_path();
+    std::error_code ec;
+
+    if (std::filesystem::exists("Panimotion.mp3", ec))
+        std::filesystem::copy_file("Panimotion.mp3", user_path + "/Panimotion.mp3",
+            std::filesystem::copy_options::skip_existing, ec);
+
+    std::filesystem::create_directories(user_path + "/dynos/colorcodes", ec);
+    std::filesystem::create_directories(user_path + "/dynos/anims", ec);
+    std::filesystem::create_directories(user_path + "/dynos/eyes", ec);
+    std::filesystem::create_directories(user_path + "/dynos/packs", ec);
+    pluto_animations_list = GetPAnimList(user_path + "/dynos/anims");
 }
 
 void imgui_init_backend(SDL_Window* window, SDL_GLContext ctx) {
@@ -134,6 +224,15 @@ void imgui_init_backend(SDL_Window* window, SDL_GLContext ctx) {
     ImGui_ImplOpenGL3_Init(glsl_version);
 
     RefreshColorCodeList();
+
+    glGenTextures(1, &rot_texture);
+    glBindTexture(GL_TEXTURE_2D, rot_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1280, 720, 0, GL_RGBA, GL_UNSIGNED_BYTE, rule_of_thirds);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    pthread_create(&s_build_thread, NULL, imgui_build_thread_func, NULL);
 }
 
 void imgui_handle_events(SDL_Event* event) {
@@ -201,7 +300,36 @@ void imgui_update() {
     if (timelines.count("Angle") && gMarioStates[0].marioObj)
         gMarioStates[0].faceAngle[1] = (s16)(face_angle * 182.04f);
 
-    // Sync anim frame to timeline cursor
+    // Mini dialog box handler (uses bool for open/close so it can be keyframed)
+    {
+        static bool s_prev_dialog_open = false;
+        static char s_prev_dialog_text[1024 * 16] = {};
+        extern s16 gDialogID;
+        extern s8  gDialogBoxState;
+        extern f32 gDialogBoxOpenTimer;
+        extern f32 gDialogBoxScale;
+        if (dialog_open && !s_prev_dialog_open) {
+            smlua_text_utils_dialog_replace(DIALOG_CUSTOM, 1, 6, 30, 200, uiDialogText);
+            create_dialog_box(DIALOG_CUSTOM);
+        } else if (!dialog_open && s_prev_dialog_open) {
+            // Reset state
+            if (gDialogID != -1) {
+                gDialogBoxOpenTimer = 0.0f;
+                gDialogBoxScale = 1.0f;
+                gDialogBoxState = 3; // DIALOG_STATE_CLOSING
+            }
+        } else if (dialog_open && s_prev_dialog_open && gDialogID == -1) {
+            // Dialog was closed elsewhere
+            smlua_text_utils_dialog_replace(DIALOG_CUSTOM, 1, 6, 30, 200, uiDialogText);
+            create_dialog_box(DIALOG_CUSTOM);
+        } else if (dialog_open && gDialogID != -1 && strncmp(uiDialogText, s_prev_dialog_text, sizeof(s_prev_dialog_text)) != 0) {
+            // Update text string if it was changed
+            smlua_text_utils_dialog_replace(DIALOG_CUSTOM, 1, 6, 30, 200, uiDialogText);
+        }
+        strncpy(s_prev_dialog_text, uiDialogText, sizeof(s_prev_dialog_text) - 1);
+        s_prev_dialog_open = dialog_open;
+    }
+
     if (anim_sync_to_timeline && (is_editing_panim || override_anim) && gMarioStates[0].marioObj) {
         struct Animation* curAnim = gMarioStates[0].marioObj->header.gfx.animInfo.curAnim;
         if (curAnim) {
@@ -215,22 +343,86 @@ void imgui_update() {
         }
     }
 
+    pthread_mutex_lock(&s_preview_mtx);
+    for (auto& p : s_preview_queue) {
+        GLuint tex;
+        glGenTextures(1, &tex);
+        glBindTexture(GL_TEXTURE_2D, tex);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, p.w, p.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, p.pixels);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        p.tex->Preview = tex;
+    }
+    s_preview_queue.clear();
+    pthread_mutex_unlock(&s_preview_mtx);
+
+    // Apply screenshot size multiplier
+    if (!screenshot_custom_res) {
+        screenshot_size[0] = gfx_current_dimensions.width  * screenshot_multiplier;
+        screenshot_size[1] = gfx_current_dimensions.height * screenshot_multiplier;
+    }
+
+    pthread_mutex_lock(&s_stable_mtx);
+    if (s_stable_valid) {
+        GLint last_program;
+        glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
+        glUseProgram(0);
+        ImGui_ImplOpenGL3_RenderDrawData(&s_stable_data);
+        glUseProgram(last_program);
+    }
+    pthread_mutex_unlock(&s_stable_mtx);
+
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame(current_window);
-    ImGui::NewFrame();
 
-    allow_game_input = !ImGui::GetIO().WantTextInput;
+    // Rebuild fonts on scale change
+    static float s_applied_scale = 1.0f;
+    if (ui_scale != s_applied_scale && !ImGui::GetIO().MouseDown[0]) {
+        ImGuiIO& io = ImGui::GetIO();
+        io.Fonts->Clear();
+        ImFontConfig cfg;
+        cfg.SizePixels = floorf(13.0f * ui_scale);
+        io.Fonts->AddFontDefault(&cfg);
+        io.Fonts->Build();
+        ImGui_ImplOpenGL3_DestroyFontsTexture();
+        ImGui_ImplOpenGL3_CreateFontsTexture();
+        s_applied_scale = ui_scale;
+    }
 
+    pthread_mutex_lock(&s_kick_mtx);
+    s_kick_flag = true;
+    pthread_cond_signal(&s_kick_cond);
+    pthread_mutex_unlock(&s_kick_mtx);
+}
+
+static void imgui_build_widgets();
+
+static void* imgui_build_thread_func(void*) {
+    while (true) {
+        pthread_mutex_lock(&s_kick_mtx);
+        while (!s_kick_flag && !s_build_quit)
+            pthread_cond_wait(&s_kick_cond, &s_kick_mtx);
+        if (s_build_quit) { pthread_mutex_unlock(&s_kick_mtx); break; }
+        s_kick_flag = false;
+        pthread_mutex_unlock(&s_kick_mtx);
+
+        ImGui::NewFrame();
+        allow_game_input = !ImGui::GetIO().WantTextInput;
+        imgui_build_widgets();
+        ImGui::Render();
+
+        pthread_mutex_lock(&s_stable_mtx);
+        stable_copy_draw_data();
+        pthread_mutex_unlock(&s_stable_mtx);
+    }
+    return NULL;
+}
+
+static void imgui_build_widgets() {
     studio_render_notifications();
     
     if (show_rule_of_thirds) {
-        if (rot_texture == 0) {
-            glGenTextures(1, &rot_texture);
-            glBindTexture(GL_TEXTURE_2D, rot_texture);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1280, 720, 0, GL_RGBA, GL_UNSIGNED_BYTE, rule_of_thirds);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        }
         ImGui::SetNextWindowPos(ImVec2(0, 0));
         ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
         ImGui::SetNextWindowBgAlpha(0.0f);
@@ -242,7 +434,7 @@ void imgui_update() {
 
     if (show_menu) {
         if (gMarioStates[0].marioObj != NULL) {
-        SDL_StartTextInput();
+        //SDL_StartTextInput(); // did i really need this >:(
 
         // Model Settings
         PopupModelSettings();
@@ -289,16 +481,19 @@ void imgui_update() {
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("Menu")) {
                 if (ImGui::MenuItem("Show Menu", NULL, show_menu)) show_menu = false;
+                ImGui::PushItemWidth(150);
+                ImGui::SliderFloat("UI Scale", &ui_scale, 1.0f, 3.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_NoInput);
+                if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+                    ui_scale = 1.0f;
+                ImGui::PopItemWidth();
                 if (ImGui::BeginMenu("Screenshot")) {
                     ImGui::Checkbox("Custom Size", &screenshot_custom_res);
                     if (screenshot_custom_res) {
                         ImGui::InputInt2("###screenshot_size", screenshot_size, ImGuiInputTextFlags_CharsDecimal);
                     } else {
-                        ImGui::SetNextItemWidth(100);
+                        ImGui::SetNextItemWidth(100 * ui_scale);
                         ImGui::SliderInt("Multiplier", &screenshot_multiplier, 1, 4);
                         ImGui::TextDisabled("%dx%d", screenshot_size[0], screenshot_size[1]);
-                        screenshot_size[0] = gfx_current_dimensions.width * screenshot_multiplier;
-                        screenshot_size[1] = gfx_current_dimensions.height * screenshot_multiplier;
                     }
                     if (ImGui::Button("Save Screenshot")) capture_screenshot = true;
                     ImGui::EndMenu();
@@ -306,21 +501,23 @@ void imgui_update() {
                 ImGui::Separator();
                 if (ImGui::MenuItem("Color Code Editor", NULL, show_window_cc_editor)) show_window_cc_editor = !show_window_cc_editor;
                 if (ImGui::MenuItem("Animation Mixtape", NULL, show_window_animations, freeze_camera)) show_window_animations = !show_window_animations;
-                //if (ImGui::MenuItem("Textbox", NULL, show_window_dialog)) show_window_dialog = !show_window_dialog;
+                if (ImGui::MenuItem("Textbox Editor", NULL, show_window_dialog)) show_window_dialog = !show_window_dialog;
                 if (ImGui::MenuItem("Timeline", NULL, show_window_timeline)) show_window_timeline = !show_window_timeline;
+                ImGui::Separator();
+                ImGui::Checkbox("Show Wireframes", &wireframe_mode);
                 ImGui::EndMenu();
             }
 
             // Machinima Camera
             if (ImGui::BeginMenu("Camera")) {
                 // To-do: This UI is super ugly
-                ImGui::PushItemWidth(150);
+                ImGui::PushItemWidth(150 * ui_scale);
 
                 ImGui::Checkbox("Freeze Camera", &freeze_camera);
                 ImGui::BeginDisabled(!freeze_camera);
 
                 // Camera Keyframing
-                ImGui::SameLine(166);
+                ImGui::SameLine(166 * ui_scale);
                 TimelineButton("Camera###timeline_camera", (Timeline) {
                     (void*)camera_kf_state, sizeof(camera_kf_state), false, false,
                     [](void* out, void* a, void* b, float x) {
@@ -396,6 +593,10 @@ void imgui_update() {
                                 if (gCamera) {
                                     vec3f_copy(gCamera->pos, cam.pos);
                                     vec3f_copy(gCamera->focus, cam.foc);
+                                    vec3f_copy(gLakituState.goalPos, cam.pos);
+                                    vec3f_copy(gLakituState.goalFocus, cam.foc);
+                                    vec3f_copy(gLakituState.pos, cam.pos);
+                                    vec3f_copy(gLakituState.focus, cam.foc);
                                 }
                             }
                             if (ImGui::IsItemHovered()) {
@@ -507,11 +708,16 @@ void imgui_update() {
         if (show_window_dialog) {
             ImGui::Begin("Dialog Textbox", &show_window_dialog, ImGuiWindowFlags_AlwaysAutoResize);
             ImGui::InputTextMultiline("###dialog_box", uiDialogText, IM_ARRAYSIZE(uiDialogText),
-                ImVec2(150, ImGui::GetTextLineHeight() * 6.5f), ImGuiInputTextFlags_None);
-            
-            if (ImGui::Button("Create###create_dialog_box")) {
-                smlua_text_utils_dialog_replace(DIALOG_CUSTOM,1,6,30,200, uiDialogText);
-                create_dialog_box(DIALOG_CUSTOM);
+                ImVec2(150 * ui_scale, ImGui::GetTextLineHeight() * 6.5f), ImGuiInputTextFlags_None);
+            if (show_window_timeline) {
+                ImGui::SameLine(); TimelineButton("Textbox Text###timeline_dialog_text", uiDialogText, sizeof(uiDialogText));
+                ImGui::Checkbox("Open on Timeline", &dialog_open);
+                ImGui::SameLine(); TimelineButton("Textbox###timeline_dialog_open", &dialog_open);
+            } else {
+                if (ImGui::Button("Create###create_dialog_box")) {
+                    smlua_text_utils_dialog_replace(DIALOG_CUSTOM,1,6,30,200, uiDialogText);
+                    create_dialog_box(DIALOG_CUSTOM);
+                }
             }
             ImGui::End();
         }
@@ -546,13 +752,6 @@ void imgui_update() {
     }
 
     //ImGui::ShowDemoWindow();
-
-    ImGui::Render();
-    GLint last_program;
-    glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
-    glUseProgram(0);
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    glUseProgram(last_program);
 }
 
 #ifdef __MINGW32__

@@ -19,7 +19,7 @@ void title_music_start(void) {
     if (sTitleStream != 0) return;
 
     char path[SYS_MAX_PATH];
-    snprintf(path, sizeof(path), "%s/plutomenu.mp3", sys_user_path());
+    snprintf(path, sizeof(path), "%s/Panimotion.mp3", sys_user_path());
 
     HSTREAM raw = BASS_StreamCreateFile(FALSE, path, 0, 0, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE);
     if (!raw) {

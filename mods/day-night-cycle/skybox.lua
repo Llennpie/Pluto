@@ -32,7 +32,7 @@ end
 
 --- @param o Object
 function bhv_skybox_loop(o)
-    if not gGlobalSyncTable.dncEnabled then
+    if not useSkybox then
         obj_mark_for_deletion(o)
         return
     end

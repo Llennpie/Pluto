@@ -22,7 +22,7 @@ extern "C" {
     extern float wiggle_intensity;
     extern bool wiggle_bone_detected;
     extern bool wind_enabled;
-    extern float wind_angle;
+    extern float wind_angle[3];
     extern float wind_strength;
     extern float wind_sway;
     int saturn_camera_update();
@@ -52,6 +52,13 @@ extern "C" {
     extern int paused_frame;
     extern bool hang_anim;
     extern bool loop_anim;
+    extern float anim_speed;
+    extern float g_saturn_anim_blend_t;
+    extern s16 g_saturn_floor_frame;
+    extern s16 g_saturn_ceil_frame;
+    extern float g_saturn_prev_blend_t;
+    extern s16 g_saturn_prev_floor_frame;
+    extern s16 g_saturn_prev_ceil_frame;
     extern bool enable_custom_anim;
     extern bool bone_count_matches;
 

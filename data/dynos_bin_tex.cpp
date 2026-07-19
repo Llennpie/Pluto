@@ -76,9 +76,18 @@ void DynOS_Tex_ConvertTextureDataToPng(GfxData *aGfxData, TexData* aTexture) {
         return;
     }
 
+
+    // Consistently use RGBA32 for texture data, regardless of format so we don't break Expressions
+    // Had to reimplement this one because of internal/baked texture data on older models
+    s32 _PixelCount = aTexture->mRawWidth * aTexture->mRawHeight;
+    aTexture->mRawData    = Array<u8>(_Buffer, _Buffer + _PixelCount * 4);
+    aTexture->mRawFormat  = G_IM_FMT_RGBA;
+    aTexture->mRawSize    = G_IM_SIZ_32b;
+
     // Convert to PNG
     s32 _PngLength = 0;
     u8 *_PngData = stbi_write_png_to_mem(_Buffer, 0, aTexture->mRawWidth, aTexture->mRawHeight, 4, &_PngLength);
+    Delete(_Buffer);
     if (!_PngData || !_PngLength) {
         PrintDataError("  ERROR: Cannot convert texture to PNG");
         return;

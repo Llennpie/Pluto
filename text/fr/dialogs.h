@@ -1,7 +1,5 @@
 // Parameters: dialog enum ID, (unused), lines per box, left offset, width
 
-DEFINE_DIALOG(DIALOG_CUSTOM, 1, 6, 30, 200, _("Welcome to Pluto"))
-
 DEFINE_DIALOG(DIALOG_000, 1, 6, 30, 200, _("\
 Incroyable! Vous voilà\n\
 propulsé au beau milieu\n\
@@ -2297,3 +2295,5 @@ Cette caverne est très\n\
 dangereuse!!!\n\
 Alors... DE-HORS!\n\
 / -- Le capitaine --"))
+
+DEFINE_DIALOG(DIALOG_CUSTOM, 1, 6, 30, 200, _("Welcome to Pluto"))

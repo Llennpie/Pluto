@@ -86,8 +86,8 @@ void djui_panel_display_create(struct DjuiBase* caller) {
             sFrameLimitInput = inputbox1;
         }
 
-        char* interpChoices[2] = { DLANG(DISPLAY, FAST), DLANG(DISPLAY, ACCURATE) };
-        struct DjuiSelectionbox* selectionbox1 = djui_selectionbox_create(body, DLANG(DISPLAY, INTERPOLATION), interpChoices, 2, &configInterpolationMode, NULL);
+        char* interpChoices[3] = { DLANG(DISPLAY, FAST), DLANG(DISPLAY, ACCURATE), DLANG(DISPLAY, OFF) };
+        struct DjuiSelectionbox* selectionbox1 = djui_selectionbox_create(body, DLANG(DISPLAY, INTERPOLATION), interpChoices, 3, &configInterpolationMode, NULL);
         djui_base_set_enabled(&selectionbox1->base, (configFrameLimit > 30 || (configFrameLimit <= 30 && configUncappedFramerate)));
         sInterpolationSelectionBox = selectionbox1;
 

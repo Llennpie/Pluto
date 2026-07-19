@@ -2,6 +2,7 @@
 extern "C" {
 #include "include/types.h"
 #include "dynos_mgr_builtin_externs.h"
+#include "actors/mario/mario_externs.h"
 }
 
   //////////////

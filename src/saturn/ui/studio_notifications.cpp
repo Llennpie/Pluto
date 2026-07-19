@@ -1,5 +1,6 @@
 #include "studio_notifications.h"
 
+#include "saturn/ui/saturn_imgui.h"
 #include "saturn/libs/imgui/imgui.h"
 #include "saturn/libs/imgui/imgui_internal.h"
 
@@ -66,10 +67,10 @@ void studio_render_notifications() {
         notif.target_y = y;
         if (notif.y == 0) notif.y = y;
         notif.y += (notif.target_y - notif.y) / 5;
-        ImGui::SetNextWindowSizeConstraints(ImVec2(NOTIF_WIDTH, 0), ImVec2(NOTIF_WIDTH, 1000));
-        if (notif.show_timer < NOTIF_ANIM_LENGTH) ImGui::SetNextWindowPos(ImVec2(interpolate_cubic_out(width, width - NOTIF_WIDTH - NOTIF_SPACING,  notif.show_timer / (float)NOTIF_ANIM_LENGTH), notif.y));
-        else if (notif.hide_timer < 0)            ImGui::SetNextWindowPos(ImVec2(interpolate_cubic_in (width - NOTIF_WIDTH - NOTIF_SPACING, width, -notif.hide_timer / (float)NOTIF_ANIM_LENGTH), notif.y));
-        else ImGui::SetNextWindowPos(ImVec2(width - NOTIF_WIDTH - NOTIF_SPACING, notif.y));
+        ImGui::SetNextWindowSizeConstraints(ImVec2(NOTIF_WIDTH * ui_scale, 0), ImVec2(NOTIF_WIDTH * ui_scale, 1000 * ui_scale));
+        if (notif.show_timer < NOTIF_ANIM_LENGTH) ImGui::SetNextWindowPos(ImVec2(interpolate_cubic_out(width, width - NOTIF_WIDTH * ui_scale - NOTIF_SPACING * ui_scale,  notif.show_timer / (float)NOTIF_ANIM_LENGTH), notif.y));
+        else if (notif.hide_timer < 0)            ImGui::SetNextWindowPos(ImVec2(interpolate_cubic_in (width - NOTIF_WIDTH * ui_scale - NOTIF_SPACING * ui_scale, width, -notif.hide_timer / (float)NOTIF_ANIM_LENGTH), notif.y));
+        else ImGui::SetNextWindowPos(ImVec2(width - NOTIF_WIDTH * ui_scale - NOTIF_SPACING * ui_scale, notif.y));
         ImGui::PushStyleColor(ImGuiCol_WindowBg, interpolate_color(0x101010, notif.color, get_color_interpolation(notif.show_timer)));
         ImGui::Begin(("##notification_" + std::to_string(notif.id)).c_str(), NULL,
             ImGuiWindowFlags_NoDecoration |
@@ -80,18 +81,18 @@ void studio_render_notifications() {
             ImGuiWindowFlags_AlwaysAutoResize
         );
         ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
-        y += ImGui::GetWindowSize().y + NOTIF_SPACING;
+        y += ImGui::GetWindowSize().y * ui_scale + NOTIF_SPACING * ui_scale;
         if (ImGui::IsWindowHovered() && notif.hide_timer >= 0) {
             notif.hide_timer = NOTIF_DELAY;
         }
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + NOTIF_BAR_HEIGHT);
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + NOTIF_BAR_HEIGHT * ui_scale);
         ImGui::Text("%s", notif.title.c_str());
         if (!notif.message.empty()) {
             ImGui::Separator();
             ImGui::TextWrapped("%s", notif.message.c_str());
         }
         ImGui::SetCursorPos(ImVec2(0, 0));
-        ImGui::ProgressBar(fmax(0, notif.hide_timer / (float)NOTIF_DELAY), ImVec2(NOTIF_WIDTH, NOTIF_BAR_HEIGHT), "");
+        ImGui::ProgressBar(fmax(0, notif.hide_timer / (float)NOTIF_DELAY), ImVec2(NOTIF_WIDTH * ui_scale, NOTIF_BAR_HEIGHT * ui_scale), "");
         ImGui::End();
         ImGui::PopStyleColor();
         notif.show_timer += ms_passed;

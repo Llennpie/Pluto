@@ -8,6 +8,7 @@
 if SM64COOPDX_VERSION == nil then return end
 
 gGlobalSyncTable.dncEnabled = true
+useSkybox = mod_storage_load_bool("useSkybox") or true
 local dncDisplayTime = true
 
 -- localize functions to improve performance
@@ -329,6 +330,12 @@ local function on_sync_command()
     if network_is_server() then save_time() end
 end
 
+local function on_skybox_command()
+    useSkybox = not useSkybox
+    mod_storage_save_bool("useSkybox", useSkybox)
+    return true
+end
+
 local function on_time_command(msg)
     local args = split(msg)
     local perms = network_is_server() or network_is_moderator()
@@ -394,3 +401,4 @@ hook_event(HOOK_ON_WARP, on_warp)
 hook_event(HOOK_ON_EXIT, on_exit)
 
 hook_chat_command("time", "\\#00ffff\\[set|add|scale|query|24h|sync]\\#7f7f7f\\ (leave blank to toggle Day Night Cycle on or off)", on_time_command)
+hook_chat_command("skybox", "\\#00ffff\\[on|off]\\#7f7f7f\\ (toggle skybox on/off)", on_skybox_command)

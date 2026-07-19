@@ -16,6 +16,7 @@ extern "C" {
     #include "game/mario.h"
     #include "game/game_init.h"
     #include "game/level_update.h"
+    #include "game/rendering_graph_node.h"
     #include "engine/math_util.h"
     #include "game/object_helpers.h"
     #include "audio/external.h"
@@ -28,7 +29,7 @@ float saturn_camera_tilt = 0.f;
 float camera_follow_speed = 1.f;
 float wiggle_intensity = 1.0f;
 bool wind_enabled = false;
-float wind_angle = 0.f;
+float wind_angle[3] = { 0.f, 0.f, 0.f };
 float wind_strength = 1.0f;
 float wind_sway = 1.f;
 bool wiggle_bone_detected = false;
@@ -58,6 +59,7 @@ bool pause_anim;
 int paused_frame;
 bool hang_anim;
 bool loop_anim;
+float anim_speed = 1.0f;
 bool enable_custom_anim;
 
 bool bone_count_matches;
@@ -208,6 +210,14 @@ CharacterAnimID get_idle_anim(struct MarioState *m) {
     }
 }
 
+// Interpolation for slow-mo
+float g_saturn_anim_blend_t = -1.0f;
+s16 g_saturn_floor_frame  = 0;
+s16 g_saturn_ceil_frame   = 0;
+float g_saturn_prev_blend_t  = -1.0f;
+s16 g_saturn_prev_floor_frame = 0;
+s16 g_saturn_prev_ceil_frame  = 0;
+
 /* Custom Mario action, active when the player is idle and in machinima mode. */
 void saturn_action_idle(struct MarioState *m) {
 
@@ -229,7 +239,76 @@ void saturn_action_idle(struct MarioState *m) {
             // If the animation goes OOB
             if (paused_frame > targetAnim->loopEnd-1) paused_frame = targetAnim->loopEnd-1;
             if (paused_frame < targetAnim->loopStart) paused_frame = targetAnim->loopStart;
+        }
+    } else {
+        // Reset animation state
+        pause_anim = false;
+        is_editing_panim = false;
+        g_root_offset[0] = g_root_offset[1] = g_root_offset[2] = 0.0f;
+    }
+
+    // Animation speed, follows interpolation for slow-motion
+    static float s_float_frame = 0.0f;
+    static float s_extra_accum = 0.0f;
+    static bool  s_slow_active = false;
+    static bool  s_fast_active = false;
+
+    if (override_anim && !pause_anim && targetAnim != NULL) {
+        int loopStart = targetAnim->loopStart;
+        int loopEnd = targetAnim->loopEnd;
+        int loopLen = loopEnd - loopStart;
+
+        if (loopLen > 0 && anim_speed < 0.999f) {
+            // Slow motion
+            if (!s_slow_active && m->marioObj->header.gfx.animInfo.animFrame < loopStart) {
+            } else {
+            if (!s_slow_active) {
+                s_float_frame = (float)m->marioObj->header.gfx.animInfo.animFrame;
+                s_slow_active = true;
+            }
+            s_float_frame += anim_speed;
+
+            if (s_float_frame >= (float)loopEnd) {
+                if (targetAnimLooping && !hang_anim) {
+                    while (s_float_frame >= (float)loopEnd) s_float_frame -= (float)loopLen;
+                } else {
+                    s_float_frame = (float)(loopEnd - 1);
+                    if (hang_anim) { pause_anim = true; paused_frame = loopEnd - 1; }
+                    else if (!targetAnimLooping) {
+                        if (saturn_check_for_chainer() == false) {
+                            override_anim = false;
+                            set_mario_animation(m, MARIO_ANIM_START_CROUCHING);
+                        }
+                    }
+                }
+            }
+
+            g_saturn_prev_floor_frame = g_saturn_floor_frame;
+            g_saturn_prev_ceil_frame = g_saturn_ceil_frame;
+            g_saturn_prev_blend_t = g_saturn_anim_blend_t;
+
+            g_saturn_floor_frame  = (s16)(int)s_float_frame;
+            s16 ceil_f = g_saturn_floor_frame + 1;
+            g_saturn_ceil_frame   = (ceil_f >= (s16)loopEnd) ? (s16)loopStart : ceil_f;
+            g_saturn_anim_blend_t = s_float_frame - (float)g_saturn_floor_frame;
+
+            m->marioObj->header.gfx.animInfo.animFrame = g_saturn_floor_frame;
+            m->marioObj->header.gfx.animInfo.animTimer = gAreaUpdateCounter;
+            paused_frame  = g_saturn_floor_frame;
+            s_extra_accum = 1.0f - anim_speed; // sync
+            s_fast_active = false;
+            }
+
         } else {
+            // Normal speed (or fast forward), no interpolation
+            s_slow_active = false;
+            g_saturn_anim_blend_t = -1.0f;
+
+            if (!s_fast_active) {
+                s_extra_accum  = 1.0f - anim_speed;
+                s_fast_active  = true;
+            }
+
             if (is_anim_at_end(m)) {
                 if (hang_anim) { pause_anim = true; paused_frame = m->marioObj->header.gfx.animInfo.animFrame; }
                 else if (!targetAnimLooping) {
@@ -239,11 +318,42 @@ void saturn_action_idle(struct MarioState *m) {
                     }
                 }
             }
+
+            // Fast forward, skip frames
+            if (loopLen > 0 && anim_speed > 1.001f) {
+                int frame = m->marioObj->header.gfx.animInfo.animFrame;
+                if (frame >= loopStart) {
+                    s_extra_accum += (anim_speed - 1.0f);
+                    int extra = (int)s_extra_accum;
+                    if (s_extra_accum < 0.0f && (float)extra != s_extra_accum) extra--;
+                    s_extra_accum -= (float)extra;
+                    frame += extra;
+                    // Fast forward can go OOB, skipping the end frame and looping
+                    if (frame >= loopEnd && !targetAnimLooping) {
+                        if (hang_anim) { pause_anim = true; paused_frame = loopEnd - 1; }
+                        else {
+                            if (saturn_check_for_chainer() == false) {
+                                override_anim = false;
+                                set_mario_animation(m, MARIO_ANIM_START_CROUCHING);
+                            }
+                        }
+                        frame = loopEnd - 1;
+                    } else {
+                        while (frame >= loopEnd)  frame -= loopLen;
+                        while (frame < loopStart) frame += loopLen;
+                    }
+                    m->marioObj->header.gfx.animInfo.animFrame = (s16)frame;
+                    paused_frame = frame;
+                }
+            }
         }
     } else {
-        pause_anim = false;
-        is_editing_panim = false;
-        g_root_offset[0] = g_root_offset[1] = g_root_offset[2] = 0.0f;
+        s_slow_active = false;
+        s_fast_active = false;
+        g_saturn_anim_blend_t = -1.0f;
+        g_saturn_prev_blend_t = -1.0f;
+        s_extra_accum = 1.0f - anim_speed;
+        if (pause_anim) s_float_frame = (float)paused_frame; // re-sync on pause
     }
 
     // Check if the model's bone count matches the current PlutoAnim's bone count

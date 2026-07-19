@@ -57,7 +57,7 @@ void BoneEditorWindow() {
         ImGui::Begin("Animation Pose Editor", &is_editing_panim, ImGuiWindowFlags_AlwaysAutoResize);
         bone_editor_was_open = true;
         ImGui::Text("Edit the current animation pose by\ndragging the translation/rotation/scale\ngizmos in the 3D view.");
-        ImGui::PushItemWidth(150);
+        ImGui::PushItemWidth(150 * ui_scale);
         ImGui::DragFloat3("Rotation###pose_rotation", current_pluto_anim.Bones[0].Rotation, 1.0f, 0.0f, 0.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
         ImGui::DragFloat3("Offset###pose_offset", g_root_offset, 1.0f, 0.0f, 0.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
         ImGui::PopItemWidth();
@@ -92,7 +92,8 @@ void BoneEditorWindow() {
     }
 
     bool player_hovered = !player_windows.empty() && player_windows[0].active && player_windows[0].hovered;
-    if (show_window_animations && freeze_camera && active_saturn_model_index != -1 && !current_pluto_anim.Bones.empty()) {
+    if (show_window_animations && freeze_camera && active_saturn_model_index != -1
+    && !current_pluto_anim.Bones.empty() && gMarioStates[0].marioObj != NULL) {
         djui_hud_set_resolution(RESOLUTION_N64);
         float scale_y = gfx_current_dimensions.height / 360.f;
         float factor  = 1.5f * scale_y;
@@ -210,9 +211,9 @@ void BoneEditorWindow() {
 
             ImGui::TextColored(ImVec4(1.f, 1.f, 0.4f, 1.f), "%s", pb.Name().c_str());
             ImGui::Separator();
-            ImGui::PushItemWidth(150);
-
-            if (is_editing_panim && pause_anim && override_anim) {                ImGui::DragFloat3("Rotation", pb.Rotation, 1.0f, -360.0f, 360.0f, "%.0f");
+            ImGui::PushItemWidth(150 * ui_scale);
+            if (is_editing_panim && pause_anim && override_anim) {
+                ImGui::DragFloat3("Rotation", pb.Rotation, 1.0f, -360.0f, 360.0f, "%.0f");
                 if (ImGui::IsItemHovered() && ImGui::GetIO().MouseClicked[1])
                     pb.Rotation[0] = pb.Rotation[1] = pb.Rotation[2] = 0;
 
@@ -271,7 +272,7 @@ void OpenAnimationsMenu() {
 
         if (vanillaMenuOpen) {
             ImGui::BeginDisabled(is_editing_panim);
-            ImGui::SetNextItemWidth(208);
+            ImGui::SetNextItemWidth(208 * ui_scale);
             if (ImGui::BeginCombo("###v_anim_combo", saturn_animations[selected_anim_index], ImGuiComboFlags_None)) {
                 ImGui::InputTextWithHint("###anim_search", "Search...", animSearchTerm, IM_ARRAYSIZE(animSearchTerm), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_CharsUppercase);
                 ImGui::Separator();
@@ -284,7 +285,7 @@ void OpenAnimationsMenu() {
 
                     if (ImGui::Selectable(saturn_animations[n], is_selected)) {
                         selected_anim_index = n;
-                        if (override_anim && !pause_anim) gMarioStates[0].marioObj->header.gfx.animInfo.animFrame = 0;
+                        if (override_anim && !pause_anim && gMarioStates[0].marioObj != NULL) gMarioStates[0].marioObj->header.gfx.animInfo.animFrame = 0;
                         // Reset pose editor state when switching animations to prevent crashes
                         is_editing_panim = false;
                         reset_bone_offsets();
@@ -306,8 +307,11 @@ void OpenAnimationsMenu() {
         ImGui::BeginDisabled(pluto_animations_list.size() <= 0 || is_editing_panim);
         bool prev_custom_anim = enable_custom_anim;
         enable_custom_anim = ImGui::BeginTabItem("PAnim");
-        if (prev_custom_anim && !enable_custom_anim)
+        if (prev_custom_anim && !enable_custom_anim) {
             SaveAndScheduleRestoreBoneFlags();
+            current_pluto_anim.Translations.clear();
+            current_pluto_anim.Scales.clear();
+        }
         ImGui::EndDisabled();
         // Refresh the list every time the tab opens
         if (ImGui::IsMouseClicked(0) && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
@@ -327,7 +331,7 @@ void OpenAnimationsMenu() {
                             PreserveBoneFlagsAsPending();
                             current_pluto_anim = LoadPAnim(pluto_animations_list[n].FilePath);
                             loop_anim = current_pluto_anim.Looping;
-                            if (override_anim && !pause_anim) gMarioStates[0].marioObj->header.gfx.animInfo.animFrame = 0;
+                            if (override_anim && !pause_anim && gMarioStates[0].marioObj != NULL) gMarioStates[0].marioObj->header.gfx.animInfo.animFrame = 0;
                             // Reset pose editor state when switching animations to prevent crashes
                             is_editing_panim = false;
                             reset_bone_offsets();
@@ -340,7 +344,7 @@ void OpenAnimationsMenu() {
                 ImGui::EndDisabled();
 
                 // Metadata
-                ImGui::BeginChild("###p_metadata", ImVec2(208, 48), ImGuiChildFlags_Border);
+                ImGui::BeginChild("###p_metadata", ImVec2(208 * ui_scale, 48 * ui_scale), ImGuiChildFlags_Border);
                 ImGui::Text("%s", current_pluto_anim.Name.c_str());
                 if (ImGui::BeginItemTooltip()) {
                     ImGui::TextUnformatted(current_pluto_anim.Name.c_str());
@@ -374,26 +378,35 @@ void OpenAnimationsMenu() {
         // Force bone count recalculation on next frame
         ResetBoneCountList();
         if (!override_anim) set_character_animation(&gMarioStates[0], CHAR_ANIM_START_CROUCHING);
-        else gMarioStates[0].marioObj->header.gfx.animInfo.animFrame = 0;
+        else if (gMarioStates[0].marioObj != NULL) gMarioStates[0].marioObj->header.gfx.animInfo.animFrame = 0;
     }
     ImGui::Separator();
     ImGui::BeginDisabled(is_editing_panim);
-        ImGui::BeginDisabled(!override_anim);
-            ImGui::BeginDisabled(anim_sync_to_timeline);
+        ImGui::BeginDisabled(anim_sync_to_timeline);
+
+            ImGui::BeginDisabled(!override_anim);
                 if (enable_custom_anim && override_anim) ImGui::TextWrapped("Now Playing: %s", current_pluto_anim.Name.c_str());
-                else ImGui::TextWrapped("Now Playing: %s", saturn_animations[gMarioStates[0].marioObj->header.gfx.animInfo.animID]);
+                else if (gMarioStates[0].marioObj != NULL) ImGui::TextWrapped("Now Playing: %s", saturn_animations[gMarioStates[0].marioObj->header.gfx.animInfo.animID]);
                 ImGui::BeginDisabled(!pause_anim);
-                    ImGui::SliderInt("###animation_frame", &paused_frame, gMarioStates[0].marioObj->header.gfx.animInfo.curAnim->loopStart, gMarioStates[0].marioObj->header.gfx.animInfo.curAnim->loopEnd-1, "frame %d", ImGuiSliderFlags_AlwaysClamp);
+                    if (gMarioStates[0].marioObj != NULL && gMarioStates[0].marioObj->header.gfx.animInfo.curAnim != NULL)
+                        ImGui::SliderInt("###animation_frame", &paused_frame, gMarioStates[0].marioObj->header.gfx.animInfo.curAnim->loopStart, gMarioStates[0].marioObj->header.gfx.animInfo.curAnim->loopEnd-1, "frame %d", ImGuiSliderFlags_AlwaysClamp);
+                    else
+                        ImGui::SliderInt("###animation_frame", &paused_frame, 0, 0, "frame %d", ImGuiSliderFlags_AlwaysClamp);
                 ImGui::EndDisabled();
                 if (ImGui::Checkbox("Paused", &pause_anim))
                     if (!pause_anim) hang_anim = false;
+            ImGui::EndDisabled();
 
-                ImGui::SameLine(); ImGui::Checkbox("Hang", &hang_anim);
-                ImGui::BeginDisabled(hang_anim);
-                    ImGui::SameLine(); ImGui::Checkbox("Loop", &loop_anim);
+            ImGui::SameLine(); ImGui::Checkbox("Hang", &hang_anim);
+            ImGui::BeginDisabled(hang_anim);
+                ImGui::SameLine(); ImGui::Checkbox("Loop", &loop_anim);
             ImGui::EndDisabled();
+            ImGui::SetNextItemWidth(150 * ui_scale);
+            if (ImGui::SliderFloat("###animation_speed", &anim_speed, 0.0f, 4.0f, "speed %.2fx"))
+                anim_speed = ImClamp(anim_speed, 0.0f, 4.0f);
+            if (ImGui::IsItemHovered() && ImGui::GetIO().MouseClicked[1])
+                anim_speed = 1.0f;
             
-            ImGui::EndDisabled();
         ImGui::EndDisabled();
     ImGui::EndDisabled();
 

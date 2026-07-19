@@ -9,6 +9,7 @@
 #include "saturn/saturn_colors.h"
 #include "saturn/saturn_models.h"
 #include "saturn/saturn_textures.h"
+#include "saturn/ui/saturn_imgui.h"
 #include "saturn/ui/saturn_imgui_file_browser.h"
 #include "saturn/libs/imgui/imgui.h"
 #include "saturn/libs/imgui/imgui_internal.h"
@@ -311,44 +312,61 @@ void OpenCCEditor() {
     bool value_changed;
     OpenCCSelector();
 
+    // To-do: clean this the FUCK up
+    static DelayedBool s_cap, s_overalls, s_gloves, s_shoes, s_skin, s_hair, s_spark,
+                       s_shirt, s_shoulders, s_arms, s_pelvis, s_thigh, s_calf;
+    bool d_cap = s_cap(show_cap);
+    bool d_overalls = s_overalls(show_overalls);
+    bool d_gloves = s_gloves(show_gloves);
+    bool d_shoes = s_shoes(show_shoes);
+    bool d_skin = s_skin(show_skin);
+    bool d_hair = s_hair(show_hair);
+    bool d_spark = s_spark(spark_enabled);
+    bool d_shirt = s_shirt(show_shirt);
+    bool d_shoulders = s_shoulders(show_shoulders);
+    bool d_arms = s_arms(show_arms);
+    bool d_pelvis = s_pelvis(show_pelvis);
+    bool d_thigh = s_thigh(show_thigh);
+    bool d_calf = s_calf(show_calf);
+
     if (ImGui::BeginTabBar("###cc_editor_tabs", ImGuiTableFlags_None)) {
         if (ImGui::BeginTabItem("Editor")) {
-            if (!show_cap && !show_overalls && !show_gloves && !show_shoes && !show_skin && !show_hair && !spark_enabled) {
+            if (!d_cap && !d_overalls && !d_gloves && !d_shoes && !d_skin && !d_hair && !d_spark) {
                 // ImGui please make a TextWrappedDisabled() ...... <3
                 ImGui::BeginDisabled();
                 ImGui::TextWrapped("Active model does not contain any editable color values");
                 ImGui::EndDisabled();
             }
             // Visual Editor
-            if (show_cap) {       if (ColorPartBox(0,  "Cap", "Cap (Main)", (float*)&uiHatMainColor, "Cap (Shade)", (float*)&uiHatShadeColor)) value_changed = true; }
-            if (show_overalls) {  if (ColorPartBox(2,  "Overalls", "Overalls (Main)", (float*)&uiOverallsMainColor, "Overalls (Shade)", (float*)&uiOverallsShadeColor)) value_changed = true; }
-            if (show_gloves) {    if (ColorPartBox(4,  "Gloves", "Gloves (Main)", (float*)&uiGlovesMainColor, "Gloves (Shade)", (float*)&uiGlovesShadeColor)) value_changed = true; }
-            if (show_shoes) {     if (ColorPartBox(6,  "Shoes", "Shoes (Main)", (float*)&uiShoesMainColor, "Shoes (Shade)", (float*)&uiShoesShadeColor)) value_changed = true; }
-            if (show_skin) {      if (ColorPartBox(8,  "Skin", "Skin (Main)", (float*)&uiSkinMainColor, "Skin (Shade)", (float*)&uiSkinShadeColor)) value_changed = true; }
-            if (show_hair) {      if (ColorPartBox(10, "Hair", "Hair (Main)", (float*)&uiHairMainColor, "Hair (Shade)", (float*)&uiHairShadeColor)) value_changed = true; }
+            if (d_cap) {       if (ColorPartBox(0,  "Cap", "Cap (Main)", (float*)&uiHatMainColor, "Cap (Shade)", (float*)&uiHatShadeColor)) value_changed = true; }
+            if (d_overalls) {  if (ColorPartBox(2,  "Overalls", "Overalls (Main)", (float*)&uiOverallsMainColor, "Overalls (Shade)", (float*)&uiOverallsShadeColor)) value_changed = true; }
+            if (d_gloves) {    if (ColorPartBox(4,  "Gloves", "Gloves (Main)", (float*)&uiGlovesMainColor, "Gloves (Shade)", (float*)&uiGlovesShadeColor)) value_changed = true; }
+            if (d_shoes) {     if (ColorPartBox(6,  "Shoes", "Shoes (Main)", (float*)&uiShoesMainColor, "Shoes (Shade)", (float*)&uiShoesShadeColor)) value_changed = true; }
+            if (d_skin) {      if (ColorPartBox(8,  "Skin", "Skin (Main)", (float*)&uiSkinMainColor, "Skin (Shade)", (float*)&uiSkinShadeColor)) value_changed = true; }
+            if (d_hair) {      if (ColorPartBox(10, "Hair", "Hair (Main)", (float*)&uiHairMainColor, "Hair (Shade)", (float*)&uiHairShadeColor)) value_changed = true; }
             if (AnyModelsEnabled() && active_saturn_model_index != -1) {
-                if (spark_enabled)
+                if (d_spark)
                     if (ImGui::SmallButton("v SPARKILIZE v###cc_editor_sparkilize"))
                         SparkilizeEditor();
-                if (show_shirt) {     if (ColorPartBox(12, "Extra 1", "Shirt (Main)", (float*)&uiShirtMainColor, "Shirt (Shade)", (float*)&uiShirtShadeColor)) value_changed = true; }
-                if (show_shoulders) { if (ColorPartBox(14, "Extra 2", "Shoulders (Main)", (float*)&uiShouldersMainColor, "Shoulders (Shade)", (float*)&uiShouldersShadeColor)) value_changed = true; }
-                if (show_arms) {      if (ColorPartBox(16, "Extra 3", "Arms (Main)", (float*)&uiArmsMainColor, "Arms (Shade)", (float*)&uiArmsShadeColor)) value_changed = true; }
-                if (show_pelvis) {    if (ColorPartBox(18, "Extra 4", "Pelvis (Main)", (float*)&uiPelvisMainColor, "Pelvis (Shade)", (float*)&uiPelvisShadeColor)) value_changed = true; }
-                if (show_thigh) {     if (ColorPartBox(20, "Extra 5", "Thigh (Main)", (float*)&uiThighMainColor, "Thigh (Shade)", (float*)&uiThighShadeColor)) value_changed = true; }
-                if (show_calf) {      if (ColorPartBox(22, "Extra 6", "Calf (Main)", (float*)&uiCalfMainColor, "Calf (Shade)", (float*)&uiCalfShadeColor)) value_changed = true; }
+                if (d_shirt) {     if (ColorPartBox(12, "Extra 1", "Shirt (Main)", (float*)&uiShirtMainColor, "Shirt (Shade)", (float*)&uiShirtShadeColor)) value_changed = true; }
+                if (d_shoulders) { if (ColorPartBox(14, "Extra 2", "Shoulders (Main)", (float*)&uiShouldersMainColor, "Shoulders (Shade)", (float*)&uiShouldersShadeColor)) value_changed = true; }
+                if (d_arms) {      if (ColorPartBox(16, "Extra 3", "Arms (Main)", (float*)&uiArmsMainColor, "Arms (Shade)", (float*)&uiArmsShadeColor)) value_changed = true; }
+                if (d_pelvis) {    if (ColorPartBox(18, "Extra 4", "Pelvis (Main)", (float*)&uiPelvisMainColor, "Pelvis (Shade)", (float*)&uiPelvisShadeColor)) value_changed = true; }
+                if (d_thigh) {     if (ColorPartBox(20, "Extra 5", "Thigh (Main)", (float*)&uiThighMainColor, "Thigh (Shade)", (float*)&uiThighShadeColor)) value_changed = true; }
+                if (d_calf) {      if (ColorPartBox(22, "Extra 6", "Calf (Main)", (float*)&uiCalfMainColor, "Calf (Shade)", (float*)&uiCalfShadeColor)) value_changed = true; }
             }
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("GameShark")) {
             // GameShark
-            if (ImGui::InputTextMultiline("###gameshark_box", uiGameShark, IM_ARRAYSIZE(uiGameShark), ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 24.5f),
+            if (ImGui::InputTextMultiline("###gameshark_box", uiGameShark, IM_ARRAYSIZE(uiGameShark), ImVec2(-FLT_MIN * ui_scale, ImGui::GetTextLineHeight() * 24.5f),
                 ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_CtrlEnterForNewLine)) {
                     PasteGameShark(std::string(uiGameShark), true);
                     current_color_code.ParseGameShark();
                     UpdateEditorFromPalette();
             }
             ImGui::EndTabItem();
-            ImGui::PushItemWidth(100);
+            ImGui::PushItemWidth(100 * ui_scale);
             ImGui::InputText(".gs", uiCcLabelName, IM_ARRAYSIZE(uiCcLabelName));
             ImGui::PopItemWidth();
             if (ImGui::Button("Add to List")) {
