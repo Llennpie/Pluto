@@ -462,7 +462,7 @@ int main(int argc, char *argv[]) {
     char name[256];
     snprintf(name, 255, "%s/sm64.z64", sys_user_path());
     name[255] = 0;
-    assetextract_init(name);
+    if (!assetextract_init(name)) return 0;
 
     // Create the window straight away
     if (!gGfxInited) {

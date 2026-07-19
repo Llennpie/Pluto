@@ -217,7 +217,7 @@ bool assetextract_init(const char* rom_dest_path) {
         }
 
         if (!message) break;
-        tinyfd_notifyPopup("Pluto", message, "error");
+        tinyfd_messageBox("Pluto", message, "ok", "error", 0);
     }
 
     FILE* f = fopen(rom_dest_path, "wb");
