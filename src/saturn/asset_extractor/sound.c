@@ -85,8 +85,6 @@ static uint8_t* vpack(const char* fmt, uint8_t* buf, va_list args) {
             copy(buf, &(int){va_arg(args, int)}, 4), buf += 4; break;
         case 'q': case 'Q':
             copy(buf, &(long long){va_arg(args, long long)}, 8), buf += 8; break;
-        case 'e':
-            copy(buf, &(_Float16){va_arg(args, _Float16)}, 2), buf += 2; break;
         case 'f':
             copy(buf, &(float){va_arg(args, double)}, 4), buf += 4; break;
         case 'd':
@@ -114,7 +112,7 @@ static const uint8_t* vunpack(const char* fmt, const uint8_t* buf, va_list args)
         default: {
             uint8_t size = (uint8_t[]){
                 ['c'] = 1, ['b'] = 1, ['B'] = 1, ['?'] = 1,
-                ['h'] = 2, ['H'] = 2, ['e'] = 2,
+                ['h'] = 2, ['H'] = 2,
                 ['i'] = 4, ['I'] = 4, ['l'] = 4, ['L'] = 4, ['f'] = 4,
                 ['q'] = 8, ['Q'] = 8, ['d'] = 8, ['F'] = 8,
                 ['D'] = 16,
@@ -143,7 +141,7 @@ static size_t calcsize(const char* fmt) {
 #endif
         default: size += (uint8_t[]){
             ['c'] = 1, ['b'] = 1, ['B'] = 1, ['?'] = 1, ['x'] = 1,
-            ['h'] = 2, ['H'] = 2, ['e'] = 2,
+            ['h'] = 2, ['H'] = 2,
             ['i'] = 4, ['I'] = 4, ['l'] = 4, ['L'] = 4, ['f'] = 4,
             ['q'] = 8, ['Q'] = 8, ['d'] = 8, ['F'] = 8,
             ['D'] = 16,
@@ -517,7 +515,9 @@ static void serialize_seqfile(
     Serializer* ser, FileType type, set(NameToSampleMap) extracted_samples,
     void(*serialize)(Serializer*, Sound_Bank*, set(NameToSampleMap)), list(int) indexes
 ) {
-    size_t offsets[size(indexes)] = {}, sizes[size(indexes)] = {};
+    size_t offsets[size(indexes)], sizes[size(indexes)];
+    memset(offsets, 0, size(indexes) * sizeof(size_t));
+    memset(sizes, 0, size(indexes) * sizeof(size_t));
 
     ser_pack(ser, "HHX", type, size(indexes));
     size_t table = ser_reserve(ser, calcsize("PIX") * size(indexes));

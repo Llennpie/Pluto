@@ -10,7 +10,7 @@ typedef int(*CompareFunc)(const void*, const void*);
 
 #define MAGIC 0xB00B
 
-typedef enum: uint8_t {
+typedef enum {
     Container_List,
     Container_Set,
     Container_Queue,
