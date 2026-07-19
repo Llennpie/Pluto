@@ -25,6 +25,7 @@ typedef struct {
 } Sound_Sample;
 
 typedef struct {
+    uint64_t ctl_offset;
     uint32_t release_rate;
     uint32_t envelope;
     Sound_Sample sound_lo, sound, sound_hi;

@@ -460,14 +460,10 @@ static void serialize_ctl(Serializer* ser, Sound_Bank* bank, set(NameToSampleMap
         ser_align(ser, 16);
     }
 
-    for (size_t i = 0; i < bank->num_instrument_list; i++) {
-        if (bank->instrument_list[i] == -1) {
-            inst_pos_buf = ser_pack_reserved(ser, inst_pos_buf, "P", 0);
-            continue;
-        }
-
-        Sound_Instrument* inst = &bank->instruments[bank->instrument_list[i]];
-        inst_pos_buf = ser_pack_reserved(ser, inst_pos_buf, "P", ser->size - base);
+    for (size_t i = 0; i < bank->num_instruments; i++) {
+        Sound_Instrument* inst = &bank->instruments[i];
+        if (inst->is_perc) continue;
+        inst->ctl_offset = ser->size - base;
 
         if (inst->normal_range_hi == 0)
             inst->normal_range_hi = 127;
@@ -476,6 +472,14 @@ static void serialize_ctl(Serializer* ser, Sound_Bank* bank, set(NameToSampleMap
         serialize_sound(ser, &inst->sound_lo, sample_name_to_addr);
         serialize_sound(ser, &inst->sound,    sample_name_to_addr);
         serialize_sound(ser, &inst->sound_hi, sample_name_to_addr);
+    }
+
+    for (size_t i = 0; i < bank->num_instrument_list; i++) {
+        if (bank->instrument_list[i] == -1) {
+            inst_pos_buf = ser_pack_reserved(ser, inst_pos_buf, "P", 0);
+            continue;
+        }
+        inst_pos_buf = ser_pack_reserved(ser, inst_pos_buf, "P", bank->instruments[bank->instrument_list[i]].ctl_offset);
     }
     if (bank->percussion) {
         size_t percussion[bank->num_percussion];
