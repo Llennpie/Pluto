@@ -62,7 +62,9 @@ int main(int argc, char** argv) {
             close_and_delete(h, argv[2]);
         }
 
-        fprintf(c, "    { \"%1$s/%2$s\", sound_%1$s_%2$s, sizeof(sound_%1$s_%2$s) },\n", bank_name, sound_name);
+        fprintf(c, "    { \"%s/%s\", sound_%s_%s, sizeof(sound_%s_%s) },\n",
+            bank_name, sound_name, bank_name, sound_name, bank_name, sound_name
+        );
     }
     fprintf(c, "};\n");
 

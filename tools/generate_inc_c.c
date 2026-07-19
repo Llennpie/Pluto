@@ -13,6 +13,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#ifndef _WIN32
+#define mkdir(path) mkdir(path, 0744)
+#endif
+
 #define LENGTH(x) (sizeof(x) - 1)
 
 char* parentdir(char* path) {
@@ -28,7 +32,7 @@ char* parentdir(char* path) {
 void mkdir_if_not_exist(char* path) {
     struct stat st;
     if (stat(path, &st) == -1)
-        mkdir(path, 0744);
+        mkdir(path);
 }
 
 void mkdirs(char* path) {
