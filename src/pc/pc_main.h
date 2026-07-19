@@ -58,9 +58,9 @@ extern "C" {
 #endif
 
 #ifdef GIT_HASH
-#define TITLE ({ char title[96] = ""; snprintf(title, 96, "Pluto [%s]", GIT_HASH); title; })
+#define TITLE "Pluto [" GIT_HASH "]"
 #else
-#define TITLE ({ char title[96] = ""; snprintf(title, 96, "Pluto"); title; })
+#define TITLE "Pluto"
 #endif
 
 #define AT_STARTUP __attribute__((constructor))
