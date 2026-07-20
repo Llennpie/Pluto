@@ -5,6 +5,9 @@
 #include <vector>
 #include <SDL2/SDL.h>
 
+#include <filesystem>
+namespace fs = std::filesystem;
+
 #include "pc/djui/djui.h"
 #include "pc/djui/djui_chat_box.h"
 #include "pc/djui/djui_console.h"
@@ -359,4 +362,21 @@ void saturn_action_idle(struct MarioState *m) {
     // Check if the model's bone count matches the current PlutoAnim's bone count
     // This determines if we animate MCOMP extra bones or not
     bone_count_matches = current_pluto_anim.BoneCount > 20;
+}
+
+static char title_screen_path[SYS_MAX_PATH];
+
+char* saturn_get_title_screen_song_path(const char* dst, const char* src) {
+    std::string name = "Panimotion.mp3";
+    fs::path dst_path = fs::path(dst) / name;
+    fs::path src_path = fs::path(src) / name;
+
+    if (fs::exists(dst_path)) strcpy(title_screen_path, dst_path.c_str());
+    else if (fs::exists(src_path)) {
+        fs::copy_file(dst_path, src_path);
+        strcpy(title_screen_path, dst_path.c_str());
+    }
+    else return NULL;
+
+    return title_screen_path;
 }

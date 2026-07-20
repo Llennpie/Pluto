@@ -1,6 +1,7 @@
 #include "asset_extractor.h"
 #include "assets.h"
 #include "sound.h"
+#include "extract_png.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -204,6 +205,9 @@ static void assetextract_run() {
         &asset_seq->data, &asset_seq->size,
         &asset_bnk->data, &asset_bnk->size
     );
+
+    printf("copying extracted files\n");
+    assetextract_write_pngs();
 
     uint64_t end = clock();
     printf("done in %g ms\n", (double)(end - start) / CLOCKS_PER_SEC * 1000);

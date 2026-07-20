@@ -9,6 +9,7 @@
 #include "pc/platform.h"
 #include "pc/configfile.h"
 #include "pc/debuglog.h"
+#include "saturn/saturn.h"
 
 static HSTREAM sTitleStream = 0;
 
@@ -18,8 +19,11 @@ static HSTREAM sTitleStream = 0;
 void title_music_start(void) {
     if (sTitleStream != 0) return;
 
-    char path[SYS_MAX_PATH];
-    snprintf(path, sizeof(path), "%s/Panimotion.mp3", sys_user_path());
+    char* path = saturn_get_title_screen_song_path(sys_user_path(), sys_exe_path());
+    if (!path) {
+        LOG_ERROR("title_music: could not find song");
+        return;
+    }
 
     HSTREAM raw = BASS_StreamCreateFile(FALSE, path, 0, 0, BASS_STREAM_PRESCAN | BASS_STREAM_DECODE);
     if (!raw) {

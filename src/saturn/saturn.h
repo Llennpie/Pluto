@@ -71,6 +71,8 @@ extern "C" {
     void saturn_action_idle(struct MarioState*);
     void saturn_update_frame();
 
+    char* saturn_get_title_screen_song_path(const char* src, const char* dst);
+
 #ifdef __cplusplus
 }
 #endif

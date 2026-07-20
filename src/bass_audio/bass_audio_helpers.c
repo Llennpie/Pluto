@@ -112,6 +112,7 @@ void bassh_init(void) {
 
     if(success == FALSE) {
         //error handling? fucking nerd shit
+        printf("BASS FAILED TO INIT!!!!!!!!!!! %d\n", BASS_ErrorGetCode());
         LOG_ERROR("Bass init failed!");
         return;
     }
