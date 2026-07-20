@@ -63,12 +63,89 @@ struct Skybox {
 
 struct Skybox sSkyBoxInfo[2];
 
-typedef const Texture *const SkyboxTexture[80];
+typedef const Texture *SkyboxTexture[80];
 
 extern u8 gRenderingInterpolated;
 
 s8 gReadOnlyBackground;
 s8 gOverrideBackground = -1;
+
+#define SKYBOX_PTR(name) \
+    const Texture name##_skybox_texture_00000[1]; \
+    const Texture name##_skybox_texture_00001[1]; \
+    const Texture name##_skybox_texture_00002[1]; \
+    const Texture name##_skybox_texture_00003[1]; \
+    const Texture name##_skybox_texture_00004[1]; \
+    const Texture name##_skybox_texture_00005[1]; \
+    const Texture name##_skybox_texture_00006[1]; \
+    const Texture name##_skybox_texture_00007[1]; \
+    const Texture name##_skybox_texture_00008[1]; \
+    const Texture name##_skybox_texture_00009[1]; \
+    const Texture name##_skybox_texture_0000A[1]; \
+    const Texture name##_skybox_texture_0000B[1]; \
+    const Texture name##_skybox_texture_0000C[1]; \
+    const Texture name##_skybox_texture_0000D[1]; \
+    const Texture name##_skybox_texture_0000E[1]; \
+    const Texture name##_skybox_texture_0000F[1]; \
+    const Texture name##_skybox_texture_00010[1]; \
+    const Texture name##_skybox_texture_00011[1]; \
+    const Texture name##_skybox_texture_00012[1]; \
+    const Texture name##_skybox_texture_00013[1]; \
+    const Texture name##_skybox_texture_00014[1]; \
+    const Texture name##_skybox_texture_00015[1]; \
+    const Texture name##_skybox_texture_00016[1]; \
+    const Texture name##_skybox_texture_00017[1]; \
+    const Texture name##_skybox_texture_00018[1]; \
+    const Texture name##_skybox_texture_00019[1]; \
+    const Texture name##_skybox_texture_0001A[1]; \
+    const Texture name##_skybox_texture_0001B[1]; \
+    const Texture name##_skybox_texture_0001C[1]; \
+    const Texture name##_skybox_texture_0001D[1]; \
+    const Texture name##_skybox_texture_0001E[1]; \
+    const Texture name##_skybox_texture_0001F[1]; \
+    const Texture name##_skybox_texture_00020[1]; \
+    const Texture name##_skybox_texture_00021[1]; \
+    const Texture name##_skybox_texture_00022[1]; \
+    const Texture name##_skybox_texture_00023[1]; \
+    const Texture name##_skybox_texture_00024[1]; \
+    const Texture name##_skybox_texture_00025[1]; \
+    const Texture name##_skybox_texture_00026[1]; \
+    const Texture name##_skybox_texture_00027[1]; \
+    const Texture name##_skybox_texture_00028[1]; \
+    const Texture name##_skybox_texture_00029[1]; \
+    const Texture name##_skybox_texture_0002A[1]; \
+    const Texture name##_skybox_texture_0002B[1]; \
+    const Texture name##_skybox_texture_0002C[1]; \
+    const Texture name##_skybox_texture_0002D[1]; \
+    const Texture name##_skybox_texture_0002E[1]; \
+    const Texture name##_skybox_texture_0002F[1]; \
+    const Texture name##_skybox_texture_00030[1]; \
+    const Texture name##_skybox_texture_00031[1]; \
+    const Texture name##_skybox_texture_00032[1]; \
+    const Texture name##_skybox_texture_00033[1]; \
+    const Texture name##_skybox_texture_00034[1]; \
+    const Texture name##_skybox_texture_00035[1]; \
+    const Texture name##_skybox_texture_00036[1]; \
+    const Texture name##_skybox_texture_00037[1]; \
+    const Texture name##_skybox_texture_00038[1]; \
+    const Texture name##_skybox_texture_00039[1]; \
+    const Texture name##_skybox_texture_0003A[1]; \
+    const Texture name##_skybox_texture_0003B[1]; \
+    const Texture name##_skybox_texture_0003C[1]; \
+    const Texture name##_skybox_texture_0003D[1]; \
+    const Texture name##_skybox_texture_0003E[1]; \
+    const Texture name##_skybox_texture_0003F[1]; \
+
+SKYBOX_PTR(water)
+SKYBOX_PTR(bitfs)
+SKYBOX_PTR(wdw)
+SKYBOX_PTR(cloud_floor)
+SKYBOX_PTR(ccm)
+SKYBOX_PTR(ssl)
+SKYBOX_PTR(bbh)
+SKYBOX_PTR(bitdw)
+SKYBOX_PTR(clouds)
+SKYBOX_PTR(bits)
 
 extern SkyboxTexture bbh_skybox_ptrlist;
 extern SkyboxTexture bitdw_skybox_ptrlist;

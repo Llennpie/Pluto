@@ -30,38 +30,14 @@
 // Bass sounds //
 /////////////////
 
-DECL_CHAR_BASS_SOUND_RAW(SOUND_MARIO_LETS_A_GO) {
-#include "sound/samples/sfx_mario/1A_mario_lets_a_go.table.inc.c"
-};
-
-DECL_CHAR_BASS_SOUND_RAW(SOUND_LUIGI_LETS_A_GO) {
-#include "sound/samples/sfx_custom_luigi/1A.table.inc.c"
-};
-
-DECL_CHAR_BASS_SOUND_RAW(SOUND_WARIO_LETS_A_GO) {
-#include "sound/samples/sfx_custom_wario/1A.table.inc.c"
-};
-
-DECL_CHAR_BASS_SOUND_RAW(SOUND_TOAD_LETS_A_GO) {
-#include "sound/samples/sfx_custom_toad/1A.table.inc.c"
-};
-
-DECL_CHAR_BASS_SOUND_RAW(SOUND_MARIO_OKEY_DOKEY) {
-#include "sound/samples/sfx_mario_peach/0B_mario_okey_dokey.table.inc.c"
-};
-
-DECL_CHAR_BASS_SOUND_RAW(SOUND_LUIGI_OKEY_DOKEY) {
-#include "sound/samples/sfx_custom_luigi_peach/0B.table.inc.c"
-};
-
-DECL_CHAR_BASS_SOUND_RAW(SOUND_WARIO_OKEY_DOKEY) {
-#include "sound/samples/sfx_custom_wario_peach/0B.table.inc.c"
-};
-
-DECL_CHAR_BASS_SOUND_RAW(SOUND_TOAD_OKEY_DOKEY) {
-#include "sound/samples/sfx_custom_toad_peach/0B.table.inc.c"
-};
-
+DECL_CHAR_BASS_SOUND_RAW(SOUND_MARIO_LETS_A_GO) "sound/samples/sfx_mario/1A_mario_lets_a_go.aiff";
+DECL_CHAR_BASS_SOUND_RAW(SOUND_LUIGI_LETS_A_GO) "sound/samples/sfx_custom_luigi/1A.aiff";
+DECL_CHAR_BASS_SOUND_RAW(SOUND_WARIO_LETS_A_GO) "sound/samples/sfx_custom_wario/1A.aiff";
+DECL_CHAR_BASS_SOUND_RAW(SOUND_TOAD_LETS_A_GO) "sound/samples/sfx_custom_toad/1A.aiff";
+DECL_CHAR_BASS_SOUND_RAW(SOUND_MARIO_OKEY_DOKEY) "sound/samples/sfx_mario_peach/0B_mario_okey_dokey.aiff";
+DECL_CHAR_BASS_SOUND_RAW(SOUND_LUIGI_OKEY_DOKEY) "sound/samples/sfx_custom_luigi_peach/0B.aiff";
+DECL_CHAR_BASS_SOUND_RAW(SOUND_WARIO_OKEY_DOKEY) "sound/samples/sfx_custom_wario_peach/0B.aiff";
+DECL_CHAR_BASS_SOUND_RAW(SOUND_TOAD_OKEY_DOKEY) "sound/samples/sfx_custom_toad_peach/0B.aiff";
 ///////////////////////
 // Bass sounds table //
 ///////////////////////
@@ -93,19 +69,4 @@ static CharacterBassSound *get_character_bass_sound(s32 sound) {
 }
 
 static void play_character_bass_sound(CharacterBassSound *cbs, f32 *pos, f32 freqScale) {
-    if (cbs->sample == CHAR_BASS_SOUND_NOT_LOADED) {
-        cbs->sample = BASS_SampleLoad(TRUE, cbs->raw, 0, cbs->size, 32, BASS_SAMPLE_OVER_POS);
-        BASS_SAMPLE info; BASS_SampleGetInfo(cbs->sample, &info);
-        cbs->freq = info.freq;
-    }
-    DWORD handle = BASS_SampleGetChannel(cbs->sample, 0);
-    f32 dist = vec3f_length(pos);
-    f32 pan = (get_sound_pan(pos[0], pos[2]) - 0.5f) * 2.f;
-    f32 intensity = sound_get_level_intensity(dist);
-    f32 masterVolume = (f32) configMasterVolume / 127.f;
-    f32 sfxVolume = (f32) configSfxVolume / 127.f;
-    BASS_ChannelSetAttribute(handle, BASS_ATTRIB_VOL, masterVolume * sfxVolume * intensity * 0.75f);
-    BASS_ChannelSetAttribute(handle, BASS_ATTRIB_PAN, pan);
-    BASS_ChannelSetAttribute(handle, BASS_ATTRIB_FREQ, cbs->freq * freqScale);
-    BASS_ChannelPlay(handle, TRUE);
 }

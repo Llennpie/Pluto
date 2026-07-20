@@ -7,11 +7,10 @@
 #include "load.h"
 #include "seqplayer.h"
 
-#include "sound_data.h"
-
 #include "pc/platform.h"
 #include "pc/fs/fs.h"
 #include "pc/lua/utils/smlua_audio_utils.h"
+#include "saturn/asset_extractor/asset_extractor.h"
 
 #define ALIGN16(val) (((val) + 0xF) & ~0xF)
 
@@ -1941,7 +1940,7 @@ void audio_init() {
     init_sequence_players();
 #else
     gSeqFileHeader = (ALSeqFile *) buf;
-    data = gMusicData;
+    data = assetextract_get_asset("sound/sequences.bin", NULL);
     audio_dma_copy_immediate((uintptr_t) data, gSeqFileHeader, 0x10);
     gSequenceCount = gSeqFileHeader->seqCount;
 #if defined(VERSION_EU)
@@ -1956,7 +1955,7 @@ void audio_init() {
 
     // Load header for CTL (assets/sound_data.ctl.s, i.e. ADSR)
     gAlCtlHeader = (ALSeqFile *) buf;
-    data = gSoundDataADSR;
+    data = assetextract_get_asset("sound/sound_data.ctl", NULL);
     audio_dma_copy_immediate((uintptr_t) data, gAlCtlHeader, 0x10);
     size = gAlCtlHeader->seqCount * sizeof(ALSeqData) + 4;
     size = ALIGN16(size);
@@ -1972,12 +1971,12 @@ void audio_init() {
     size = ALIGN16(size);
     gAlTbl = soundAlloc(&gAudioInitPool, size);
 
-    data = gSoundDataRaw;
+    data = assetextract_get_asset("sound/sound_data.tbl", NULL);
     audio_dma_copy_immediate((uintptr_t) data, gAlTbl, size);
     alSeqFileNew(gAlTbl, data);
 
     // Load bank sets for each sequence (assets/bank_sets.s)
-    data = gBankSetsData;
+    data = assetextract_get_asset("sound/bank_sets", NULL);
     gAlBankSets = soundAlloc(&gAudioInitPool, 160);
     audio_dma_copy_immediate((uintptr_t)data, gAlBankSets, 160);
 

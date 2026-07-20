@@ -7,7 +7,7 @@ CC           := gcc
 CXX          := g++
 CFLAGS       := -I../include -I. -Wall -Wextra -Wno-unused-parameter -Wno-error=implicit-function-declaration -pedantic -std=c99 -O2 -s
 LDFLAGS      := -lm
-ALL_PROGRAMS := n64graphics n64graphics_ci mio0 n64cksum textconv patch_libultra_math aifc_decode aiff_extract_codebook vadpcm_enc tabledesign extract_data_for_mio skyconv
+ALL_PROGRAMS := n64graphics n64graphics_ci mio0 n64cksum textconv patch_libultra_math aifc_decode aiff_extract_codebook vadpcm_enc tabledesign extract_data_for_mio skyconv generate_inc_c generate_sound_table
 LIBAUDIOFILE := audiofile/libaudiofile.a
 
 # Attempt to detect OS
@@ -58,6 +58,12 @@ vadpcm_enc_CFLAGS  := -Wno-unused-result -Wno-uninitialized -Wno-sign-compare -W
 extract_data_for_mio_SOURCES := extract_data_for_mio.c
 
 skyconv_SOURCES := skyconv.c n64graphics.c utils.c
+
+generate_inc_c_SOURCES := generate_inc_c.c
+generate_inc_c_CFLAGS  := -Wno-missing-field-initializers
+generate_inc_c_LDFLAGS := -I.. -I../src
+
+generate_sound_table_SOURCES := generate_sound_table.c
 
 all-except-recomp: $(LIBAUDIOFILE) $(BUILD_PROGRAMS)
 

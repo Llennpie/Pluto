@@ -245,7 +245,7 @@ const Gfx dl_cake_end_screen_eu_070297D8[] = {
 // VERSION_EU
 #else
 
-#include "levels/ending/cake.inc.c"
+//#include "levels/ending/cake.inc.c"
 
 // 0x07025800 - 0x07025840
 static const Vtx cake_end_vertex_07025800[] = {
@@ -638,7 +638,7 @@ const Gfx dl_cake_end_screen[] = {
     gsDPSetRenderMode(G_RM_AA_OPA_SURF, G_RM_AA_OPA_SURF2),
     gsSPTexture(0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON),
 
-    gsDPLoadTextureBlock(cake_end_texture_0, G_IM_FMT_RGBA, G_IM_SIZ_16b, 80, 20, 0, G_TX_CLAMP, G_TX_CLAMP, 7, 6, G_TX_NOLOD, G_TX_NOLOD),
+    /*gsDPLoadTextureBlock(cake_end_texture_0, G_IM_FMT_RGBA, G_IM_SIZ_16b, 80, 20, 0, G_TX_CLAMP, G_TX_CLAMP, 7, 6, G_TX_NOLOD, G_TX_NOLOD),
     gsSPVertex(cake_end_vertex_07025800, 4, 0),
     gsSP2Triangles( 0,  1,  2, 0x0,  0,  2,  3, 0x0),
 
@@ -828,7 +828,7 @@ const Gfx dl_cake_end_screen[] = {
 
     gsDPLoadTextureBlock(cake_end_texture_47, G_IM_FMT_RGBA, G_IM_SIZ_16b, 80, 20, 0, G_TX_CLAMP, G_TX_CLAMP, 7, 6, G_TX_NOLOD, G_TX_NOLOD),
     gsSPVertex(cake_end_vertex_070263C0, 4, 0),
-    gsSP2Triangles( 0,  1,  2, 0x0,  0,  2,  3, 0x0),
+    gsSP2Triangles( 0,  1,  2, 0x0,  0,  2,  3, 0x0),*/
 
     gsDPPipeSync(),
     gsSPTexture(0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_OFF),

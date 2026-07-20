@@ -40,6 +40,8 @@
 #include "saturn/saturn_colors.h"
 #include "saturn/ui/saturn_imgui_colors.h"
 
+#include "saturn/asset_extractor/asset_extractor.h"
+
 #define SUPPORT_CHECK(x) assert(x)
 
 // this is used for multi-textures
@@ -650,6 +652,9 @@ static void import_texture(int tile) {
 #endif
         return;
     }
+
+    const void* asset = assetextract_get_asset((const char*)rdp.loaded_texture[tile].addr, NULL);
+    if (asset) asset = rdp.loaded_texture[tile].addr = asset;
 
     if (gfx_texture_cache_lookup(tile, &rendering_state.textures[tile], rdp.loaded_texture[tile].addr, fmt, siz)) {
         return;
