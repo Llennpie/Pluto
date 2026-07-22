@@ -1373,45 +1373,16 @@ static void geo_process_mcomp_extra(struct GraphNodeAnimatedPart *node) {
         vec3f_set(translation, node->translation[0], node->translation[1], node->translation[2]);
         vec3f_copy(translationPrev, translation);
 
-        if (gCurGraphNodeObject == &gMarioObject->header.gfx) {
-            Vec3s boneOffset, boneOffsetPrev;
-            ApplyBoneTranslation(boneOffset, boneOffsetPrev);
-            translation[0] += boneOffset[0];
-            translation[1] += boneOffset[1];
-            translation[2] += boneOffset[2];
-            translationPrev[0] += boneOffsetPrev[0];
-            translationPrev[1] += boneOffsetPrev[1];
-            translationPrev[2] += boneOffsetPrev[2];
-        }
+        if (gCurGraphNodeObject == &gMarioObject->header.gfx)
+            BumpBoneTranslationCounter();
 
         Vec3s poseRot, poseRotPrev;
         SaturnGetCurrentBonePoseRotation(poseRot, poseRotPrev);
         mtxf_rotate_xyz_and_translate(matrix, translation, poseRot);
         if (gCurGraphNodeObject == &gMarioObject->header.gfx && SaturnShouldApplyBoneScale()) {
-            Vec3f boneScale, boneScalePrev;
-            ApplyBoneScale(boneScale, boneScalePrev);
-            bool non_identity = (boneScale[0] != 1.0f || boneScale[1] != 1.0f || boneScale[2] != 1.0f
-                              || boneScalePrev[0] != 1.0f || boneScalePrev[1] != 1.0f || boneScalePrev[2] != 1.0f);
-            if (non_identity) {
-                Mat4 matrixPrev;
-                mtxf_rotate_xyz_and_translate(matrixPrev, translationPrev, poseRotPrev);
-                mtxf_mul(gMatStack[gMatStackIndex + 1],     matrix,     gMatStack[gMatStackIndex]);
-                mtxf_mul(gMatStackPrev[gMatStackIndex + 1], matrixPrev, gMatStackPrev[gMatStackIndex]);
-                for (int _sc = 0; _sc < 3; _sc++) {
-                    gMatStack[gMatStackIndex + 1][_sc][0] *= boneScale[_sc];
-                    gMatStack[gMatStackIndex + 1][_sc][1] *= boneScale[_sc];
-                    gMatStack[gMatStackIndex + 1][_sc][2] *= boneScale[_sc];
-                    gMatStackPrev[gMatStackIndex + 1][_sc][0] *= boneScalePrev[_sc];
-                    gMatStackPrev[gMatStackIndex + 1][_sc][1] *= boneScalePrev[_sc];
-                    gMatStackPrev[gMatStackIndex + 1][_sc][2] *= boneScalePrev[_sc];
-                }
-            } else {
-                Mat4 matrixPrev;
-                mtxf_rotate_xyz_and_translate(matrixPrev, translationPrev, poseRotPrev);
-                mtxf_mul(gMatStack[gMatStackIndex + 1],     matrix,     gMatStack[gMatStackIndex]);
-                mtxf_mul(gMatStackPrev[gMatStackIndex + 1], matrixPrev, gMatStackPrev[gMatStackIndex]);
-            }
-        } else {
+            BumpBoneScaleCounter();
+        }
+        {
             Mat4 matrixPrev;
             mtxf_rotate_xyz_and_translate(matrixPrev, translationPrev, poseRotPrev);
             mtxf_mul(gMatStack[gMatStackIndex + 1],     matrix,     gMatStack[gMatStackIndex]);
@@ -1486,16 +1457,8 @@ static void geo_process_extra_wiggle(struct GraphNodeExtraWiggle *node) {
         vec3f_set(translation, node->translation[0], node->translation[1], node->translation[2]);
         vec3f_copy(translationPrev, translation);
 
-        if (gCurGraphNodeObject == &gMarioObject->header.gfx) {
-            Vec3s boneOffset, boneOffsetPrev;
-            ApplyBoneTranslation(boneOffset, boneOffsetPrev);
-            translation[0] += boneOffset[0];
-            translation[1] += boneOffset[1];
-            translation[2] += boneOffset[2];
-            translationPrev[0] += boneOffsetPrev[0];
-            translationPrev[1] += boneOffsetPrev[1];
-            translationPrev[2] += boneOffsetPrev[2];
-        }
+        if (gCurGraphNodeObject == &gMarioObject->header.gfx)
+            BumpBoneTranslationCounter();
 
         Vec3s poseRot, poseRotPrev;
         SaturnGetCurrentBonePoseRotation(poseRot, poseRotPrev);
@@ -1845,9 +1808,10 @@ bool node_is_any_player(struct Object *node) {
  * Process an object node.
  */
 static void geo_process_object(struct Object *node) {
+    mcomp_bone_detected = false;
+    mcomp_bone_index = 0;
     if (node == gMarioObject) {
         ResetBoneCountList();
-        mcomp_bone_index = 0;
     }
 
     // Errors are only shown outside of machinima mode
