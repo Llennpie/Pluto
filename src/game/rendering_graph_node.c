@@ -28,6 +28,7 @@
 #include "saturn/ui/saturn_imgui.h"
 #include "pc/lua/utils/smlua_obj_utils.h"
 #include "game/mario_misc.h"
+extern u32 dynos_model_get_id_from_graph_node(struct GraphNode* aGraphNode);
 
 /**
  * This file contains the code that processes the scene graph for rendering.
@@ -1848,6 +1849,9 @@ static void geo_process_object(struct Object *node) {
         ResetBoneCountList();
         mcomp_bone_index = 0;
     }
+
+    // Errors are only shown outside of machinima mode
+    if (dynos_model_get_id_from_graph_node(node->header.gfx.sharedChild) == MODEL_ERROR_MODEL && freeze_camera) return;
 
     // Chroma Key: Objects
     if (auto_chroma && !chroma_show_objects && !node_is_any_player(node)) return;

@@ -152,11 +152,13 @@ struct GraphNode* DynOS_Model_GetGeo(u32 aId) {
     }
 
     if (sIdMap.count(aId) == 0) {
+        PrintConsole("Could not find model id 0x%X in sIdMap, returning error geo\n", aId);
         return DynOS_Model_GetErrorGeo();
     }
 
     auto& vec = sIdMap[aId];
     if (vec.size() == 0 || vec.empty()) {
+        PrintConsole("Model id 0x%X has empty vec in sIdMap, returning error geo\n", aId);
         return DynOS_Model_GetErrorGeo();
     }
 
