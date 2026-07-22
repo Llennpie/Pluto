@@ -227,6 +227,7 @@ void saturn_action_idle(struct MarioState *m) {
     if (!(enable_custom_anim && override_anim)) force_set_character_animation(m, (override_anim) ? selected_anim_index : get_idle_anim(m));
     if (m->marioObj == NULL) return;
 
+    if (m->animation->targetAnim == NULL) return;
     struct Animation *targetAnim = m->marioObj->header.gfx.animInfo.curAnim;
     // Animation-specific looping
     if (override_anim) {

@@ -76,10 +76,9 @@ namespace fs = std::filesystem;
 SDL_Window* current_window = nullptr;
 
 bool show_menu;
-bool show_window_machinima = true;
-bool show_window_cc_editor = true;
+bool show_window_cc_editor = false;
 bool show_window_model_settings = false;
-bool show_window_animations = true;
+bool show_window_animations = false;
 bool saturn_any_bone_dot_hovered = false;
 bool show_window_dialog = false;
 bool show_window_timeline = false;
