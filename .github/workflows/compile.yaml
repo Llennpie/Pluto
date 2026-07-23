@@ -8,16 +8,23 @@ jobs:
     outputs:
       version_number: ${{ steps.config.outputs.version_number }}
       patch_notes: ${{ steps.config.outputs.patch_notes }}
+      is_prerelease: ${{ steps.config.outputs.is_prerelease }}
       
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
 
+      - name: Set up dependencies
+        run: sudo apt install -y build-essential
+
       - name: Generate config
         id: config
         run: |
+          VERSION=$(cat src/saturn/saturn_version.h <(echo SATURN_VERSION) | cpp | sed s/#.*$//g | sed s/\"//g | sed 's/ \. /./g')
           PATCH_NOTES=$(cat PATCH_NOTES.md)
-          echo "version_number=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          IS_PRERELEASE=$(cat src/saturn/saturn_version.h <(echo -e "#ifdef VERSION_PRERELEASE\ntrue\n#else\nfalse\n#endif") | cpp | sed s/#.*$//g | sed s/\"//g | sed 's/ \. /./g')
+          echo "version_number=$(echo $VERSION)" >> $GITHUB_OUTPUT
+          echo "is_prerelease=$(echo $IS_PRERELEASE)" >> $GITHUB_OUTPUT
           echo "patch_notes<<EOF" >> $GITHUB_OUTPUT
           echo "$PATCH_NOTES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -52,7 +59,7 @@ jobs:
           tag_name: ${{ needs.configure.outputs.version_number }}
           body: ${{ needs.configure.outputs.patch_notes }}
           draft: true
-          prerelease: false
+          prerelease: ${{ needs.configure.outputs.is_prerelease }}
 
   build:
     needs: [release]
