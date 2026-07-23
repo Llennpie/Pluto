@@ -278,9 +278,9 @@ void SaveActiveColorCode(std::string save_path) {
     short_path.erase(0, pos);
 
     if (std::filesystem::exists(save_path + "/" + std::string(uiCcLabelName) + ".gs"))
-        studio_notif_success(uiCcLabelName, "Saved color code to:\n%s/%s.gs", short_path.c_str(), uiCcLabelName);
+        Notif::create_message(NotifColor::COL_SUCCESS, uiCcLabelName, format("Saved color code to:\n%s/%s.gs", short_path.c_str(), uiCcLabelName));
     else
-        studio_notif_error(uiCcLabelName, "Failed to save color code to:\n%s/%s.gs", short_path.c_str(), uiCcLabelName);
+        Notif::create_message(NotifColor::COL_ERROR, uiCcLabelName, format("Failed to save color code to:\n%s/%s.gs", short_path.c_str(), uiCcLabelName));
 
     RefreshColorCodeList();
 }
