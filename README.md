@@ -21,7 +21,7 @@ __**Linux:**__
 
 * Open your terminal
 * Install dependencies
-  * Debian/Ubuntu/Mint: `sudo apt install git make gcc libsdl2-dev libglew-dev libcjson-dev xclip libzip`
+  * Debian/Ubuntu/Mint: `sudo apt install git make gcc libsdl2-dev libglew-dev libcjson-dev xclip libzip-dev`
   * Arch/CachyOS: `sudo pacman -S git make gcc sdl2-compat glew cjson xclip libzip`
   * Gentoo: `emerge --ask dev-vcs/git dev-build/make media-libs/libsdl2 media-libs-glew dev-libs/cJSON x11-misc/xclip dev-libs/libzip`
 * Run `git clone https://github.com/Llennpie/Pluto && cd Pluto`
