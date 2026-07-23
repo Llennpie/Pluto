@@ -744,9 +744,6 @@ static void imgui_build_widgets() {
                 ImGui::EndMenu();
             }
 
-            if (ImGui::MenuItem("notif"))
-                Notif::create_message(NotifColor::COL_INFO, "title", "message");
-
             ImGui::EndMainMenuBar();
         }
 
