@@ -5,7 +5,7 @@ __**Windows:**__
 * Download [MSYS2](<https://msys2.org>) from their official website
 * After it's installed, go to the start menu and type in **MINGW64** and run it
   * Confirm that "MINGW64" is displayed in a magenta font
-* Enter `pacman -S git make mingw-w64-x86_64-gcc mingw-w64-x86_64-SDL2 mingw-w64-x86_64-glew mingw-w64-x86_64-cjson mingw-w64-x86_64-libzip mingw-w64-x86_64-bzip2 mingw-w64-x86_64-xz mingw-w64-x86_64-zstd python3`
+* Enter `pacman -S git make mingw-w64-x86_64-gcc mingw-w64-x86_64-SDL2 mingw-w64-x86_64-glew mingw-w64-x86_64-cjson mingw-w64-x86_64-libzip python3`
   * When pasting commands into the window, make sure to use the right click menu or **Shift+Insert** otherwise it won't work
   * When it prompts you, type in `y` and press Enter
 * Download the source code: `git clone https://github.com/Llennpie/Pluto && cd Pluto`
