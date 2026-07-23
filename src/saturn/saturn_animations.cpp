@@ -416,7 +416,7 @@ std::vector<PlutoAnim> GetPAnimList(const std::string& folderPath) {
         }
     }
 
-    if (convert_count > 0) studio_notif_success("JSON -> PAnim", "Converted %d JSON animations to PAnim. Backups saved.", convert_count);
+    if (convert_count > 0) Notif::create_message(NotifColor::COL_SUCCESS, "JSON -> PAnim", format("Converted %d JSON animations to PAnim. Backups saved.", convert_count));
 
     return panim_list;
 }

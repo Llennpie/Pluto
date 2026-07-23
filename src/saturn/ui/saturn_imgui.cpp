@@ -6,6 +6,7 @@
 #include "saturn/saturn_animations.h"
 #include "saturn/saturn_textures.h"
 #include "saturn/saturn_colors.h"
+#include "saturn/saturn_updater.h"
 
 #if defined(__MINGW32__) || defined(OSX_BUILD)
 # define GLEW_STATIC
@@ -219,6 +220,8 @@ void imgui_init() {
 
     fs::remove_all(dynos_src);
     pluto_animations_list = GetPAnimList((dynos_dst / "anims").string());
+
+    CheckForUpdates();
 }
 
 void imgui_init_backend(SDL_Window* window, SDL_GLContext ctx) {
@@ -741,6 +744,9 @@ static void imgui_build_widgets() {
                 ImGui::EndMenu();
             }
 
+            if (ImGui::MenuItem("notif"))
+                Notif::create_message(NotifColor::COL_INFO, "title", "message");
+
             ImGui::EndMainMenuBar();
         }
 
@@ -921,7 +927,7 @@ void imgui_capture_screenshot(void* buffer) {
 #endif
         free(pixels);
 
-        studio_notif_info(filename.c_str(), "Saved screenshot to:\n%s/screenshots", fs::path(path).generic_string().c_str());
+        Notif::create_message(NotifColor::COL_INFO, filename, format("Saved screenshot to:\n%s/screenshots", fs::path(path).generic_string().c_str()));
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);

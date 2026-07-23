@@ -427,15 +427,17 @@ BUILD_DIR_BASE := build
 # BUILD_DIR is the location where all build artifacts are placed
 BUILD_DIR := $(BUILD_DIR_BASE)/$(VERSION)_pc
 
+TARGET_NAME := sm64coopdx
+
 ifeq ($(WINDOWS_BUILD),1)
-	EXE := $(BUILD_DIR)/sm64coopdx.exe
-else # Linux builds/binary namer
-	ifeq ($(TARGET_RPI),1)
-		EXE := $(BUILD_DIR)/sm64coopdx.arm
-	else
-		EXE := $(BUILD_DIR)/sm64coopdx
-	endif
+    TARGET_NAME := $(TARGET_NAME).exe
+else ifeq ($(TARGET_RPI),1)
+    TARGET_NAME := $(TARGET_NAME).arm
 endif
+
+EXE := $(BUILD_DIR)/$(TARGET_NAME)
+
+DEFINES += TARGET_NAME=\"$(TARGET_NAME)\"
 
 ELF            := $(BUILD_DIR)/$(TARGET).elf
 LIBULTRA       := $(BUILD_DIR)/libultra.a
@@ -971,6 +973,7 @@ endif
 # Network/Discord/Bass (ugh, needs cleanup)
 ifeq ($(WINDOWS_BUILD),1)
   LDFLAGS += -L"ws2_32" -lwsock32
+  CFLAGS += -DZIP_STATIC
   ifeq ($(DISCORD_SDK),1)
     LDFLAGS += -Wl,-Bdynamic -L./lib/discordsdk/ -L./lib/bass/ -ldiscord_game_sdk -lbass -lbass_fx -Wl,-Bstatic
   else
@@ -988,7 +991,7 @@ else
   endif
 endif
 
-LDFLAGS += -lstdc++
+LDFLAGS += -lstdc++ -lzip
 
 # Prevent a crash with -sopt
 export LANG := C

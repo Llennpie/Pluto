@@ -15,6 +15,8 @@ extern "C" {
 #include "gfx/gfx_sdl.h"
 #include "gfx/gfx_dummy.h"
 
+#include "saturn/saturn_version.h"
+
 #if defined(WAPI_SDL1) || defined(WAPI_SDL2)
 # define WAPI gfx_sdl
 #elif defined(WAPI_DXGI)
@@ -58,9 +60,13 @@ extern "C" {
 #endif
 
 #ifdef GIT_HASH
-#define TITLE "Pluto [" GIT_HASH "]"
+    #define TITLE "Pluto [" GIT_HASH "]"
 #else
-#define TITLE "Pluto"
+    #ifdef VERSION_PRERELASE
+        #define TITLE "Pluto " SATURN_VERSION " (Prerelease)"
+    #else
+        #define TITLE "Pluto " SATURN_VERSION
+    #endif
 #endif
 
 #define AT_STARTUP __attribute__((constructor))
