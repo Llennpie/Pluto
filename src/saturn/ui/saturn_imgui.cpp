@@ -407,6 +407,9 @@ void imgui_update() {
     s_kick_flag = true;
     pthread_cond_signal(&s_kick_cond);
     pthread_mutex_unlock(&s_kick_mtx);
+
+    if (!allow_game_input) SDL_StartTextInput();
+    else SDL_StopTextInput();
 }
 
 static void imgui_build_widgets();
@@ -447,8 +450,6 @@ static void imgui_build_widgets() {
 
     if (show_menu) {
         if (gMarioStates[0].marioObj != NULL) {
-        //SDL_StartTextInput(); // did i really need this >:(
-
         // Model Settings
         PopupModelSettings();
         if (!gDjuiInMainMenu && !gDjuiChatBoxFocus && !gDjuiConsoleFocus && !gInteractableOverridePad) {
