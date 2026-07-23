@@ -49,8 +49,10 @@ bool is_wayland() {
 
 extern "C" {
     #include "pc/pc_main.h"
+    #include "pc/configfile.h"
     #include "pc/gfx/gfx_pc.h"
     #include "pc/controller/controller_api.h"
+    #include "pc/controller/controller_bind_mapping.h"
     #include "pc/djui/djui.h"
     #include "pc/djui/djui_chat_box.h"
     #include "pc/djui/djui_console.h"
@@ -252,6 +254,18 @@ void imgui_handle_events(SDL_Event* event) {
     ImGui_ImplSDL2_ProcessEvent(event);
 }
 
+const char* imgui_get_bind_name(unsigned int configKey[MAX_BINDS]) {
+#if defined(CAPI_SDL1) || defined(CAPI_SDL2)
+    if (!configKey) return NULL;
+    for (int i = 0; i < MAX_BINDS; i++) {
+        if (configKey[i] != VK_INVALID) {
+            return translate_bind_to_name(configKey[i]);
+        }
+    }
+#endif
+    return NULL;
+}
+
 void imgui_handle_binds(int scancode) {
     // Handle Pluto keybinds
     // These are treated like regular SM64 binds and can be changed in Djui
@@ -296,6 +310,10 @@ void imgui_handle_binds(int scancode) {
 
             if (scancode == (int)configKeyPlutoRuleOfThirds[i])
                 show_rule_of_thirds = !show_rule_of_thirds;
+
+            if (gCamera && freeze_camera &&
+            gMarioStates[0].marioObj && scancode == (int)configKeyPlutoCenterOnMario[i])
+                saturn_recenter_camera();
         }
     }
 }
@@ -494,7 +512,7 @@ static void imgui_build_widgets() {
         // Main Menu
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("Menu")) {
-                if (ImGui::MenuItem("Show Menu", NULL, show_menu)) show_menu = false;
+                if (ImGui::MenuItem("Show Menu", imgui_get_bind_name(configKeyPlutoMenu), show_menu)) show_menu = false;
                 ImGui::PushItemWidth(150);
                 ImGui::SliderFloat("UI Scale", &ui_scale, 1.0f, 3.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_NoInput);
                 if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
@@ -506,7 +524,7 @@ static void imgui_build_widgets() {
                         ImGui::InputInt2("###screenshot_size", screenshot_size, ImGuiInputTextFlags_CharsDecimal);
                     } else {
                         ImGui::SetNextItemWidth(100 * ui_scale);
-                        ImGui::SliderInt("Multiplier", &screenshot_multiplier, 1, 4);
+                        ImGui::SliderInt("###screenshot_mult", &screenshot_multiplier, 1, 4, "%dx", ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_NoInput);
                         ImGui::TextDisabled("%dx%d", screenshot_size[0], screenshot_size[1]);
                     }
                     if (ImGui::Button("Save Screenshot")) capture_screenshot = true;
@@ -547,102 +565,139 @@ static void imgui_build_widgets() {
                     }
                 });
 
-                if (ImGui::BeginMenu("Settings###camera_settings")) {
-                    ImGui::SliderFloat("###freeze_camera_speed", &freeze_camera_speed, 0.f, 6.f, "Move Speed %.1f");
-                    if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
-                        freeze_camera_speed = 1.f;
+                // Camera Position and Rotation
+                if (gCamera != NULL) {
+                    if (ImGui::BeginMenu("Settings###camera_settings", gCamera != NULL && freeze_camera)) {
+                        ImGui::PushItemFlag(ImGuiItemFlags_SelectableDontClosePopup, true);
+                        ImGui::SliderFloat("###freeze_camera_speed", &freeze_camera_speed, 0.f, 6.f, "Move Speed %.1f");
+                        if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+                            freeze_camera_speed = 1.f;
 
-                    ImGui::SeparatorText("Position");
-                    if (ImGui::InputFloat3("Position###camera_pos", camera_kf_state) && gCamera) {
-                        // Maintain focus offset
-                        float dx = gCamera->focus[0] - gCamera->pos[0];
-                        float dy = gCamera->focus[1] - gCamera->pos[1];
-                        float dz = gCamera->focus[2] - gCamera->pos[2];
-                        gCamera->pos[0] = camera_kf_state[0];
-                        gCamera->pos[1] = camera_kf_state[1];
-                        gCamera->pos[2] = camera_kf_state[2];
-                        gCamera->focus[0] = camera_kf_state[0] + dx;
-                        gCamera->focus[1] = camera_kf_state[1] + dy;
-                        gCamera->focus[2] = camera_kf_state[2] + dz;
-                        camera_kf_state[3] = gCamera->focus[0];
-                        camera_kf_state[4] = gCamera->focus[1];
-                        camera_kf_state[5] = gCamera->focus[2];
-                    }
-                    ImGui::SliderFloat("###camera_tilt", &saturn_camera_tilt, -45.f, 45.f, "Tilt %.1f");
-                    if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
-                        saturn_camera_tilt = 0.f;
-                    ImGui::SameLine(); TimelineButton("Tilt", &saturn_camera_tilt);
-
-                    if (ImGui::MenuItem("Save Current")) {
-                        static int counter = 1;
-                        saved_camera_positions.push_back({ counter, "Unnamed Camera " + std::to_string(counter),
-                            gCamera->pos[0], gCamera->pos[1], gCamera->pos[2],
-                            gCamera->focus[0], gCamera->focus[1], gCamera->focus[2]
-                        });
-                        counter++;
-                    }
-                    if (!saved_camera_positions.empty()) ImGui::Separator();
-                    saved_camera_positions.erase(std::remove_if(
-                        saved_camera_positions.begin(), saved_camera_positions.end(),
-                        [](CameraSaveState& cam) {
-                            std::string delete_id = "X##camdel_" + std::to_string(cam.id);
-                            std::string restore_id = ">##camres_" + std::to_string(cam.id);
-                            std::string name_id = "##camname_" + std::to_string(cam.id);
-    
-                            if (ImGui::Button(delete_id.c_str())) return true;
-                            if (ImGui::IsItemHovered()) {
-                                ImGui::BeginTooltip();
-                                ImGui::Text("Remove");
-                                ImGui::EndTooltip();
-                            }
-                            ImGui::SameLine();
-                            if (ImGui::Button(restore_id.c_str())) {
-                                // Apply saved pos/foc to camera_kf_state so a keyframe can be created if needed
-                                camera_kf_state[0] = cam.pos[0];
-                                camera_kf_state[1] = cam.pos[1];
-                                camera_kf_state[2] = cam.pos[2];
-                                camera_kf_state[3] = cam.foc[0];
-                                camera_kf_state[4] = cam.foc[1];
-                                camera_kf_state[5] = cam.foc[2];
-                                if (gCamera) {
-                                    vec3f_copy(gCamera->pos, cam.pos);
-                                    vec3f_copy(gCamera->focus, cam.foc);
-                                    vec3f_copy(gLakituState.goalPos, cam.pos);
-                                    vec3f_copy(gLakituState.goalFocus, cam.foc);
-                                    vec3f_copy(gLakituState.pos, cam.pos);
-                                    vec3f_copy(gLakituState.focus, cam.foc);
-                                }
-                            }
-                            if (ImGui::IsItemHovered()) {
-                                ImGui::BeginTooltip();
-                                ImGui::Text("Restore");
-                                ImGui::EndTooltip();
-                            }
-                            ImGui::SameLine();
-                            ImGui::InputText(name_id.c_str(), &cam.name);
-
-                            return false;
+                        if (ImGui::MenuItem("Center on Avatar", imgui_get_bind_name(configKeyPlutoCenterOnMario), false, gMarioStates[0].marioObj != NULL))
+                            saturn_recenter_camera();
+                        if (ImGui::IsItemHovered()) {
+                            ImGui::BeginTooltip();
+                            ImGui::TextDisabled("Right click for more options");
+                            ImGui::EndTooltip();
+                            if (ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+                                ImGui::OpenPopup("Recenter Presets");
                         }
-                    ), saved_camera_positions.end());
-                    if (!saved_camera_positions.empty()) {
-                        if (ImGui::MenuItem("Remove All")) saved_camera_positions.clear();
-                    } 
+                        if (ImGui::BeginPopup("Recenter Presets")) {
+                            ImGui::Checkbox("Stay Centered", &camera_recentering);
+                            ImGui::EndPopup();
+                        }
 
-                    ImGui::EndMenu();
+                        ImGui::Separator();
+                        {
+                            static float pos[3] = { 0.f, 0.f, 0.f };
+                            static bool pos_active = false;
+                            if (!pos_active) {
+                                pos[0] = camera_kf_state[0];
+                                pos[1] = camera_kf_state[1];
+                                pos[2] = camera_kf_state[2];
+                            }
+                            ImGui::DragFloat3("Position###camera_pos", pos, 1.0f, 0.f, 0.f, "%.1f");
+                            pos_active = ImGui::IsItemActive();
+                            camera_ui_pos[0] = pos[0];
+                            camera_ui_pos[1] = pos[1];
+                            camera_ui_pos[2] = pos[2];
+                            camera_ui_pos_active = pos_active;
+                        }
+                        {
+                            static float rot[2] = { 0.f, 0.f };
+                            static bool rot_active = false;
+                            f32 dist; s16 pitch, yaw;
+                            vec3f_get_dist_and_angle(gCamera->pos, gCamera->focus, &dist, &pitch, &yaw);
+                            if (!rot_active) {
+                                rot[0] = pitch * 360.0f / 65536.0f;
+                                rot[1] = yaw * 360.0f / 65536.0f;
+                            }
+                            ImGui::DragFloat2("Rotation###camera_rot", rot, 0.5f, 0.f, 0.f, "%.1f deg");
+                            rot_active = ImGui::IsItemActive();
+                            camera_ui_rot[0] = rot[0];
+                            camera_ui_rot[1] = rot[1];
+                            camera_ui_rot_active = rot_active;
+                        }
+
+                        ImGui::SliderFloat("###camera_tilt", &saturn_camera_tilt, -45.f, 45.f, "Tilt %.1f");
+                        if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+                            saturn_camera_tilt = 0.f;
+                        ImGui::SameLine(); TimelineButton("Tilt", &saturn_camera_tilt);
+                        ImGui::Separator();
+
+                        if (ImGui::MenuItem("Save Current")) {
+                            static int counter = 1;
+                            saved_camera_positions.push_back({ counter, "Unnamed Camera " + std::to_string(counter),
+                                gCamera->pos[0], gCamera->pos[1], gCamera->pos[2],
+                                gCamera->focus[0], gCamera->focus[1], gCamera->focus[2]
+                            });
+                            counter++;
+                        }
+                        if (!saved_camera_positions.empty()) ImGui::Separator();
+                        saved_camera_positions.erase(std::remove_if(
+                            saved_camera_positions.begin(), saved_camera_positions.end(),
+                            [](CameraSaveState& cam) {
+                                std::string delete_id = "X##camdel_" + std::to_string(cam.id);
+                                std::string restore_id = ">##camres_" + std::to_string(cam.id);
+                                std::string name_id = "##camname_" + std::to_string(cam.id);
+        
+                                if (ImGui::Button(delete_id.c_str())) return true;
+                                if (ImGui::IsItemHovered()) {
+                                    ImGui::BeginTooltip();
+                                    ImGui::Text("Remove");
+                                    ImGui::EndTooltip();
+                                }
+                                ImGui::SameLine();
+                                if (ImGui::Button(restore_id.c_str())) {
+                                    // Apply saved pos/foc to camera_kf_state so a keyframe can be created if needed
+                                    camera_kf_state[0] = cam.pos[0];
+                                    camera_kf_state[1] = cam.pos[1];
+                                    camera_kf_state[2] = cam.pos[2];
+                                    camera_kf_state[3] = cam.foc[0];
+                                    camera_kf_state[4] = cam.foc[1];
+                                    camera_kf_state[5] = cam.foc[2];
+                                    if (gCamera) {
+                                        vec3f_copy(gCamera->pos, cam.pos);
+                                        vec3f_copy(gCamera->focus, cam.foc);
+                                        vec3f_copy(gLakituState.goalPos, cam.pos);
+                                        vec3f_copy(gLakituState.goalFocus, cam.foc);
+                                        vec3f_copy(gLakituState.pos, cam.pos);
+                                        vec3f_copy(gLakituState.focus, cam.foc);
+                                    }
+                                }
+                                if (ImGui::IsItemHovered()) {
+                                    ImGui::BeginTooltip();
+                                    ImGui::Text("Restore");
+                                    ImGui::EndTooltip();
+                                }
+                                ImGui::SameLine();
+                                ImGui::InputText(name_id.c_str(), &cam.name);
+
+                                return false;
+                            }
+                        ), saved_camera_positions.end());
+                        if (!saved_camera_positions.empty()) {
+                            if (ImGui::MenuItem("Remove All")) saved_camera_positions.clear();
+                        } 
+
+                        ImGui::PopItemFlag();
+                        ImGui::EndMenu();
+                    }
                 }
                 ImGui::EndDisabled();
-                
-                ImGui::Separator();
 
-                ImGui::SliderFloat("###camera_follow_speed", &camera_follow_speed, 0.01f, 1.f, "Follow %.2f");
-                if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
-                    camera_follow_speed = 1.f;
                 ImGui::Separator();
 
                 ImGui::SliderFloat("###camera_fov", &saturn_camera_fov, 0.f, 100.f, "FOV %.1f");
                 if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
                     saturn_camera_fov = 45.f;
                 ImGui::SameLine(); TimelineButton("FOV", &saturn_camera_fov);
+
+                ImGui::SliderFloat("###camera_follow_speed", &camera_follow_speed, 0.01f, 1.f, "Follow %.2f");
+                if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+                    camera_follow_speed = 1.f;
+
+                ImGui::Separator();
 
                 ImGui::Checkbox("Rule of Thirds", &show_rule_of_thirds);
                 const char* hudItems[] = { "Hide in Freeze", "Enabled", "Disabled" };

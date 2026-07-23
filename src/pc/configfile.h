@@ -71,6 +71,7 @@ extern unsigned int configKeyPlutoPauseAnim[];
 extern unsigned int configKeyPlutoCreateDialog[];
 extern unsigned int configKeyPlutoFlushTextures[];
 extern unsigned int configKeyPlutoRuleOfThirds[];
+extern unsigned int configKeyPlutoCenterOnMario[];
 extern unsigned int configStickDeadzone;
 extern unsigned int configRumbleStrength;
 extern unsigned int configGamepadNumber;

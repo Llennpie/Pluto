@@ -4,7 +4,7 @@
 #include "src/pc/configfile.h"
 
 void djui_panel_controls_pluto_create(struct DjuiBase* caller) {
-    f32 bindBodyHeight = 28 * 12 + 1 * 10;
+    f32 bindBodyHeight = 28 * 13 + 1 * 10;
 
     struct DjuiThreePanel* panel = djui_panel_menu_create(DLANG(CONTROLS, CONTROLS));
     struct DjuiBase* body = djui_three_panel_get_body(panel);
@@ -19,6 +19,7 @@ void djui_panel_controls_pluto_create(struct DjuiBase* caller) {
             djui_bind_create(&bindBody->base, "Screenshot", configKeyPlutoScreenshot);
             djui_bind_create(&bindBody->base, "Chroma Key", configKeyPlutoChroma);
             djui_bind_create(&bindBody->base, "Freeze Camera", configKeyPlutoFreezeCamera);
+            djui_bind_create(&bindBody->base, "Recenter Camera", configKeyPlutoCenterOnMario);
             djui_bind_create(&bindBody->base, "Play Anim", configKeyPlutoPlayAnim);
             djui_bind_create(&bindBody->base, "Pause Anim", configKeyPlutoPauseAnim);
             djui_bind_create(&bindBody->base, "Reload Models", configKeyPlutoFlushTextures);
