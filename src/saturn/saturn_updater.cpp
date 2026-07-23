@@ -69,7 +69,8 @@ static void ReloadCallback(bool now) {
     CreateProcess(NULL, (LPSTR)exe_path.c_str(), NULL, NULL, false, CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
     ExitProcess(0);
 #else
-    execv(exe_path.c_str(), (char*[]){NULL});
+    char* argv[] = {NULL};
+    execv(exe_path.c_str(), argv);
 #endif
 }
 
