@@ -12,6 +12,7 @@ namespace fs = std::filesystem;
 #include "pc/djui/djui_chat_box.h"
 #include "pc/djui/djui_console.h"
 #include "saturn/saturn_animations.h"
+#include "saturn/saturn_models.h"
 #include "saturn/ui/saturn_imgui_animations.h"
 extern "C" {
     #include "sm64.h"
@@ -36,7 +37,6 @@ float wind_angle[3] = { 0.f, 0.f, 0.f };
 float wind_strength = 1.0f;
 float wind_sway = 1.f;
 bool wiggle_bone_detected = false;
-bool enable_hud;
 bool enable_torso_rotation = true;
 int head_rotation[2] = { 0, 0 };
 bool enable_head_rotation;
@@ -77,8 +77,27 @@ bool anim_sync_to_timeline = false;
 bool allow_game_input;
 
 float camera_kf_state[6] = {};
+float camera_ui_rot[2] = {};
+bool camera_ui_rot_active = false;
+float camera_ui_pos[3] = {};
+bool camera_ui_pos_active = false;
+
+bool camera_recentering = false;
 
 extern struct Animation *gCurAnim;
+
+void saturn_recenter_camera() {
+    float* mario_pos = gMarioStates[0].marioObj->header.gfx.pos;
+    if (!timeline_is_playing && !camera_recentering) {
+        camera_kf_state[3] = mario_pos[0];
+        camera_kf_state[4] = mario_pos[1] + 100.f * marioScaleY;
+        camera_kf_state[5] = mario_pos[2];
+    }
+    float focus_y[3] = { mario_pos[0], mario_pos[1] + 100.f * marioScaleY, mario_pos[2] };
+    vec3f_copy(gCamera->focus, focus_y);
+    vec3f_copy(gLakituState.goalFocus, focus_y);
+    vec3f_copy(gLakituState.focus, focus_y);
+}
 
 /* "Machinima Camera", an extended freeze camera function that allows for free/fly camera and C-Up. */
 int saturn_camera_update() {
@@ -90,19 +109,48 @@ int saturn_camera_update() {
         gLakituState.focHSpeed = 32.f;
         gLakituState.focVSpeed = 32.f;
 
-        // Cancel input when another UI is present
-        // This includes DJUI's menu/chat/console, and text inputs in Saturn's UI (i.e. CC editor GameShark)
-        if (gDjuiInMainMenu || gDjuiChatBoxFocus || gDjuiConsoleFocus || !allow_game_input) return CAM_FROZEN;
-
-        // Timeline playback
+        // Timeline playback: load keyframe state into camera first
         bool camera_automated = timelines.count("Camera###timeline_camera") > 0;
         if (camera_automated) {
             for (int i = 0; i < 3; i++) {
                 gCamera->pos[i]   = camera_kf_state[i];
-                gCamera->focus[i] = camera_kf_state[3 + i];
+                if (!camera_recentering) gCamera->focus[i] = camera_kf_state[3 + i];
             }
             if (timeline_is_playing) return CAM_FROZEN;
         }
+
+        // Apply rotation set from the imgui panel (runs on main thread to avoid race)
+        if (camera_ui_rot_active) {
+            f32 dist; s16 pitch, yaw;
+            vec3f_get_dist_and_angle(gCamera->pos, gCamera->focus, &dist, &pitch, &yaw);
+            vec3f_set_dist_and_angle(gCamera->pos, gCamera->focus, dist,
+                (s16)(camera_ui_rot[0] * 65536.0f / 360.0f),
+                (s16)(camera_ui_rot[1] * 65536.0f / 360.0f));
+        }
+
+        // Apply position set from the imgui panel
+        {
+            static float s_foc_offset[3] = {};
+            static bool s_was_active = false;
+            if (camera_ui_pos_active) {
+                if (!s_was_active) {
+                    s_foc_offset[0] = gCamera->focus[0] - gCamera->pos[0];
+                    s_foc_offset[1] = gCamera->focus[1] - gCamera->pos[1];
+                    s_foc_offset[2] = gCamera->focus[2] - gCamera->pos[2];
+                }
+                gCamera->pos[0] = camera_ui_pos[0];
+                gCamera->pos[1] = camera_ui_pos[1];
+                gCamera->pos[2] = camera_ui_pos[2];
+                gCamera->focus[0] = camera_ui_pos[0] + s_foc_offset[0];
+                gCamera->focus[1] = camera_ui_pos[1] + s_foc_offset[1];
+                gCamera->focus[2] = camera_ui_pos[2] + s_foc_offset[2];
+            }
+            s_was_active = camera_ui_pos_active;
+        }
+
+        // Cancel input when another UI is present
+        // This includes DJUI's menu/chat/console, and text inputs in Saturn's UI (i.e. CC editor GameShark)
+        if (gDjuiInMainMenu || gDjuiChatBoxFocus || gDjuiConsoleFocus || !allow_game_input) return CAM_FROZEN;
 
         if (!SDL_GetKeyboardState(NULL)[SDL_SCANCODE_R]) {
             // Movement
@@ -160,13 +208,14 @@ int saturn_camera_update() {
         yvel = approach_f32_symmetric(yvel, 0.f, 2.f);
         yvel = approach_f32_asymptotic(yvel, 0.f, 0.1f);
 
-        // Timeline playback
-        if (camera_automated) {
-            for (int i = 0; i < 3; i++) {
-                camera_kf_state[i]     = gCamera->pos[i];
-                camera_kf_state[3 + i] = gCamera->focus[i];
-            }
+        // Sync camera_kf_state so timeline keyframes always capture the current camera position
+        for (int i = 0; i < 3; i++) {
+            camera_kf_state[i]     = gCamera->pos[i];
+            if (!camera_recentering) camera_kf_state[3 + i] = gCamera->focus[i];
         }
+
+        if (camera_recentering)
+            saturn_recenter_camera();
 
         // Misc. Animation
         if (gMarioStates[0].marioObj != NULL) {

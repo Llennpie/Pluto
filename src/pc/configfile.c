@@ -106,12 +106,13 @@ unsigned int configKeyPlutoMenu[MAX_BINDS]          = { 0x003B, 0x100c, VK_INVAL
 unsigned int configKeyPlutoScreenshot[MAX_BINDS]    = { 0x003C, VK_INVALID, VK_INVALID };
 unsigned int configKeyPlutoChroma[MAX_BINDS]        = { 0x003D, VK_INVALID, VK_INVALID };
 unsigned int configKeyPlutoFreezeCamera[MAX_BINDS]  = { 0x0021, 0x100b, VK_INVALID };
-unsigned int configKeyPlutoPlayTimeline[MAX_BINDS]  = { 0x003E, VK_INVALID, VK_INVALID };
+unsigned int configKeyPlutoPlayTimeline[MAX_BINDS]  = { 0x003E, 0x100e, VK_INVALID };
 unsigned int configKeyPlutoPlayAnim[MAX_BINDS]      = { 0x0018, 0x100d, VK_INVALID };
-unsigned int configKeyPlutoPauseAnim[MAX_BINDS]     = { 0x0019, 0x100e, VK_INVALID };
+unsigned int configKeyPlutoPauseAnim[MAX_BINDS]     = { 0x0019, VK_INVALID, VK_INVALID };
 unsigned int configKeyPlutoCreateDialog[MAX_BINDS] = { VK_INVALID, VK_INVALID, VK_INVALID };
 unsigned int configKeyPlutoFlushTextures[MAX_BINDS] = { 0x0057, VK_INVALID, VK_INVALID };
-unsigned int configKeyPlutoRuleOfThirds[MAX_BINDS] = { 0x003F, VK_INVALID, VK_INVALID };
+unsigned int configKeyPlutoRuleOfThirds[MAX_BINDS]   = { 0x003F, VK_INVALID, VK_INVALID };
+unsigned int configKeyPlutoCenterOnMario[MAX_BINDS] = { 0x002F, VK_INVALID, VK_INVALID };
 unsigned int configStickDeadzone = 16; // 16*DEADZONE_STEP=4960 (the original default deadzone)
 unsigned int configRumbleStrength = 50;
 // better camera settings
@@ -179,9 +180,9 @@ unsigned int configDjuiScale                      = 0;
 bool         configCoopCompatibility              = false;
 bool         configGlobalPlayerModels             = true;
 char         configLastVersion[MAX_CONFIG_STRING] = SM64COOPDX_VERSION;
-bool configAutoReloadModels = false;
-
-bool configPlutoShadows = true;
+bool         configAutoReloadModels = false;
+bool         configPlutoShadows = true;
+unsigned int configHudMode = 0; // 0 = hidden in freeze cam, 1 = enabled, 2 = disabled
 
 static const struct ConfigOption options[] = {
     {.name = "fullscreen",                     .type = CONFIG_TYPE_BOOL, .boolValue = &configWindow.fullscreen},
@@ -234,6 +235,7 @@ static const struct ConfigOption options[] = {
     {.name = "key_pluto_create_dialog",        .type = CONFIG_TYPE_BIND, .uintValue = configKeyPlutoCreateDialog},
     {.name = "key_pluto_flush_textures",       .type = CONFIG_TYPE_BIND, .uintValue = configKeyPlutoFlushTextures},
     {.name = "key_pluto_rule_of_thirds",       .type = CONFIG_TYPE_BIND, .uintValue = configKeyPlutoRuleOfThirds},
+    {.name = "key_pluto_center_on_mario",       .type = CONFIG_TYPE_BIND, .uintValue = configKeyPlutoCenterOnMario},
 
     {.name = "stick_deadzone",                 .type = CONFIG_TYPE_UINT, .uintValue = &configStickDeadzone},
     {.name = "rumble_strength",                .type = CONFIG_TYPE_UINT, .uintValue = &configRumbleStrength},
@@ -318,6 +320,7 @@ static const struct ConfigOption options[] = {
     {.name = "last_version",                   .type = CONFIG_TYPE_STRING, .stringValue = (char*)&configLastVersion, .maxStringLength = MAX_CONFIG_STRING},
     {.name = "auto_reload_models",             .type = CONFIG_TYPE_BOOL  , .boolValue   = &configAutoReloadModels},
     {.name = "enable_shadows",                 .type = CONFIG_TYPE_BOOL  , .boolValue   = &configPlutoShadows},
+    {.name = "hud_mode",                        .type = CONFIG_TYPE_UINT  , .uintValue   = &configHudMode},
 };
 
 // FunctionConfigOption functions

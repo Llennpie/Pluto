@@ -636,7 +636,7 @@ void render_hud(void) {
         create_dl_ortho_matrix();
 #endif
 
-        bool showHud = (!gDjuiInMainMenu && !gOverrideHideHud && !freeze_camera);
+        bool showHud = (configHudMode != 2) && !gDjuiInMainMenu && !gOverrideHideHud && (configHudMode == 1 || !freeze_camera);
 
         if (gCurrentArea != NULL && gCurrentArea->camera != NULL && gCurrentArea->camera->mode == CAMERA_MODE_INSIDE_CANNON) {
             render_hud_cannon_reticle();

@@ -19,6 +19,10 @@ extern "C" {
     extern float saturn_camera_fov;
     extern float saturn_camera_tilt;
     extern float camera_kf_state[6];
+    extern float camera_ui_rot[2];
+    extern bool camera_ui_rot_active;
+    extern float camera_ui_pos[3];
+    extern bool camera_ui_pos_active;
     extern float wiggle_intensity;
     extern bool wiggle_bone_detected;
     extern bool wind_enabled;
@@ -28,7 +32,6 @@ extern "C" {
     int saturn_camera_update();
     extern float camera_follow_speed;
 
-    extern bool enable_hud;
     extern bool enable_torso_rotation;
     extern bool enable_head_rotation;
     extern int head_rotation[2];
@@ -67,6 +70,9 @@ extern "C" {
     extern int player_speed;
     extern int walkpoint_speed;
     extern bool anim_sync_to_timeline;
+
+    extern bool camera_recentering;
+    void saturn_recenter_camera();
 
     void saturn_action_idle(struct MarioState*);
     void saturn_update_frame();
