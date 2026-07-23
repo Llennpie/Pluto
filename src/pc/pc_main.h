@@ -62,7 +62,7 @@ extern "C" {
 #ifdef GIT_HASH
     #define TITLE "Pluto [" GIT_HASH "]"
 #else
-    #ifdef VERSION_PRERELASE
+    #ifdef VERSION_PRERELEASE
         #define TITLE "Pluto " SATURN_VERSION " (Prerelease)"
     #else
         #define TITLE "Pluto " SATURN_VERSION
