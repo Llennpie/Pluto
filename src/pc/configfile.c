@@ -179,9 +179,9 @@ unsigned int configDjuiScale                      = 0;
 bool         configCoopCompatibility              = false;
 bool         configGlobalPlayerModels             = true;
 char         configLastVersion[MAX_CONFIG_STRING] = SM64COOPDX_VERSION;
-bool configAutoReloadModels = false;
-
-bool configPlutoShadows = true;
+bool         configAutoReloadModels = false;
+bool         configPlutoShadows = true;
+unsigned int configHudMode = 0; // 0 = hidden in freeze cam, 1 = enabled, 2 = disabled
 
 static const struct ConfigOption options[] = {
     {.name = "fullscreen",                     .type = CONFIG_TYPE_BOOL, .boolValue = &configWindow.fullscreen},
@@ -318,6 +318,7 @@ static const struct ConfigOption options[] = {
     {.name = "last_version",                   .type = CONFIG_TYPE_STRING, .stringValue = (char*)&configLastVersion, .maxStringLength = MAX_CONFIG_STRING},
     {.name = "auto_reload_models",             .type = CONFIG_TYPE_BOOL  , .boolValue   = &configAutoReloadModels},
     {.name = "enable_shadows",                 .type = CONFIG_TYPE_BOOL  , .boolValue   = &configPlutoShadows},
+    {.name = "hud_mode",                        .type = CONFIG_TYPE_UINT  , .uintValue   = &configHudMode},
 };
 
 // FunctionConfigOption functions

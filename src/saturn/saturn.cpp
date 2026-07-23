@@ -36,7 +36,6 @@ float wind_angle[3] = { 0.f, 0.f, 0.f };
 float wind_strength = 1.0f;
 float wind_sway = 1.f;
 bool wiggle_bone_detected = false;
-bool enable_hud;
 bool enable_torso_rotation = true;
 int head_rotation[2] = { 0, 0 };
 bool enable_head_rotation;

@@ -645,6 +645,8 @@ static void imgui_build_widgets() {
                 ImGui::SameLine(); TimelineButton("FOV", &saturn_camera_fov);
 
                 ImGui::Checkbox("Rule of Thirds", &show_rule_of_thirds);
+                const char* hudItems[] = { "Hide in Freeze", "Enabled", "Disabled" };
+                ImGui::Combo("HUD", (int*)&configHudMode, hudItems, IM_ARRAYSIZE(hudItems));
 
                 ImGui::PopItemWidth();
                 ImGui::EndMenu();

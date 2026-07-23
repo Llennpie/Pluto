@@ -138,6 +138,7 @@ extern bool         configGlobalPlayerModels;
 extern char         configLastVersion[];
 extern bool         configAutoReloadModels;
 extern bool         configPlutoShadows;
+extern unsigned int configHudMode; // 0 = hidden in freeze cam, 1 = enabled, 2 = disabled
 
 void enable_queued_mods();
 void configfile_load(void);
