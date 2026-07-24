@@ -180,8 +180,11 @@ unsigned int configDjuiScale                      = 0;
 bool         configCoopCompatibility              = false;
 bool         configGlobalPlayerModels             = true;
 char         configLastVersion[MAX_CONFIG_STRING] = SM64COOPDX_VERSION;
-bool         configAutoReloadModels = false;
-bool         configPlutoShadows = true;
+bool         configAutoReloadModels               = false;
+bool         configPlutoShadows                   = true;
+#ifdef PLUTO_UPDATER
+bool         configPlutoCheckUpdates              = true;
+#endif
 unsigned int configHudMode = 0; // 0 = hidden in freeze cam, 1 = enabled, 2 = disabled
 
 static const struct ConfigOption options[] = {
@@ -320,7 +323,10 @@ static const struct ConfigOption options[] = {
     {.name = "last_version",                   .type = CONFIG_TYPE_STRING, .stringValue = (char*)&configLastVersion, .maxStringLength = MAX_CONFIG_STRING},
     {.name = "auto_reload_models",             .type = CONFIG_TYPE_BOOL  , .boolValue   = &configAutoReloadModels},
     {.name = "enable_shadows",                 .type = CONFIG_TYPE_BOOL  , .boolValue   = &configPlutoShadows},
-    {.name = "hud_mode",                        .type = CONFIG_TYPE_UINT  , .uintValue   = &configHudMode},
+    {.name = "check_updates",                  .type = CONFIG_TYPE_BOOL  , .boolValue   = &configPlutoCheckUpdates},
+#ifdef PLUTO_UPDATER
+    {.name = "hud_mode",                       .type = CONFIG_TYPE_UINT  , .uintValue   = &configHudMode},
+#endif
 };
 
 // FunctionConfigOption functions

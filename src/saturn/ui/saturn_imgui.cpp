@@ -220,8 +220,6 @@ void imgui_init() {
 
     fs::remove_all(dynos_src);
     pluto_animations_list = GetPAnimList((dynos_dst / "anims").string());
-
-    CheckForUpdates();
 }
 
 void imgui_init_backend(SDL_Window* window, SDL_GLContext ctx) {

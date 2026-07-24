@@ -1,5 +1,7 @@
 #ifdef PLUTO_UPDATER
 
+#include "saturn/saturn_updater.h"
+
 extern "C" {
     #include "pc/platform.h"
 }
@@ -10,6 +12,7 @@ extern "C" {
 #include "saturn/saturn_version.h"
 #include "saturn/ui/studio_notifications.h"
 #include "pc/utils/miniz/miniz.h"
+#include "pc/configfile.h"
 
 #include <thread>
 #include <string.h>
@@ -125,6 +128,8 @@ static void CheckUpdateCallback(bool confirmed) {
 }
 
 void CheckForUpdates() {
+    if (!configPlutoCheckUpdates) return;
+
     update_thread = std::thread([]() {
         httplib::Client client("https://api.github.com");
         client.set_follow_location(true);

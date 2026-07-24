@@ -67,6 +67,7 @@
 #include "saturn/saturn_colors.h"
 #include "saturn/saturn_models.h"
 #include "saturn/asset_extractor/asset_extractor.h"
+#include "saturn/saturn_updater.h"
 
 OSMesg D_80339BEC;
 OSMesgQueue gSIEventMesgQueue;
@@ -301,6 +302,8 @@ void* main_game_init(UNUSED void* arg) {
     configfile_load();
     configWindow.settings_changed = true;
     if (!djui_language_init(configLanguage)) { snprintf(configLanguage, MAX_CONFIG_STRING, "%s", ""); }
+
+    CheckForUpdates();
 
     /*if (gCLIOpts.network != NT_SERVER) {
         check_for_updates();
