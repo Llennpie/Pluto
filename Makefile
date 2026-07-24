@@ -60,6 +60,9 @@ ICON ?= 1
 # Use .app (mac only)
 USE_APP ?= 1
 
+# Include a built-in updater
+PLUTO_UPDATER ?= 1
+
 # Various workarounds for weird toolchains
 NO_BZERO_BCOPY ?= 0
 NO_LDIV ?= 0
@@ -972,7 +975,7 @@ endif
 
 # Network/Discord/Bass (ugh, needs cleanup)
 ifeq ($(WINDOWS_BUILD),1)
-  LDFLAGS += -L"ws2_32" -lwsock32 -lurlmon
+  LDFLAGS += -L"ws2_32" -lwsock32
   CFLAGS += -DZIP_STATIC
   ifeq ($(DISCORD_SDK),1)
     LDFLAGS += -Wl,-Bdynamic -L./lib/discordsdk/ -L./lib/bass/ -ldiscord_game_sdk -lbass -lbass_fx -Wl,-Bstatic
@@ -992,6 +995,9 @@ else
 endif
 
 LDFLAGS += -lstdc++
+ifeq ($(PLUTO_UPDATER),1)
+    LDFLAGS += -lssl -lcrypto
+endif
 
 # Prevent a crash with -sopt
 export LANG := C
@@ -1040,6 +1046,12 @@ endif
 ifeq ($(DEVELOPMENT),1)
   CC_CHECK_CFLAGS += -DDEVELOPMENT
   CFLAGS += -DDEVELOPMENT
+endif
+
+# Check for updater option
+ifeq ($(PLUTO_UPDATER),1)
+  CC_CHECK_CFLAGS += -DPLUTO_UPDATER
+  CFLAGS += -DPLUTO_UPDATER
 endif
 
 # Check for rpi option
