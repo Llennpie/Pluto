@@ -6,11 +6,11 @@ extern "C" {
 #include "saturn/libs/downloader.h"
 #include "saturn/saturn_version.h"
 #include "saturn/ui/studio_notifications.h"
+#include "pc/utils/miniz/miniz.h"
 
 #include <thread>
 #include <string.h>
 #include <errno.h>
-#include <zip.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -36,18 +36,23 @@ static std::thread update_thread;
 #endif
 
 static char* unzip(char* inbuf, size_t insiz, size_t* outsiz) {
-    zip_error_t error;
-    zip_stat_t file_stat;
-    zip_source_t* zip_src = zip_source_buffer_create(inbuf, insiz, 0, &error);
-    zip_t* zip_archive = zip_open_from_source(zip_src, 0, &error);
-    zip_int64_t file_index = zip_name_locate(zip_archive, TARGET_NAME, ZIP_FL_NOCASE);
-    zip_file_t* zip_file = zip_fopen_index(zip_archive, file_index, 0);
-    zip_stat_index(zip_archive, file_index, 0, &file_stat);
-    *outsiz = file_stat.size;
+    __attribute__((cleanup(mz_zip_reader_end))) mz_zip_archive zip_archive;
+    memset(&zip_archive, 0, sizeof(zip_archive));
+    if (!mz_zip_reader_init_mem(&zip_archive, inbuf, insiz, 0)) return NULL;
+
+    int file_index = mz_zip_reader_locate_file(&zip_archive, TARGET_NAME, NULL, 0);
+    if (file_index < 0) return NULL;
+
+    mz_zip_archive_file_stat file_stat;
+    if (!mz_zip_reader_file_stat(&zip_archive, file_index, &file_stat)) return NULL;
+
+    *outsiz = file_stat.m_uncomp_size;
     char* outbuf = (char*)malloc(*outsiz);
-    zip_fread(zip_file, outbuf, *outsiz);
-    zip_fclose(zip_file);
-    zip_close(zip_archive);
+    if (!mz_zip_reader_extract_to_mem(&zip_archive, file_index, outbuf, *outsiz, 0)) {
+        free(outbuf);
+        return NULL;
+    }
+
     return outbuf;
 }
 
