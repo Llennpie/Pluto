@@ -914,7 +914,7 @@ LDFLAGS += -lz
 ifeq ($(WINDOWS_BUILD),1)
   LDFLAGS += -lwininet
 else
-  LDFLAGS += -lcurl
+  LDFLAGS += $(shell curl-config --libs)
 endif
 
 # Lua

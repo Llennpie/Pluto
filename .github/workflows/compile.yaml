@@ -81,7 +81,7 @@ jobs:
         if: matrix.os == 'ubuntu-22.04'
         run: |
           sudo apt update
-          sudo apt install -y build-essential python3 libglew-dev libsdl2-dev libcurl4-gnutls-dev libzip-dev curl pkgconf
+          sudo apt install -y build-essential python3 libglew-dev libsdl2-dev libcurl4-openssl-dev libzip-dev curl pkgconf
           make -j$(nproc)
           cd build/us_pc
           zip -r ../../release.zip sm64coopdx libbass.so libbass_fx.so libdiscord_game_sdk.so dynos lang mods Panimotion.mp3
