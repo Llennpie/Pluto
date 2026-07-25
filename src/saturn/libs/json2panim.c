@@ -9,6 +9,15 @@
 
 int convert_count;
 
+void remove_leading_comma(char* buf) {
+  for (int i = 0; i < strlen(buf); i++) {
+    //printf("%i: %c\n", i, buf[i]);
+    if (buf[i] == ',' && buf[i+6] == ']') { // NOTE(Lain): Kinda hacky fix, should work for now? 
+      memmove(&buf[i], &buf[i+1], strlen(buf) - i);
+    }
+  }
+}
+
 long find_length(char *i_file) {
   FILE *json_file_b = fopen(i_file, "rb");
 
@@ -36,6 +45,10 @@ void convert_mcomp_to_panim(char *i_file, char *o_file) {
   char *buf = malloc(find_length(i_file));
   size_t read_file = fread(buf, sizeof(buf[0]), find_length(i_file), json_file);
   fclose(json_file);
+
+  printf("%s", buf);
+  remove_leading_comma(buf);
+  printf("%s", buf);
 
   cJSON *json = cJSON_Parse(buf);
   if (json == NULL) {
