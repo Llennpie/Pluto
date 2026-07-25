@@ -1,4 +1,5 @@
 #include "json2panim.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -9,11 +10,18 @@
 
 int convert_count;
 
-void remove_leading_comma(char* buf) {
+void remove_trailing_comma(char* buf) {
   for (int i = 0; i < strlen(buf); i++) {
-    //printf("%i: %c\n", i, buf[i]);
-    if (buf[i] == ',' && buf[i+6] == ']') { // NOTE(Lain): Kinda hacky fix, should work for now? 
-      memmove(&buf[i], &buf[i+1], strlen(buf) - i);
+    if (buf[i] == ']') {
+      for (int j = i-1; j > 0; j--) {
+        printf("%i: %c\n", j, buf[j]);
+        if (isspace(buf[j])) continue;
+        if (buf[j] == ',') {
+          memmove(&buf[j], &buf[j + 1], strlen(buf) - j);
+        }
+        
+        break;
+      }
     }
   }
 }
