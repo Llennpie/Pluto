@@ -14,6 +14,7 @@ void remove_trailing_comma(char* buf) {
   for (int i = 0; i < strlen(buf); i++) {
     if (buf[i] == ']') {
       for (int j = i-1; j > 0; j--) {
+        printf("%i: %c\n", j, buf[j]);
         if (isspace(buf[j])) continue;
         if (buf[j] == ',') {
           memmove(&buf[j], &buf[j + 1], strlen(buf) - j);
@@ -52,6 +53,8 @@ void convert_mcomp_to_panim(char *i_file, char *o_file) {
   char *buf = malloc(find_length(i_file));
   size_t read_file = fread(buf, sizeof(buf[0]), find_length(i_file), json_file);
   fclose(json_file);
+
+  remove_trailing_comma(buf);
 
   cJSON *json = cJSON_Parse(buf);
   if (json == NULL) {
