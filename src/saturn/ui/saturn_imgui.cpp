@@ -218,7 +218,10 @@ void imgui_init() {
         printf("Copied %s\n", file.string().c_str());
     }
 
-    fs::remove_all(dynos_src);
+    try {
+        fs::remove_all(dynos_src);
+    }
+    catch (...) { /* we cant remove it. oh well! */ }
     pluto_animations_list = GetPAnimList((dynos_dst / "anims").string());
 }
 
