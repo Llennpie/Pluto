@@ -1,6 +1,6 @@
-#ifdef PLUTO_UPDATER
-
 #include "saturn/saturn_updater.h"
+
+#ifdef PLUTO_UPDATER
 
 extern "C" {
     #include "pc/platform.h"
