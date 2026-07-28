@@ -6,8 +6,9 @@ extern "C" {
     #include "pc/platform.h"
 }
 
+#define CPPHTTPLIB_OPENSSL_SUPPORT
 #include "saturn/libs/cjson/cJSON.h"
-#include "saturn/libs/downloader.h"
+#include "saturn/libs/cpp-httplib.h"
 #include "saturn/saturn_version.h"
 #include "saturn/ui/studio_notifications.h"
 #include "pc/utils/miniz/miniz.h"
@@ -89,21 +90,22 @@ static void CheckUpdateCallback(bool confirmed) {
     update_thread = std::thread([]() {
         Notif* notif = Notif::create_progress("Pluto Update", "Downloading Pluto...");
 
-        std::string url = format("https://github.com/" OWNER "/" REPO "/releases/download/%s/" TARGET_OS ".zip", latest_version.c_str());
-        Downloader downloader(url);
-        downloader.progress([notif](double now, double total) {
-            notif->set_progress(total == 0 ? 0 : now / total);
+        std::string path = format("/" OWNER "/" REPO "/releases/download/%s/" TARGET_OS ".zip", latest_version.c_str());
+        httplib::Client client("https://github.com");
+        client.set_follow_location(true);
+        auto res = client.Get(path, [&notif](size_t len, size_t total) {
+            notif->set_progress(total == 0 ? 0 : (double)len / total);
+            return true;
         });
-        downloader.download();
         notif->set_progress(1);
 
-        if (downloader.status >= 200 && downloader.status <= 299) {
+        if (res->status >= 200 && res->status <= 299) {
             std::string new_path = format("%s/" TARGET_NAME ".update", sys_user_path());
             std::string old_path = format("%s/" TARGET_NAME ".old",    sys_user_path());
             exe_path = GetExePath();
 
             size_t outsiz;
-            char* out = unzip(downloader.data.data(), downloader.data.size(), &outsiz);
+            char* out = unzip(res->body.data(), res->body.size(), &outsiz);
             FILE* f = fopen(new_path.c_str(), "wb");
             if (!f)
                 Notif::create_message(NotifColor::COL_ERROR, "Pluto Update", format("Could not update Pluto\n%s", strerror(errno)));
@@ -120,19 +122,18 @@ static void CheckUpdateCallback(bool confirmed) {
             free(out);
         }
         else
-            Notif::create_message(NotifColor::COL_ERROR, "Pluto Update", format("There was an error downloading the latest update.\nHTTP error code: %d", downloader.status));
+            Notif::create_message(NotifColor::COL_ERROR, "Pluto Update", format("There was an error downloading the latest update.\nHTTP error code: %d", res->status));
     });
     update_thread.detach();
 }
 
 void CheckForUpdates() {
-    if (!configPlutoCheckUpdates) return;
-
     update_thread = std::thread([]() {
-        Downloader downloader("https://api.github.com/repos/" OWNER "/" REPO "/releases/latest");
-        downloader.download();
-        if (downloader.status < 200 || downloader.status > 299) return;
-        cJSON* obj = cJSON_Parse(downloader.data.data());
+        httplib::Client client("https://api.github.com");
+        client.set_follow_location(true);
+        auto res = client.Get("/repos/" OWNER "/" REPO "/releases/latest");
+        if (res->status < 200 || res->status > 299) return;
+        cJSON* obj = cJSON_Parse(res->body.c_str());
         obj = cJSON_GetObjectItem(obj, "name");
         latest_version = cJSON_GetStringValue(obj);
 
@@ -143,6 +144,7 @@ void CheckForUpdates() {
     });
     update_thread.detach();
 }
+
 #else
 void CheckForUpdates() {}
 #endif

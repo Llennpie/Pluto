@@ -63,6 +63,8 @@ USE_APP ?= 1
 # Include a built-in updater
 PLUTO_UPDATER ?= 0
 
+SKIP_PACKAGE_MANAGER ?= 0
+
 # Various workarounds for weird toolchains
 NO_BZERO_BCOPY ?= 0
 NO_LDIV ?= 0
@@ -110,6 +112,18 @@ endif
 
 ifeq ($(HOST_OS),Windows)
   WINDOWS_BUILD := 1
+endif
+
+# Check Windows build environment
+ifeq ($(WINDOWS_BUILD),1)
+    ifeq ($(MSYSTEM),MINGW64)
+        ifeq ($(PLUTO_UPDATER),1)
+            $(warning Building with MINGW64: The updater is force-disabled)
+        endif
+        PLUTO_UPDATER := 0
+    else ifneq ($(MSYSTEM),UCRT64)
+        $(error $(MSYSTEM) is not supported, please use UCRT64 or MINGW64)
+    endif
 endif
 
 # MXE overrides
@@ -410,6 +424,10 @@ ifeq ($(filter clean distclean,$(MAKECMDGOALS)),)
     $(info Build Matching: yes)
   endif
   $(info =======================)
+endif
+
+ifeq ($(SKIP_PACKAGE_MANAGER),0)
+    $(shell ./install-dependencies.sh 1>&2)
 endif
 
 #==============================================================================#
@@ -913,19 +931,12 @@ endif
 # Zlib
 LDFLAGS += -lz
 
-# Update checker library
-ifeq ($(WINDOWS_BUILD),1)
-  LDFLAGS += -lwininet
-else
-  LDFLAGS += $(shell curl-config --libs)
-endif
-
 # Lua
 ifeq ($(WINDOWS_BUILD),1)
   ifeq ($(TARGET_BITS), 32)
-    LDFLAGS += -Llib/lua/win32 -l:liblua53.a
+    LDFLAGS += -Llib/lua/win32 -l:liblua53-$(MSYSTEM).a
   else
-    LDFLAGS += -Llib/lua/win64 -l:liblua53.a
+    LDFLAGS += -Llib/lua/win64 -l:liblua53-$(MSYSTEM).a
   endif
 else ifeq ($(OSX_BUILD),1)
   ifeq ($(shell uname -m),arm64)
@@ -996,7 +1007,12 @@ endif
 
 LDFLAGS += -lstdc++
 ifeq ($(PLUTO_UPDATER),1)
-    LDFLAGS += -lssl -lcrypto
+    ifeq ($(WINDOWS_BUILD),1)
+        LDFLAGS += `pkg-config --static --libs openssl`
+    else
+        LDFLAGS += -lssl -lcrypto
+    endif
+    CFLAGS += -DHAVE_OPENSSL
 endif
 
 # Prevent a crash with -sopt
