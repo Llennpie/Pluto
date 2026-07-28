@@ -304,7 +304,7 @@ void* main_game_init(UNUSED void* arg) {
     if (!djui_language_init(configLanguage)) { snprintf(configLanguage, MAX_CONFIG_STRING, "%s", ""); }
 
     CheckForUpdates();
-
+    
     /*if (gCLIOpts.network != NT_SERVER) {
         check_for_updates();
     }*/

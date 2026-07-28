@@ -61,7 +61,7 @@ ICON ?= 1
 USE_APP ?= 1
 
 # Include a built-in updater
-PLUTO_UPDATER ?= 1
+PLUTO_UPDATER ?= 0
 
 # Various workarounds for weird toolchains
 NO_BZERO_BCOPY ?= 0

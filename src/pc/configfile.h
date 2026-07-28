@@ -139,9 +139,9 @@ extern bool         configGlobalPlayerModels;
 extern char         configLastVersion[];
 extern bool         configAutoReloadModels;
 extern bool         configPlutoShadows;
-#ifdef PLUTO_UPDATER
+//#ifdef PLUTO_UPDATER
 extern bool         configPlutoCheckUpdates;
-#endif
+//#endif
 extern unsigned int configHudMode; // 0 = hidden in freeze cam, 1 = enabled, 2 = disabled
 
 void enable_queued_mods();
