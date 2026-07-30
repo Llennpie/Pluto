@@ -430,8 +430,7 @@ void imgui_update() {
     pthread_cond_signal(&s_kick_cond);
     pthread_mutex_unlock(&s_kick_mtx);
 
-    if (allow_game_input) SDL_StartTextInput();
-    else SDL_StopTextInput();
+    SDL_StartTextInput();
 }
 
 static void imgui_build_widgets();

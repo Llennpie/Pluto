@@ -227,16 +227,17 @@ bool djui_interactable_on_key_down(int scancode) {
         return true;
     }
 
-    if (gDjuiChatBox != NULL && !gDjuiChatBoxFocus) {
-        bool pressChat = false;
-        for (int i = 0; i < MAX_BINDS; i++) {
-            if (scancode == (int)configKeyChat[i]) { pressChat = true; }
-        }
+    bool pressChat = false;
+    for (int i = 0; i < MAX_BINDS; i++) {
+        if (scancode == (int)configKeyChat[i]) { pressChat = true; }
+    }
 
-        if (pressChat && !gDjuiConsoleFocus) {
+    if (pressChat && gDjuiChatBox != NULL && !gDjuiConsoleFocus) {
+        if (gDjuiChatBoxFocus && gInteractableFocus != &gDjuiChatBox->chatInput->base)
+            djui_interactable_set_input_focus(&gDjuiChatBox->chatInput->base);
+        else
             djui_chat_box_toggle();
-            return true;
-        }
+        return true;
     }
 
     if ((gDjuiPlayerList != NULL || gDjuiModList != NULL) && gServerSettings.enablePlayerList) {
@@ -322,6 +323,7 @@ void djui_interactable_on_key_up(int scancode) {
 }
 
 void djui_interactable_on_text_input(char* text) {
+    if (!allow_game_input) return;
     if (gInteractableFocus == NULL) { return; }
     if (gInteractableFocus->interactable == NULL) { return; }
     if (gInteractableFocus->interactable->on_text_input == NULL) { return; }
