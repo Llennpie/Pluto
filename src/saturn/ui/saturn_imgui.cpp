@@ -430,7 +430,7 @@ void imgui_update() {
     pthread_cond_signal(&s_kick_cond);
     pthread_mutex_unlock(&s_kick_mtx);
 
-    SDL_StartTextInput();
+    if (!allow_game_input || gDjuiChatBoxFocus || gDjuiConsoleFocus) SDL_StartTextInput();
 }
 
 static void imgui_build_widgets();
