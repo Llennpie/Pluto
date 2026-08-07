@@ -43,6 +43,7 @@
 
 #include "saturn/ui/saturn_imgui.h"
 #include "saturn/saturn_colors.h"
+#include "saturn/saturn_models.h"
 
 #define TEX_CACHE_STEP 512
 
@@ -116,6 +117,7 @@ static inline void gfx_opengl_set_shader_uniforms(struct ShaderProgram *prg) {
         glUniform2f(prg->uniform_locations[5], (float)gfx_current_dimensions.width, (float)gfx_current_dimensions.height);
         glUniform1f(prg->uniform_locations[6], gFrustumNear);
         glUniform1f(prg->uniform_locations[7], gFrustumFar);
+        glUniform1f(prg->uniform_locations[8], marioScaleX);
     }
 }
 
@@ -403,6 +405,7 @@ static struct ShaderProgram *gfx_opengl_create_and_load_new_shader(struct ColorC
         append_line(fs_buf, &fs_len, "uniform vec2 uScreenSize;");
         append_line(fs_buf, &fs_len, "uniform float uNearClip;");
         append_line(fs_buf, &fs_len, "uniform float uFarClip;");
+        append_line(fs_buf, &fs_len, "uniform float uPlayerScale;");
     }
 
     append_line(fs_buf, &fs_len, "void main() {");
@@ -471,8 +474,8 @@ static struct ShaderProgram *gfx_opengl_create_and_load_new_shader(struct ColorC
         append_line(fs_buf, &fs_len, "float _range = uFarClip - uNearClip;");
         append_line(fs_buf, &fs_len, "float _lin_frag = (2.0*uNearClip*uFarClip) / (uFarClip + uNearClip - (2.0*gl_FragCoord.z - 1.0) * _range);");
         append_line(fs_buf, &fs_len, "float _lin_buf  = (2.0*uNearClip*uFarClip) / (uFarClip + uNearClip - (2.0*_buf_d - 1.0) * _range);");
-        // 15 world units
-        append_line(fs_buf, &fs_len, "if (_lin_frag > _lin_buf + 15.0) discard;");
+        // 15 world units, scaled by player scale
+        append_line(fs_buf, &fs_len, "if (_lin_frag > _lin_buf + 15.0 * uPlayerScale) discard;");
     }
     append_line(fs_buf, &fs_len, "}");
 
@@ -595,6 +598,7 @@ static struct ShaderProgram *gfx_opengl_create_and_load_new_shader(struct ColorC
         prg->uniform_locations[5] = glGetUniformLocation(shader_program, "uScreenSize");
         prg->uniform_locations[6] = glGetUniformLocation(shader_program, "uNearClip");
         prg->uniform_locations[7] = glGetUniformLocation(shader_program, "uFarClip");
+        prg->uniform_locations[8] = glGetUniformLocation(shader_program, "uPlayerScale");
         prg->used_near_clip = true;
     } else {
         prg->used_near_clip = false;
