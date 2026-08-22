@@ -382,42 +382,42 @@ void OpenCCEditor() {
                     current_color_code.ParseGameShark();
                     UpdateEditorFromPalette();
             }
+            {
+                // Save Color Code
+                ImGui::PushItemWidth(150 * ui_scale);
+                ImGui::InputText(".gs", uiCcLabelName, IM_ARRAYSIZE(uiCcLabelName));
+                ImGui::PopItemWidth();
+
+                if (ImGui::Button("Add to List")) {
+                    AttemptSaveCC();
+                }
+                if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+                    ColorCode dragging;
+                    dragging.Name = uiCcLabelName;
+                    dragging.GameShark = uiGameShark;
+                    ImGui::SetDragDropPayload("SAVE_COLORCODE", &dragging, sizeof(ColorCode));
+                    ImGui::Text("/%s.gs", dragging.Name.c_str());
+                    ImGui::EndDragDropSource();
+                }
+
+                ImGui::SameLine();
+                if (active_saturn_model_index != -1)
+                    ImGui::Checkbox("Model###saving_to_model", &saving_to_model);
+
+                // "Are you sure?"
+                if (ImGui::BeginPopup("###overwrite_gs")) {
+                    ImGui::Text("Overwrite %s.gs? This action is irreversible!", uiCcLabelName);
+                    if (ImGui::Button("Yes")) {
+                        AttemptSaveCC(true);
+                        ImGui::CloseCurrentPopup();
+                    } ImGui::SameLine();
+                    if (ImGui::Button("No")) ImGui::CloseCurrentPopup();
+                    ImGui::EndPopup();
+                }
+            }
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();
-        {
-            // Save Color Code
-            ImGui::PushItemWidth(150 * ui_scale);
-            ImGui::InputText(".gs", uiCcLabelName, IM_ARRAYSIZE(uiCcLabelName));
-            ImGui::PopItemWidth();
-
-            if (ImGui::Button("Add to List")) {
-                AttemptSaveCC();
-            }
-            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-                ColorCode dragging;
-                dragging.Name = uiCcLabelName;
-                dragging.GameShark = uiGameShark;
-                ImGui::SetDragDropPayload("SAVE_COLORCODE", &dragging, sizeof(ColorCode));
-                ImGui::Text("/%s.gs", dragging.Name.c_str());
-                ImGui::EndDragDropSource();
-            }
-
-            ImGui::SameLine();
-            if (active_saturn_model_index != -1)
-                ImGui::Checkbox("Model###saving_to_model", &saving_to_model);
-
-            // "Are you sure?"
-            if (ImGui::BeginPopup("###overwrite_gs")) {
-                ImGui::Text("Overwrite %s.gs? This action is irreversible!", uiCcLabelName);
-                if (ImGui::Button("Yes")) {
-                    AttemptSaveCC(true);
-                    ImGui::CloseCurrentPopup();
-                } ImGui::SameLine();
-                if (ImGui::Button("No")) ImGui::CloseCurrentPopup();
-                ImGui::EndPopup();
-            }
-        }
     }
 
     if (value_changed) {
