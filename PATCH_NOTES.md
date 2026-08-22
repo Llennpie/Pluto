@@ -22,3 +22,4 @@
 - Check for NULL pointer on selected mixtape animation
 - Fixed text input occasionally not registering
 - Fixed some ImGui elements flickering under threading (i.e. CC/GameShark Box)
+- Fixed animation frames offsetting by 1 index
