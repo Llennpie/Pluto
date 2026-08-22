@@ -126,6 +126,8 @@ static pthread_cond_t s_kick_cond = PTHREAD_COND_INITIALIZER;
 static bool s_kick_flag = false;
 static bool s_build_quit = false;
 
+static pthread_mutex_t s_imgui_mtx = PTHREAD_MUTEX_INITIALIZER;
+
 static pthread_mutex_t s_stable_mtx = PTHREAD_MUTEX_INITIALIZER;
 static ImVector<ImDrawList*> s_stable_owned;
 static ImDrawData s_stable_data;
@@ -255,7 +257,9 @@ void imgui_init_backend(SDL_Window* window, SDL_GLContext ctx) {
 }
 
 void imgui_handle_events(SDL_Event* event) {
+    pthread_mutex_lock(&s_imgui_mtx);
     ImGui_ImplSDL2_ProcessEvent(event);
+    pthread_mutex_unlock(&s_imgui_mtx);
 }
 
 const char* imgui_get_bind_name(unsigned int configKey[MAX_BINDS]) {
@@ -282,9 +286,11 @@ bool imgui_handle_mouse_bind(int scancode, bool key_down) {
     }
     if (!is_left_bind && !is_right_bind) return false;
 
+    pthread_mutex_lock(&s_imgui_mtx);
 
     ImGuiContext* ctx = ImGui::GetCurrentContext();
     if (!ctx) {
+        pthread_mutex_unlock(&s_imgui_mtx);
         return false;
     }
 
@@ -304,6 +310,7 @@ bool imgui_handle_mouse_bind(int scancode, bool key_down) {
             s_right_active = false;
             released = true;
         }
+        pthread_mutex_unlock(&s_imgui_mtx);
         return released;
     }
 
@@ -317,6 +324,7 @@ bool imgui_handle_mouse_bind(int scancode, bool key_down) {
     bool consume_left = is_left_bind && hovered_item;
     bool consume_right = is_right_bind && (hovered_item || hovered_model_context);
     if (!consume_left && !consume_right) {
+        pthread_mutex_unlock(&s_imgui_mtx);
         return false;
     }
 
@@ -330,6 +338,7 @@ bool imgui_handle_mouse_bind(int scancode, bool key_down) {
         s_right_active = true;
     }
 
+    pthread_mutex_unlock(&s_imgui_mtx);
     return true;
 }
 
@@ -471,6 +480,7 @@ void imgui_update() {
     }
     pthread_mutex_unlock(&s_stable_mtx);
 
+    pthread_mutex_lock(&s_imgui_mtx);
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame(current_window);
 
@@ -487,6 +497,7 @@ void imgui_update() {
         ImGui_ImplOpenGL3_CreateFontsTexture();
         s_applied_scale = ui_scale;
     }
+    pthread_mutex_unlock(&s_imgui_mtx);
 
     pthread_mutex_lock(&s_kick_mtx);
     s_kick_flag = true;
@@ -507,6 +518,7 @@ static void* imgui_build_thread_func(void*) {
         s_kick_flag = false;
         pthread_mutex_unlock(&s_kick_mtx);
 
+        pthread_mutex_lock(&s_imgui_mtx);
         ImGui::NewFrame();
         allow_game_input = !ImGui::GetIO().WantTextInput;
         imgui_build_widgets();
@@ -515,6 +527,7 @@ static void* imgui_build_thread_func(void*) {
         pthread_mutex_lock(&s_stable_mtx);
         stable_copy_draw_data();
         pthread_mutex_unlock(&s_stable_mtx);
+        pthread_mutex_unlock(&s_imgui_mtx);
     }
     return NULL;
 }
