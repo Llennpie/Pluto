@@ -53,6 +53,7 @@ static u32 joy_binds[MAX_JOYBINDS][2] = { 0 };
 static u32 mouse_binds[MAX_JOYBINDS][2] = { 0 };
 
 static bool joy_buttons[MAX_JOYBUTTONS] = { false };
+static bool joy_buttons_consumed[MAX_JOYBUTTONS] = { false };
 static u32 mouse_buttons = 0;
 static u32 last_mouse = VK_INVALID;
 static u32 last_joybutton = VK_INVALID;
@@ -162,14 +163,27 @@ static inline void update_button(const int i, const bool new) {
     const bool pressed = !joy_buttons[i] && new;
     const bool unpressed = joy_buttons[i] && !new;
     joy_buttons[i] = new;
+
+    const int scancode = VK_BASE_SDL_GAMEPAD + i;
     if (pressed) {
+        if (imgui_handle_mouse_bind(scancode, true)) {
+            joy_buttons_consumed[i] = true;
+            return;
+        }
+
         last_joybutton = i;
-        djui_panel_pause_disconnect_key_update(VK_BASE_SDL_GAMEPAD + i);
-        djui_interactable_on_key_down(VK_BASE_SDL_GAMEPAD + i);
+        djui_panel_pause_disconnect_key_update(scancode);
+        djui_interactable_on_key_down(scancode);
     }
     if (unpressed) {
-        djui_interactable_on_key_up(VK_BASE_SDL_GAMEPAD + i);
-        imgui_handle_binds(VK_BASE_SDL_GAMEPAD + i);
+        if (joy_buttons_consumed[i]) {
+            imgui_handle_mouse_bind(scancode, false);
+            joy_buttons_consumed[i] = false;
+            return;
+        }
+
+        djui_interactable_on_key_up(scancode);
+        imgui_handle_binds(scancode);
     }
 }
 
@@ -255,7 +269,7 @@ static void controller_sdl_read(OSContPad *pad) {
 
     u32 buttons_down = 0;
     for (u32 i = 0; i < num_joy_binds; ++i)
-        if (joy_buttons[joy_binds[i][0]])
+        if (joy_buttons[joy_binds[i][0]] && !joy_buttons_consumed[joy_binds[i][0]])
             buttons_down |= joy_binds[i][1];
 
     pad->button |= buttons_down;

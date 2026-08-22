@@ -38,6 +38,11 @@ static int keyboard_map_scancode(int scancode) {
 bool keyboard_on_key_down(int scancode) {
     djui_panel_pause_disconnect_key_update(scancode);
 
+    if (imgui_handle_mouse_bind(scancode, true)) {
+        keyboard_lastkey = scancode;
+        return FALSE;
+    }
+
     // see if interactable captures this scancode
     if (djui_interactable_on_key_down(scancode) && allow_game_input) {
         keyboard_lastkey = scancode;
@@ -52,6 +57,12 @@ bool keyboard_on_key_down(int scancode) {
 
 bool keyboard_on_key_up(int scancode) {
     djui_interactable_on_key_up(scancode);
+
+    if (imgui_handle_mouse_bind(scancode, false)) {
+        if (keyboard_lastkey == (u32) scancode)
+            keyboard_lastkey = VK_INVALID;
+        return FALSE;
+    }
 
     imgui_handle_binds(scancode);
 

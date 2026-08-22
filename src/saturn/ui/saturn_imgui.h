@@ -48,6 +48,7 @@ extern "C" {
     void imgui_init();
     void imgui_init_backend(SDL_Window*, SDL_GLContext);
     void imgui_handle_events(SDL_Event*);
+    bool imgui_handle_mouse_bind(int, bool);
     void imgui_handle_binds(int);
     void imgui_update();
     void imgui_hud();

@@ -270,6 +270,69 @@ const char* imgui_get_bind_name(unsigned int configKey[MAX_BINDS]) {
     return NULL;
 }
 
+/* Use L or R to control mouse buttons, mostly useful for Steam Deck or Controller (trackpads) */
+bool imgui_handle_mouse_bind(int scancode, bool key_down) {
+    if (!show_menu) return false;
+
+    bool is_left_bind = false;
+    bool is_right_bind = false;
+    for (int i = 0; i < MAX_BINDS; i++) {
+        if (scancode == (int)configKeyL[i]) is_left_bind = true;
+        if (scancode == (int)configKeyR[i]) is_right_bind = true;
+    }
+    if (!is_left_bind && !is_right_bind) return false;
+
+
+    ImGuiContext* ctx = ImGui::GetCurrentContext();
+    if (!ctx) {
+        return false;
+    }
+
+    static bool s_left_active = false;
+    static bool s_right_active = false;
+
+    if (!key_down) {
+        bool released = false;
+        ImGuiIO& io = ImGui::GetIO();
+        if (is_left_bind && s_left_active) {
+            io.AddMouseButtonEvent(ImGuiMouseButton_Left, false);
+            s_left_active = false;
+            released = true;
+        }
+        if (is_right_bind && s_right_active) {
+            io.AddMouseButtonEvent(ImGuiMouseButton_Right, false);
+            s_right_active = false;
+            released = true;
+        }
+        return released;
+    }
+
+    bool hovered_item = ImGui::IsAnyItemHovered();
+    bool hovered_model_context = false;
+    if (is_right_bind && player_windows.size() > 0) {
+        hovered_model_context = player_windows[0].active && player_windows[0].hovered &&
+            AnyModelsEnabled() && active_saturn_model_index != -1;
+    }
+
+    bool consume_left = is_left_bind && hovered_item;
+    bool consume_right = is_right_bind && (hovered_item || hovered_model_context);
+    if (!consume_left && !consume_right) {
+        return false;
+    }
+
+    ImGuiIO& io = ImGui::GetIO();
+    if (consume_left) {
+        io.AddMouseButtonEvent(ImGuiMouseButton_Left, true);
+        s_left_active = true;
+    }
+    if (consume_right) {
+        io.AddMouseButtonEvent(ImGuiMouseButton_Right, true);
+        s_right_active = true;
+    }
+
+    return true;
+}
+
 void imgui_handle_binds(int scancode) {
     // Handle Pluto keybinds
     // These are treated like regular SM64 binds and can be changed in Djui

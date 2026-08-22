@@ -27,6 +27,8 @@
 
 #include "pc/djui/djui.h"
 
+#include "saturn/ui/saturn_imgui.h"
+
 #define MAX_JOYBINDS 32
 #define MAX_MOUSEBUTTONS 8 // arbitrary
 #define MAX_JOYBUTTONS 32  // arbitrary; includes virtual keys for triggers
@@ -54,6 +56,7 @@ static u32 mouse_binds[MAX_JOYBINDS][2];
 static int joy_axis_binds[MAX_AXES] = { 0, 1, 2, 3, 4, 5 };
 
 static bool joy_buttons[MAX_JOYBUTTONS] = { false };
+static bool joy_buttons_consumed[MAX_JOYBUTTONS] = { false };
 static u32 mouse_buttons = 0;
 static u32 last_mouse = VK_INVALID;
 static u32 last_joybutton = VK_INVALID;
@@ -136,8 +139,22 @@ static void controller_sdl_init(void) {
 
 static inline void update_button(const int i, const bool new) {
     const bool pressed = !joy_buttons[i] && new;
+    const bool unpressed = joy_buttons[i] && !new;
     joy_buttons[i] = new;
-    if (pressed) last_joybutton = i;
+
+    const int scancode = VK_BASE_SDL_GAMEPAD + i;
+    if (pressed) {
+        if (imgui_handle_mouse_bind(scancode, true)) {
+            joy_buttons_consumed[i] = true;
+            return;
+        }
+        last_joybutton = i;
+    }
+
+    if (unpressed && joy_buttons_consumed[i]) {
+        imgui_handle_mouse_bind(scancode, false);
+        joy_buttons_consumed[i] = false;
+    }
 }
 
 static inline int16_t get_axis(const int i) {
@@ -191,7 +208,7 @@ static void controller_sdl_read(OSContPad *pad) {
 
     u32 buttons_down = 0;
     for (u32 i = 0; i < num_joy_binds; ++i)
-        if (joy_buttons[joy_binds[i][0]])
+        if (joy_buttons[joy_binds[i][0]] && !joy_buttons_consumed[joy_binds[i][0]])
             buttons_down |= joy_binds[i][1];
 
     pad->button |= buttons_down;
