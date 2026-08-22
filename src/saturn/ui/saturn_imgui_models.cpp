@@ -275,6 +275,7 @@ void OpenModelCCSelector(PackData* pack) {
         UpdateEditorFromPalette();
         UpdatePaletteFromEditor(0);
         send_palette_to_network();
+        saving_to_model = true;
     }
     if (ImGui::BeginDragDropTarget()) {
         if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SAVE_COLORCODE")) {
@@ -435,7 +436,7 @@ void OpenExtraOptions() {
     }
 }
 
-void OpenAccessorySettings() {
+/*void OpenAccessorySettings() {
     ImGui::BeginDisabled(accessory_packs.size() <= 0);
     if (accessory_packs.size() > 0) {
         if (ImGui::BeginListBox("###accessory_packs_list", ImVec2(150 * ui_scale, 100 * ui_scale))) {
@@ -464,7 +465,7 @@ void OpenAccessorySettings() {
         ImGui::EndDisabled();
     } else ImGui::Text("No accessory packs found");
     ImGui::EndDisabled();
-}
+}*/
 
 void OpenModelSettings() {
     if (AnyModelsEnabled() && active_saturn_model_index != -1) {
@@ -549,7 +550,6 @@ void OpenModelSettingsAtCursor() {
 }
 
 static char model_search_term[256] = "";
-
 std::vector<std::pair<PackData*, bool>> model_packs;
 
 void OpenModelSelector() {

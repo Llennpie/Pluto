@@ -9,6 +9,7 @@
 #include <string>
 
 extern void SaveActiveColorCode(std::string);
+extern bool saving_to_model;
 
 extern "C" {
 #endif

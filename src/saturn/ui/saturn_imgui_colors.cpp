@@ -29,6 +29,8 @@
 bool show_cap, show_overalls, show_gloves, show_shoes, show_skin, show_hair;
 bool show_shirt, show_shoulders, show_arms, show_pelvis, show_thigh, show_calf;
 
+bool saving_to_model;
+
 /* Applies UI values in the CC Editor to the active player.
 This should be called when loading a CC, to insert our new colors into the editor. */
 void UpdatePaletteFromEditor(int networkIndex) {
@@ -305,11 +307,26 @@ void OpenCCSelector() {
         UpdateEditorFromPalette();
         UpdatePaletteFromEditor(0);
         send_palette_to_network();
+        saving_to_model = false;
+    }
+}
+
+/* Save a CC to either the CC directory or a model's CC directory */
+void AttemptSaveCC(bool force = false) {
+    UpdatePaletteFromEditor(0);
+    std::string save_path = (saving_to_model && ActiveModelPath().size() > 0) ?
+                            ActiveModelPath() + "/colorcodes" :
+                            std::string(sys_user_path()).append("/dynos/colorcodes");
+
+    if (std::filesystem::exists(save_path + "/" + std::string(uiCcLabelName) + ".gs") && !force) {
+        ImGui::OpenPopup("###overwrite_gs");
+    } else {
+        SaveActiveColorCode(save_path);
     }
 }
 
 void OpenCCEditor() {
-    bool value_changed;
+    bool value_changed = false;
     OpenCCSelector();
 
     // To-do: clean this the FUCK up
@@ -366,14 +383,16 @@ void OpenCCEditor() {
                     UpdateEditorFromPalette();
             }
             ImGui::EndTabItem();
-            ImGui::PushItemWidth(100 * ui_scale);
+        }
+        ImGui::EndTabBar();
+        {
+            // Save Color Code
+            ImGui::PushItemWidth(150 * ui_scale);
             ImGui::InputText(".gs", uiCcLabelName, IM_ARRAYSIZE(uiCcLabelName));
             ImGui::PopItemWidth();
+
             if (ImGui::Button("Add to List")) {
-                UpdatePaletteFromEditor(0);
-                if (std::filesystem::exists(std::string(sys_user_path()).append("/dynos/colorcodes/") + current_color_code.Name + ".gs"))
-                    ImGui::OpenPopup("###overwrite_gs");
-                else SaveActiveColorCode(std::string(sys_user_path()).append("/dynos/colorcodes"));
+                AttemptSaveCC();
             }
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
                 ColorCode dragging;
@@ -384,18 +403,21 @@ void OpenCCEditor() {
                 ImGui::EndDragDropSource();
             }
 
+            ImGui::SameLine();
+            if (active_saturn_model_index != -1)
+                ImGui::Checkbox("Model###saving_to_model", &saving_to_model);
+
             // "Are you sure?"
             if (ImGui::BeginPopup("###overwrite_gs")) {
                 ImGui::Text("Overwrite %s.gs? This action is irreversible!", uiCcLabelName);
                 if (ImGui::Button("Yes")) {
-                    SaveActiveColorCode(std::string(sys_user_path()).append("/dynos/colorcodes"));
+                    AttemptSaveCC(true);
                     ImGui::CloseCurrentPopup();
                 } ImGui::SameLine();
                 if (ImGui::Button("No")) ImGui::CloseCurrentPopup();
                 ImGui::EndPopup();
             }
         }
-        ImGui::EndTabBar();
     }
 
     if (value_changed) {

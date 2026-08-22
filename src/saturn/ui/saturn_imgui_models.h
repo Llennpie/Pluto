@@ -15,7 +15,7 @@ extern "C" {
     void OpenEyeSelector();
     void OpenSwitchOptions();
     void OpenExtraOptions();
-    void OpenAccessorySettings();
+    //void OpenAccessorySettings();
     void OpenModelSettings();
     void PopupModelSettings();
     void OpenModelSettingsAtCursor();

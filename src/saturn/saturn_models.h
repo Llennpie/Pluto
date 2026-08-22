@@ -38,6 +38,8 @@ extern ImVec4 uiCalfMainColor;
 extern ImVec4 uiCalfShadeColor;
 extern void UpdateEditorFromPalette();
 
+extern std::string ActiveModelName();
+extern std::string ActiveModelPath();
 extern bool IsSaturnModel(int);
 extern bool IsAccessoryModel(int);
 extern std::vector<int> accessory_packs;

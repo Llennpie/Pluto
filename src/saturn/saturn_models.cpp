@@ -120,6 +120,17 @@ bool AnyModelsEnabled() {
     return false;
 }
 
+std::string ActiveModelName() {
+    if (active_saturn_model_index < 0 || active_saturn_model_index >= DynOS_Pack_GetCount()) return "";
+    PackData* pack = DynOS_Pack_GetFromIndex(active_saturn_model_index);
+    return std::string(pack->mDisplayName.begin(), pack->mDisplayName.end());
+}
+std::string ActiveModelPath() {
+    if (active_saturn_model_index < 0 || active_saturn_model_index >= DynOS_Pack_GetCount()) return "";
+    PackData* pack = DynOS_Pack_GetFromIndex(active_saturn_model_index);
+    return std::string(pack->mPath.c_str());
+}
+
 /* Returns true if a given DynOS model index is intended for Saturn. */
 bool IsSaturnModel(int index) {
     PackData* pack = DynOS_Pack_GetFromIndex(index);
@@ -223,6 +234,8 @@ static void RefreshPackMetadata(PackData* pack) {
     }
 }
 
+extern bool saving_to_model;
+
 /* Loads Saturn model data at a given DynOS index. */
 void LoadModelData(int index, bool enabled, bool first_use, bool auto_reload) {
     PackData* pack = DynOS_Pack_GetFromIndex(index);
@@ -283,6 +296,7 @@ void LoadModelData(int index, bool enabled, bool first_use, bool auto_reload) {
                 current_color_code.ParseGameShark();
                 UpdateEditorFromPalette();
                 send_palette_to_network();
+                saving_to_model = true;
             }
         }
 
