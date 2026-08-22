@@ -475,7 +475,7 @@ static struct ShaderProgram *gfx_opengl_create_and_load_new_shader(struct ColorC
         append_line(fs_buf, &fs_len, "float _lin_frag = (2.0*uNearClip*uFarClip) / (uFarClip + uNearClip - (2.0*gl_FragCoord.z - 1.0) * _range);");
         append_line(fs_buf, &fs_len, "float _lin_buf  = (2.0*uNearClip*uFarClip) / (uFarClip + uNearClip - (2.0*_buf_d - 1.0) * _range);");
         // 15 world units, scaled by player scale
-        append_line(fs_buf, &fs_len, "if (_lin_frag > _lin_buf + 15.0 * uPlayerScale) discard;");
+        append_line(fs_buf, &fs_len, "if (_lin_frag > _lin_buf + 10.0 * uPlayerScale) discard;");
     }
     append_line(fs_buf, &fs_len, "}");
 
