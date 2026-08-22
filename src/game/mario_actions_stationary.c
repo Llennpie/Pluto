@@ -32,7 +32,8 @@ s32 check_common_idle_cancels(struct MarioState *m) {
         return mario_push_off_steep_floor(m, ACT_FREEFALL, 0);
     }
 
-    if (m->input & INPUT_FIRST_PERSON) {
+    if (m->input & INPUT_FIRST_PERSON &&
+    !(freeze_camera && gPlayer1Controller->buttonDown & R_TRIG)) {
         return set_mario_action(m, ACT_FIRST_PERSON, 0);
     }
 
@@ -40,7 +41,8 @@ s32 check_common_idle_cancels(struct MarioState *m) {
         return set_mario_action(m, ACT_FREEFALL, 0);
     }
 
-    if ((is_editing_panim && enable_custom_anim) || override_anim || pause_anim) { return 0; }
+    if ((is_editing_panim && enable_custom_anim) || override_anim ||
+    (freeze_camera && gPlayer1Controller->buttonDown & R_TRIG)) { return 0; }
 
     if (m->input & INPUT_UNKNOWN_10) {
         return set_mario_action(m, ACT_SHOCKWAVE_BOUNCE, 0);
@@ -76,7 +78,7 @@ s32 check_common_hold_idle_cancels(struct MarioState *m) {
         return mario_push_off_steep_floor(m, ACT_HOLD_FREEFALL, 0);
     }
 
-    if ((is_editing_panim && enable_custom_anim) || override_anim || pause_anim) { return 0; }
+    if ((is_editing_panim && enable_custom_anim) || override_anim) { return 0; }
 
     if (m->heldObj != NULL && m->heldObj->oInteractionSubtype & INT_SUBTYPE_DROP_IMMEDIATELY) {
         m->heldObj->oInteractionSubtype =

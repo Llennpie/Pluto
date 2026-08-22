@@ -86,6 +86,16 @@ bool camera_recentering = false;
 
 extern struct Animation *gCurAnim;
 
+// Little formula for controller stick movement speed
+static float saturn_stick_move_speed(s16 raw_stick, float max_value = 12.0f) {
+    const int abs_raw = (raw_stick < 0) ? -raw_stick : raw_stick;
+    const float deadzone = 12.0f;
+    float t = ((float)abs_raw - deadzone) / (127.0f - deadzone);
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
+    return 1.0f + (max_value - 1.0f) * t;
+}
+
 void saturn_recenter_camera() {
     float* mario_pos = gMarioStates[0].marioObj->header.gfx.pos;
     if (!timeline_is_playing && !camera_recentering) {
@@ -154,51 +164,72 @@ int saturn_camera_update() {
 
         if (!SDL_GetKeyboardState(NULL)[SDL_SCANCODE_R]) {
             // Movement
-            if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_Y]) {
-                gCamera->pos[0] += sins(gCamera->yaw + atan2s(-127, 0)) * 12 * freeze_camera_speed;
-                gCamera->pos[2] += coss(gCamera->yaw + atan2s(-127, 0)) * 12 * freeze_camera_speed;
-                gCamera->focus[0] += sins(gCamera->yaw + atan2s(-127, 0)) * 12 * freeze_camera_speed;
-                gCamera->focus[2] += coss(gCamera->yaw + atan2s(-127, 0)) * 12 * freeze_camera_speed;
-            } else if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_H]) {
-                gCamera->pos[0] -= sins(gCamera->yaw + atan2s(-127, 0)) * 12 * freeze_camera_speed;
-                gCamera->pos[2] -= coss(gCamera->yaw + atan2s(-127, 0)) * 12 * freeze_camera_speed;
-                gCamera->focus[0] -= sins(gCamera->yaw + atan2s(-127, 0)) * 12 * freeze_camera_speed;
-                gCamera->focus[2] -= coss(gCamera->yaw + atan2s(-127, 0)) * 12 * freeze_camera_speed;
+            const bool stick_forward = (gPlayer1Controller->rawStickY > 0 && (gPlayer1Controller->buttonDown & R_TRIG));
+            const bool stick_backward = (gPlayer1Controller->rawStickY < 0 && (gPlayer1Controller->buttonDown & R_TRIG));
+            const bool stick_left = (gPlayer1Controller->rawStickX < 0 && (gPlayer1Controller->buttonDown & R_TRIG));
+            const bool stick_right = (gPlayer1Controller->rawStickX > 0 && (gPlayer1Controller->buttonDown & R_TRIG));
+            const float forward_speed = stick_forward ? saturn_stick_move_speed(gPlayer1Controller->rawStickY) : 12.0f;
+            const float backward_speed = stick_backward ? saturn_stick_move_speed(gPlayer1Controller->rawStickY) : 12.0f;
+            const float left_speed = stick_left ? saturn_stick_move_speed(gPlayer1Controller->rawStickX) : 12.0f;
+            const float right_speed = stick_right ? saturn_stick_move_speed(gPlayer1Controller->rawStickX) : 12.0f;
+
+            if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_Y] || stick_forward) {
+                gCamera->pos[0] += sins(gCamera->yaw + atan2s(-127, 0)) * forward_speed * freeze_camera_speed;
+                gCamera->pos[2] += coss(gCamera->yaw + atan2s(-127, 0)) * forward_speed * freeze_camera_speed;
+                gCamera->focus[0] += sins(gCamera->yaw + atan2s(-127, 0)) * forward_speed * freeze_camera_speed;
+                gCamera->focus[2] += coss(gCamera->yaw + atan2s(-127, 0)) * forward_speed * freeze_camera_speed;
+            } else if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_H] || stick_backward) {
+                gCamera->pos[0] -= sins(gCamera->yaw + atan2s(-127, 0)) * backward_speed * freeze_camera_speed;
+                gCamera->pos[2] -= coss(gCamera->yaw + atan2s(-127, 0)) * backward_speed * freeze_camera_speed;
+                gCamera->focus[0] -= sins(gCamera->yaw + atan2s(-127, 0)) * backward_speed * freeze_camera_speed;
+                gCamera->focus[2] -= coss(gCamera->yaw + atan2s(-127, 0)) * backward_speed * freeze_camera_speed;
             }
-            if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_G]) {
-                gCamera->pos[0] -= sins(gCamera->yaw + atan2s(0, 127)) * 12 * freeze_camera_speed;
-                gCamera->pos[2] -= coss(gCamera->yaw + atan2s(0, 127)) * 12 * freeze_camera_speed;
-                gCamera->focus[0] -= sins(gCamera->yaw + atan2s(0, 127)) * 12 * freeze_camera_speed;
-                gCamera->focus[2] -= coss(gCamera->yaw + atan2s(0, 127)) * 12 * freeze_camera_speed;
-            } else if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_J]) {
-                gCamera->pos[0] += sins(gCamera->yaw + atan2s(0, 127)) * 12 * freeze_camera_speed;
-                gCamera->pos[2] += coss(gCamera->yaw + atan2s(0, 127)) * 12 * freeze_camera_speed;
-                gCamera->focus[0] += sins(gCamera->yaw + atan2s(0, 127)) * 12 * freeze_camera_speed;
-                gCamera->focus[2] += coss(gCamera->yaw + atan2s(0, 127)) * 12 * freeze_camera_speed;
+            if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_G] || stick_left) {
+                gCamera->pos[0] -= sins(gCamera->yaw + atan2s(0, 127)) * left_speed * freeze_camera_speed;
+                gCamera->pos[2] -= coss(gCamera->yaw + atan2s(0, 127)) * left_speed * freeze_camera_speed;
+                gCamera->focus[0] -= sins(gCamera->yaw + atan2s(0, 127)) * left_speed * freeze_camera_speed;
+                gCamera->focus[2] -= coss(gCamera->yaw + atan2s(0, 127)) * left_speed * freeze_camera_speed;
+            } else if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_J] || stick_right) {
+                gCamera->pos[0] += sins(gCamera->yaw + atan2s(0, 127)) * right_speed * freeze_camera_speed;
+                gCamera->pos[2] += coss(gCamera->yaw + atan2s(0, 127)) * right_speed * freeze_camera_speed;
+                gCamera->focus[0] += sins(gCamera->yaw + atan2s(0, 127)) * right_speed * freeze_camera_speed;
+                gCamera->focus[2] += coss(gCamera->yaw + atan2s(0, 127)) * right_speed * freeze_camera_speed;
             }
-        } else {
+        }
+        if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_R] || gPlayer1Controller->buttonDown & R_TRIG) {
             // Rotation
+            const bool ext_up = (gPlayer1Controller->extStickY > 0 && (gPlayer1Controller->buttonDown & R_TRIG));
+            const bool ext_down = (gPlayer1Controller->extStickY < 0 && (gPlayer1Controller->buttonDown & R_TRIG));
+            const bool ext_left = (gPlayer1Controller->extStickX < 0 && (gPlayer1Controller->buttonDown & R_TRIG));
+            const bool ext_right = (gPlayer1Controller->extStickX > 0 && (gPlayer1Controller->buttonDown & R_TRIG));
+            const float pitch_up_speed = ext_up ? saturn_stick_move_speed(gPlayer1Controller->extStickY, 512.0f) : 512.0f;
+            const float pitch_down_speed = ext_down ? saturn_stick_move_speed(gPlayer1Controller->extStickY, 512.0f) : 512.0f;
+            const float yaw_left_speed = ext_left ? saturn_stick_move_speed(gPlayer1Controller->extStickX, 512.0f) : 512.0f;
+            const float yaw_right_speed = ext_right ? saturn_stick_move_speed(gPlayer1Controller->extStickX, 512.0f) : 512.0f;
+
             f32 dist;
             s16 pitch, yaw;
             vec3f_get_dist_and_angle(gCamera->pos, gCamera->focus, &dist, &pitch, &yaw);
 
-            if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_Y] && pitch < 12000)
-                pitch += (1.0f / 1.5f) * 512 * freeze_camera_speed;
-            if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_H] && pitch > -12000)
-                pitch -= (1.0f / 1.5f) * 512 * freeze_camera_speed;
-            if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_G])
-                yaw += (1.0f / 1.5f) * 512 * freeze_camera_speed;
-            if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_J])
-                yaw -= (1.0f / 1.5f) * 512 * freeze_camera_speed;
+            if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_Y] || ext_up)
+                if (pitch < 12000) pitch += (1.0f / 1.5f) * pitch_up_speed * freeze_camera_speed;
+            if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_H] || ext_down)
+                if (pitch > -12000) pitch -= (1.0f / 1.5f) * pitch_down_speed * freeze_camera_speed;
+            if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_G] || ext_left)
+                yaw += (1.0f / 1.5f) * yaw_left_speed * freeze_camera_speed;
+            if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_J] || ext_right)
+                yaw -= (1.0f / 1.5f) * yaw_right_speed * freeze_camera_speed;
 
             vec3f_set_dist_and_angle(gCamera->pos, gCamera->focus, dist, pitch, yaw);
         }
 
         // Ascend/Descend
         static f32 yvel = 0.f;
-        if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_T])
+        if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_T]
+        || (gPlayer1Controller->buttonDown & A_BUTTON && gPlayer1Controller->buttonDown & R_TRIG))
             yvel += 3.f * freeze_camera_speed;
-        else if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_U])
+        else if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_U]
+        || (gPlayer1Controller->buttonDown & B_BUTTON && gPlayer1Controller->buttonDown & R_TRIG))
             yvel -= 3.f * freeze_camera_speed;
         else
             yvel = 0.f;
@@ -214,7 +245,7 @@ int saturn_camera_update() {
             if (!camera_recentering) camera_kf_state[3 + i] = gCamera->focus[i];
         }
 
-        if (camera_recentering)
+        if (camera_recentering || (gPlayer1Controller->buttonDown & R_TRIG && gPlayer1Controller->buttonPressed & L_TRIG))
             saturn_recenter_camera();
 
         // Misc. Animation
