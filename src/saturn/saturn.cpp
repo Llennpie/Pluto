@@ -319,10 +319,13 @@ void saturn_action_idle(struct MarioState *m) {
     // Flip-flop
     if (override_anim) {
         if (pause_anim) {
-            m->marioObj->header.gfx.animInfo.animFrame = paused_frame;
             // If the animation goes OOB
             if (paused_frame > targetAnim->loopEnd-1) paused_frame = targetAnim->loopEnd-1;
             if (paused_frame < targetAnim->loopStart) paused_frame = targetAnim->loopStart;
+
+            m->marioObj->header.gfx.animInfo.animFrame = paused_frame;
+            m->marioObj->header.gfx.animInfo.animFrameAccelAssist = paused_frame << 16;
+            m->marioObj->header.gfx.animInfo.animTimer = gAreaUpdateCounter;
         }
     } else {
         // Reset animation state
