@@ -2,7 +2,7 @@
 #define DEVSTAGE_RELEASE 1
 
 // comment this out for release builds
-//#define VERSION_PRERELEASE
+#define VERSION_PRERELEASE
 
 #define VERSION_STAGE DEVSTAGE_RELEASE
 #define VERSION_MAJOR 2

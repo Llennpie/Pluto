@@ -18,11 +18,12 @@
     #define VERSION_REGION "US"
 #endif
 
-#define MAX_VERSION_LENGTH 32
-#define MAX_LOCAL_VERSION_LENGTH 36
+#define MAX_VERSION_LENGTH 48 //bump by 16 due to hashing, i don't think git uses a 40 bit hash, only a 7-12 so someone fact check this later
+#define MAX_LOCAL_VERSION_LENGTH 52
 const char* get_version(void);
 const char* get_version_local(void);
 const char* get_version_dx(void);
+const char* get_version_pluto(void);
 const char* get_game_name(void);
 
 #endif

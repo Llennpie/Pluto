@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "version.h"
 #include "types.h"
+#include "saturn/saturn_version.h"
 
 #undef VERSION_TEXT
 #define VERSION_TEXT "v"
@@ -8,6 +9,7 @@
 static char sVersionString[MAX_VERSION_LENGTH] = { 0 };
 static char sLocalVersionString[MAX_LOCAL_VERSION_LENGTH] = { 0 };
 static char sDxVersionString[MAX_VERSION_LENGTH] = { 0 };
+static char sPlutoVersionString[MAX_VERSION_LENGTH] = { 0 };
 
 const char* get_version(void) {
     if (configCoopCompatibility) {
@@ -65,6 +67,22 @@ const char* get_version_dx(void) {
 #endif
 
     return sDxVersionString;
+}
+
+// Hi guys it's mush with my totally not useless function! 
+// I left the coop function the same for archival reasons :/
+const char* get_version_pluto(void) {
+#if defined(VERSION_US)
+    #if defined(GIT_HASH) && defined(VERSION_PRERELEASE)
+    snprintf(sPlutoVersionString, MAX_VERSION_LENGTH, " Pluto v%s\nCoopDX v%s\nCommit %s", SATURN_VERSION, SM64COOPDX_VERSION, GIT_HASH);
+    #else
+    snprintf(sPlutoVersionString, MAX_VERSION_LENGTH, " Pluto v%s\nCoopDX v%s", SATURN_VERSION, SM64COOPDX_VERSION);
+    #endif
+#else
+    snprintf(sPlutoVersionString, MAX_VERSION_LENGTH, "v%s %s", SATURN_VERSION, VERSION_REGION);
+#endif
+
+    return sPlutoVersionString;
 }
 
 const char* get_game_name(void) {
